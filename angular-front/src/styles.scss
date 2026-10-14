@@ -1,1 +1,5 @@
-/* You can add global styles to this file, and also import other style files */
+/* Smart Campus — global stylesheet entry point.
+   Keep this file thin: it only wires the design system together. */
+@use './styles/tokens';
+@use './styles/base';
+@use './styles/utilities';
