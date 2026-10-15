@@ -5,10 +5,17 @@
 
 export type UserRole = 'student' | 'administrator';
 
+export interface Preferences {
+  language: string;
+  notificationsEnabled: boolean;
+  theme: string;
+}
+
 export interface User {
   id: string;
   fullName: string;
   email: string;
   role: UserRole;
   avatarUrl?: string;
+  preferences: Preferences;
 }
