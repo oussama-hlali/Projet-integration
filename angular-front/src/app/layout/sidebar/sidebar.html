@@ -1,0 +1,67 @@
+<aside class="sidebar" [class.sidebar--collapsed]="collapsed()" aria-label="Main navigation">
+  <div class="sidebar__brand">
+    <span class="sidebar__brand-mark" aria-hidden="true">S</span>
+    <span class="sidebar__brand-name">Smart Campus</span>
+    <button class="sidebar__close-button" type="button" aria-label="Close navigation menu" (click)="closeMobileMenu()">
+      <span aria-hidden="true">×</span>
+    </button>
+  </div>
+
+  <nav class="sidebar__nav">
+    <span class="sidebar__section-label">Workspace</span>
+    @for (item of navigation; track item.route) {
+      <a
+        class="sidebar__link"
+        [routerLink]="item.route"
+        routerLinkActive="sidebar__link--active"
+        [routerLinkActiveOptions]="{ exact: true }"
+        [attr.aria-label]="collapsed() ? item.label : null"
+        [attr.title]="collapsed() ? item.label : null"
+        (click)="requestClose()"
+      >
+        <span class="sidebar__icon" aria-hidden="true">
+          @switch (item.icon) {
+            @case ('dashboard') { <svg viewBox="0 0 24 24"><path d="M4 13h6V4H4v9Zm0 7h6v-4H4v4Zm10 0h6v-9h-6v9Zm0-16v4h6V4h-6Z" /></svg> }
+            @case ('rooms') { <svg viewBox="0 0 24 24"><path d="M4 20V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v15M3 20h18M7 8h3m-3 4h3m4-4h3m-3 4h3M8 20v-4h8v4" /></svg> }
+            @case ('calendar') { <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2" /><path d="M8 3v4m8-4v4M4 10h16M8 14h2m2 0h2m-6 3h2" /></svg> }
+            @case ('events') { <svg viewBox="0 0 24 24"><path d="M12 3 14.5 9.5 21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z" /></svg> }
+            @case ('megaphone') { <svg viewBox="0 0 24 24"><path d="m4 13 12 4V7L4 11v2Zm12 4 3 2V5l-3 2M7 14l1.5 5H12l-1.5-4.5" /></svg> }
+            @case ('transport') { <svg viewBox="0 0 24 24"><path d="M5 17h14l-1-8a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2l-1 8Zm2 0v2m10-2v2M7 12h10M8 15h.01m8 0h.01" /></svg> }
+            @case ('cafeteria') { <svg viewBox="0 0 24 24"><path d="M6 3v8a3 3 0 0 0 3 3V3m-3 5h6M9 14v7m8-18v18m0-18c3 2 3 5 0 7" /></svg> }
+            @case ('search') { <svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg> }
+          }
+        </span>
+        <span class="sidebar__label">{{ item.label }}</span>
+      </a>
+    }
+
+    <span class="sidebar__section-label">Personal</span>
+    <a
+      class="sidebar__link"
+      routerLink="/notifications"
+      routerLinkActive="sidebar__link--active"
+      [routerLinkActiveOptions]="{ exact: true }"
+      [attr.aria-label]="collapsed() ? 'Notifications' : null"
+      (click)="requestClose()"
+    >
+      <span class="sidebar__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9ZM10 21h4" /></svg></span>
+      <span class="sidebar__label">Notifications</span>
+    </a>
+    <a
+      class="sidebar__link"
+      routerLink="/profile"
+      routerLinkActive="sidebar__link--active"
+      [routerLinkActiveOptions]="{ exact: true }"
+      [attr.aria-label]="collapsed() ? 'Profile' : null"
+      (click)="requestClose()"
+    >
+      <span class="sidebar__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></svg></span>
+      <span class="sidebar__label">Profile</span>
+    </a>
+  </nav>
+
+  <div class="sidebar__footer">
+    <span class="sidebar__footer-mark" aria-hidden="true">?</span>
+    <span class="sidebar__label">Help center</span>
+  </div>
+</aside>
