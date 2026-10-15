@@ -1,0 +1,55 @@
+<main class="login">
+  <section class="login__panel" aria-labelledby="login-title">
+    <header class="login__header">
+      <span class="login__brand">Smart Campus</span>
+      <h1 id="login-title" class="login__title">Sign in</h1>
+      <p class="login__subtitle">Choose a demo account to explore the platform.</p>
+    </header>
+
+    <form class="login__form" [formGroup]="form" (ngSubmit)="submit()">
+      <fieldset class="login__fieldset">
+        <legend class="login__legend">Demo account</legend>
+
+        <label
+          class="login__option"
+          [class.login__option--selected]="form.controls.role.value === 'student'"
+        >
+          <input
+            class="login__radio"
+            type="radio"
+            formControlName="role"
+            value="student"
+          />
+          <span class="login__option-body">
+            <span class="login__option-title">Student</span>
+            <span class="login__option-desc">
+              Browse rooms, events, transport and reservations.
+            </span>
+          </span>
+        </label>
+
+        <label
+          class="login__option"
+          [class.login__option--selected]="form.controls.role.value === 'administrator'"
+        >
+          <input
+            class="login__radio"
+            type="radio"
+            formControlName="role"
+            value="administrator"
+          />
+          <span class="login__option-body">
+            <span class="login__option-title">Administrator</span>
+            <span class="login__option-desc">
+              Manage rooms, events, announcements and users.
+            </span>
+          </span>
+        </label>
+      </fieldset>
+
+      <button class="login__submit" type="submit" [disabled]="form.invalid">Continue</button>
+    </form>
+
+    <p class="login__note" role="note">Demo sign-in — no real authentication.</p>
+  </section>
+</main>
