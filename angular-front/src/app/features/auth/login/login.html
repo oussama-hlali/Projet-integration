@@ -1,55 +1,102 @@
-<main class="login">
-  <section class="login__panel" aria-labelledby="login-title">
-    <header class="login__header">
-      <span class="login__brand">Smart Campus</span>
-      <h1 id="login-title" class="login__title">Sign in</h1>
-      <p class="login__subtitle">Choose a demo account to explore the platform.</p>
-    </header>
+<div class="login">
+  <div class="login__pane">
+    <div class="login__brand">
+      <span class="login__logo" aria-hidden="true">SC</span>
+      <span class="login__wordmark">Smart Campus</span>
+    </div>
 
-    <form class="login__form" [formGroup]="form" (ngSubmit)="submit()">
-      <fieldset class="login__fieldset">
-        <legend class="login__legend">Demo account</legend>
+    <div class="login__content">
+      <header class="login__header">
+        <h1 id="login-title" class="login__title">Sign in</h1>
+        <p class="login__subtitle">Choose a demo account to explore the platform.</p>
+      </header>
 
-        <label
-          class="login__option"
-          [class.login__option--selected]="form.controls.role.value === 'student'"
-        >
-          <input
-            class="login__radio"
-            type="radio"
-            formControlName="role"
-            value="student"
-          />
-          <span class="login__option-body">
-            <span class="login__option-title">Student</span>
-            <span class="login__option-desc">
-              Browse rooms, events, transport and reservations.
+      <form class="login__form" [formGroup]="form" (ngSubmit)="submit()">
+        <fieldset class="login__fieldset">
+          <legend class="login__legend">Demo account</legend>
+
+          <label
+            class="login__option"
+            [class.login__option--selected]="form.controls.role.value === 'student'"
+          >
+            <input
+              class="login__radio"
+              type="radio"
+              formControlName="role"
+              value="student"
+            />
+            <span class="login__option-body">
+              <span class="login__option-title">Student</span>
+              <span class="login__option-desc">
+                Browse rooms, events, transport and reservations.
+              </span>
             </span>
-          </span>
-        </label>
-
-        <label
-          class="login__option"
-          [class.login__option--selected]="form.controls.role.value === 'administrator'"
-        >
-          <input
-            class="login__radio"
-            type="radio"
-            formControlName="role"
-            value="administrator"
-          />
-          <span class="login__option-body">
-            <span class="login__option-title">Administrator</span>
-            <span class="login__option-desc">
-              Manage rooms, events, announcements and users.
+            <span class="login__option-check" aria-hidden="true">
+              <svg viewBox="0 0 16 16" focusable="false">
+                <path
+                  d="M6.2 11.3 3.4 8.5l1.1-1.1 1.7 1.7 4.9-4.9 1.1 1.1z"
+                  fill="currentColor"
+                />
+              </svg>
             </span>
-          </span>
-        </label>
-      </fieldset>
+          </label>
 
-      <button class="login__submit" type="submit" [disabled]="form.invalid">Continue</button>
-    </form>
+          <label
+            class="login__option"
+            [class.login__option--selected]="form.controls.role.value === 'administrator'"
+          >
+            <input
+              class="login__radio"
+              type="radio"
+              formControlName="role"
+              value="administrator"
+            />
+            <span class="login__option-body">
+              <span class="login__option-title">Administrator</span>
+              <span class="login__option-desc">
+                Manage rooms, events, announcements and users.
+              </span>
+            </span>
+            <span class="login__option-check" aria-hidden="true">
+              <svg viewBox="0 0 16 16" focusable="false">
+                <path
+                  d="M6.2 11.3 3.4 8.5l1.1-1.1 1.7 1.7 4.9-4.9 1.1 1.1z"
+                  fill="currentColor"
+                />
+              </svg>
+            </span>
+          </label>
+        </fieldset>
 
-    <p class="login__note" role="note">Demo sign-in — no real authentication.</p>
-  </section>
-</main>
+        <button class="login__submit" type="submit" [disabled]="form.invalid">
+          Continue
+          <svg class="login__submit-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <path
+              d="M8.7 3.3 13.4 8l-4.7 4.7-1.1-1.1 2.9-2.9H2.5V8h8l-2.9-2.9z"
+              fill="currentColor"
+            />
+          </svg>
+        </button>
+      </form>
+
+      <p class="login__note" role="note">Demo sign-in — no real authentication.</p>
+    </div>
+
+    <p class="login__footnote">Smart Campus 2026</p>
+  </div>
+
+  <div class="login__visual" aria-hidden="true">
+    <div class="login__visual-inner">
+      <div class="login__visual-glow"></div>
+      <div class="login__visual-body">
+        <p class="login__visual-eyebrow">Unified campus services</p>
+        <p class="login__visual-title">Everything campus, in one calm place.</p>
+        <ul class="login__visual-list">
+          <li>Rooms &amp; reservations</li>
+          <li>Events &amp; announcements</li>
+          <li>Transport, cafeteria &amp; lost &amp; found</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
