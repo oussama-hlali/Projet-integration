@@ -15,7 +15,7 @@ const FADE_MS = 500;
 
 const NS = 'http://www.w3.org/2000/svg';
 const SCL = 98;
-const PARTICLE_COLORS = ['#39FF14', '#a8ff78', '#00D4FF', '#FFE600', '#9B5DE5'];
+const PARTICLE_COLORS = ['#0d7c78', '#14b8a6', '#2dd4bf', '#38bdf8', '#111c3a'];
 
 type Vec3 = [number, number, number];
 
@@ -255,12 +255,12 @@ export class Splash implements AfterViewInit, OnDestroy {
     const c = Math.cos(spin);
     const s = Math.sin(spin);
 
-    this.glowHue = 108 + Math.sin(t * 0.14) * 13;
-    const glowLight = 54 + Math.sin(t * 2.7) * 9;
+    this.glowHue = 178 + Math.sin(t * 0.14) * 10;
+    const glowLight = 46 + Math.sin(t * 2.7) * 8;
     const glowRadius = 15 + Math.sin(t * 2.7) * 6;
     gem.style.filter =
-      `drop-shadow(0 0 ${glowRadius}px hsl(${this.glowHue},100%,${glowLight}%)) ` +
-      `drop-shadow(0 0 ${(glowRadius * 2.8).toFixed(0)}px hsla(${this.glowHue},100%,${glowLight - 12}%,.38))`;
+      `drop-shadow(0 0 ${glowRadius}px hsl(${this.glowHue},75%,${glowLight}%)) ` +
+      `drop-shadow(0 0 ${(glowRadius * 2.8).toFixed(0)}px hsla(${this.glowHue},75%,${glowLight - 12}%,.38))`;
 
     const projected = V.map((v) => project(v, c, s));
     const drawn: DrawnFace[] = FACES.map((face, i) => {
@@ -323,7 +323,7 @@ export class Splash implements AfterViewInit, OnDestroy {
       const halo = this.halos[i];
       const alpha = i === 0 ? 0.26 : 0.1;
       const width = i === 0 ? 1.5 : 1;
-      halo.style.border = `${width}px solid hsla(${this.glowHue},100%,60%,${alpha})`;
+      halo.style.border = `${width}px solid hsla(${this.glowHue},70%,44%,${alpha})`;
     }
   }
 }

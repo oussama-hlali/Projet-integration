@@ -12,9 +12,9 @@
 }
 
 .splash {
-  --ink: #0d0d0d;
-  --canvas: #f4efe6;
-  --green: #39ff14;
+  --ink: #111c3a;
+  --canvas: #f4f6fb;
+  --accent: #0d7c78;
 
   position: fixed;
   inset: 0;
@@ -178,7 +178,7 @@
   background: linear-gradient(90deg,
       var(--ink) 0%,
       var(--ink) 25%,
-      var(--green) 50%,
+      var(--accent) 50%,
       var(--ink) 75%,
       var(--ink) 100%);
   background-size: 280% 100%;
@@ -235,7 +235,7 @@
   50% {
     opacity: 1;
     transform: scale(1.4);
-    color: var(--green);
+    color: var(--accent);
   }
 }
 
@@ -309,7 +309,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--green);
+  background: var(--accent);
   animation: dotPulse 2s ease-in-out infinite;
 }
 
@@ -335,11 +335,11 @@
 }
 
 .sub-btn:hover .dot {
-  background: var(--green);
+  background: var(--accent);
 }
 
 .sub-btn:focus-visible {
-  outline: 2px solid var(--green);
+  outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
 
