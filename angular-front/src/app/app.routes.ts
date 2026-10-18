@@ -12,7 +12,8 @@ export const routes: Routes = [
   {
     path: '',
     pathMatch: 'full',
-    redirectTo: 'dashboard',
+    title: 'Smart Campus',
+    loadComponent: () => import('./features/splash/splash').then((m) => m.Splash),
   },
 
   {
