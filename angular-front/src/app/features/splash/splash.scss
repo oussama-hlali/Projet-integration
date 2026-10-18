@@ -1,0 +1,378 @@
+:host {
+  display: block;
+}
+
+.splash,
+.splash *,
+.splash *::before,
+.splash *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+.splash {
+  --ink: #111c3a;
+  --canvas: #f4f6fb;
+  --accent: #0d7c78;
+
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--canvas);
+  cursor: none;
+  font-family: "JetBrains Mono", "Courier New", monospace;
+  transition: opacity 500ms ease;
+}
+
+.splash--leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ── grain ── */
+.splash::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 200;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='.05'/%3E%3C/svg%3E");
+}
+
+/* ── custom cursor: tiny plumbob diamond ── */
+.cur {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 999;
+  width: 20px;
+  height: 28px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  transition: opacity 0.15s;
+}
+
+/* ── ghost text ── */
+.ghost {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  font-family: "Unbounded", "Arial Black", sans-serif;
+  font-weight: 900;
+  font-size: clamp(6rem, 22vw, 17rem);
+  line-height: 1;
+  letter-spacing: -0.05em;
+  white-space: nowrap;
+  color: var(--ink);
+  opacity: 0.022;
+  pointer-events: none;
+  user-select: none;
+  transform: translate(-50%, -50%);
+}
+
+/* ── layout ── */
+.stage {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  gap: clamp(1.5rem, 5vh, 3rem);
+}
+
+/* ── plumbob ── */
+.gem-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: bob 3.6s ease-in-out infinite;
+}
+
+@keyframes bob {
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+.plumbob {
+  display: block;
+  overflow: visible;
+}
+
+/* halos */
+.halo {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.h1 {
+  width: 200px;
+  height: 200px;
+  transform: translate(-50%, -50%);
+  animation: halo 2.6s ease-in-out infinite;
+}
+
+.h2 {
+  width: 270px;
+  height: 270px;
+  transform: translate(-50%, -50%);
+  animation: halo 2.6s ease-in-out infinite 0.7s;
+}
+
+@keyframes halo {
+
+  0%,
+  100% {
+    opacity: 0.6;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  50% {
+    opacity: 0.1;
+    transform: translate(-50%, -50%) scale(1.12);
+  }
+}
+
+/* ── typography ── */
+.text-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.text-wrap h1 {
+  display: flex;
+  align-items: baseline;
+  font-family: "Unbounded", "Arial Black", sans-serif;
+  font-weight: 900;
+  font-size: clamp(2.6rem, 7.8vw, 5.4rem);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  cursor: none;
+  user-select: none;
+  animation: up 0.8s ease-out 0.05s both;
+}
+
+/* "Smart" — shimmer sweep */
+.w1 {
+  background: linear-gradient(90deg,
+      var(--ink) 0%,
+      var(--ink) 25%,
+      var(--accent) 50%,
+      var(--ink) 75%,
+      var(--ink) 100%);
+  background-size: 280% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 4.2s ease-in-out infinite 1.4s;
+}
+
+@keyframes shimmer {
+
+  0%,
+  100% {
+    background-position: 220% center;
+  }
+
+  40%,
+  60% {
+    background-position: -5% center;
+  }
+}
+
+/* "Campus" — outlined */
+.w2 {
+  margin-left: 0.15em;
+  color: transparent;
+  -webkit-text-stroke: 2.5px var(--ink);
+}
+
+.year {
+  margin-top: 0.1rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--ink);
+  opacity: 0.5;
+  animation: up 0.7s ease-out 1s both;
+}
+
+.year em {
+  display: inline-block;
+  font-style: normal;
+  animation: symPop 2.4s ease-in-out infinite;
+}
+
+@keyframes symPop {
+
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.4);
+    color: var(--accent);
+  }
+}
+
+/* ── particles ── */
+.parts {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.pt {
+  position: fixed;
+  z-index: 20;
+  font-weight: 700;
+  font-size: 0.9rem;
+  opacity: 0;
+  pointer-events: none;
+  animation: ptUp var(--d, 1.3s) ease-out var(--dl, 0s) forwards;
+}
+
+@keyframes ptUp {
+  0% {
+    opacity: 0.8;
+    transform: translateY(0) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-100px) scale(0.1);
+  }
+}
+
+/* ── shared entrance ── */
+@keyframes up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── enter button ── */
+.sub-btn {
+  position: relative;
+  z-index: 150;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-family: "JetBrains Mono", "Courier New", monospace;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: var(--canvas);
+  border: 1.5px solid var(--ink);
+  cursor: none;
+  transition: background 0.2s, color 0.2s, border-color 0.2s, transform 0.18s;
+  animation: up 0.8s ease-out 1.6s both;
+}
+
+.sub-btn .dot {
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: dotPulse 2s ease-in-out infinite;
+}
+
+@keyframes dotPulse {
+
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.4;
+    transform: scale(0.6);
+  }
+}
+
+.sub-btn:hover {
+  color: var(--canvas);
+  background: var(--ink);
+  border-color: var(--ink);
+  transform: translate(-2px, -2px);
+}
+
+.sub-btn:hover .dot {
+  background: var(--accent);
+}
+
+.sub-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* ── responsive ── */
+@media (max-width: 480px) {
+
+  .plumbob {
+    width: 110px;
+    height: 212px;
+  }
+
+  .h1 {
+    width: 150px;
+    height: 150px;
+  }
+
+  .h2 {
+    width: 200px;
+    height: 200px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .splash,
+  .text-wrap h1,
+  .year,
+  .year em,
+  .sub-btn,
+  .sub-btn .dot,
+  .gem-wrap,
+  .halo,
+  .w1 {
+    animation: none;
+  }
+}
