@@ -1,5 +1,30 @@
-<div class="splash" [class.splash--leaving]="leaving()">
-  <canvas #canvas class="splash__canvas" aria-hidden="true"></canvas>
+<div class="splash" #host [class.splash--leaving]="leaving()">
+  <svg #cur class="cur" viewBox="0 0 20 28" fill="none" aria-hidden="true">
+    <polygon points="10,1 19,11 10,14 1,11" fill="#39ff14" opacity=".9"></polygon>
+    <polygon points="10,14 19,11 10,27" fill="#22cc0a" opacity=".85"></polygon>
+    <polygon points="10,14 1,11 10,27" fill="#1a9908" opacity=".75"></polygon>
+    <polygon points="10,1 19,11 10,14 1,11" fill="white" opacity=".18"></polygon>
+  </svg>
 
-  <p class="splash__hint">Tap to continue</p>
+  <div class="ghost" aria-hidden="true">CAMPUS</div>
+
+  <main class="stage">
+    <div class="gem-wrap">
+      <div class="halo h1"></div>
+      <div class="halo h2"></div>
+      <svg #plumbob class="plumbob" viewBox="-120 -230 240 460" width="148" height="284"></svg>
+    </div>
+
+    <div class="text-wrap">
+      <h1><span class="w1">Smart</span><span class="w2">Campus</span></h1>
+      <p class="year"><em>&#9670;</em>&thinsp;2026</p>
+    </div>
+
+    <button type="button" class="sub-btn" (click)="enter()">
+      <span class="dot"></span>
+      enter
+    </button>
+  </main>
+
+  <div #parts class="parts" aria-hidden="true"></div>
 </div>
