@@ -123,10 +123,19 @@ interface RoomHighlight {
       flex-direction: column;
       gap: var(--space-3);
       padding: var(--space-4) var(--space-5);
-      background: var(--color-surface);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-md);
-      box-shadow: var(--shadow-xs);
+      background-color: var(--glass-bg-strong);
+      background-image: linear-gradient(180deg, var(--glass-highlight), transparent 30%);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--glass-shadow);
+      backdrop-filter: blur(18px) saturate(140%);
+      -webkit-backdrop-filter: blur(18px) saturate(140%);
+      transition:
+        border-color var(--transition-fast),
+        background-color var(--transition-base);
+    }
+    .panel:hover {
+      border-color: color-mix(in srgb, var(--color-accent) 28%, var(--glass-border));
     }
     h2 {
       margin: 0;

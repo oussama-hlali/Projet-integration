@@ -4,3 +4,4 @@ export * from './empty-state.component';
 export * from './confirm-dialog.component';
 export * from './page-header.component';
 export * from './role-switcher.component';
+export * from './theme-toggle.component';

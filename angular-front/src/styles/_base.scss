@@ -11,6 +11,7 @@ html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   scroll-behavior: smooth;
+  background: var(--wall-base);
 }
 
 body {
@@ -20,10 +21,37 @@ body {
   font-size: var(--font-size-base);
   line-height: var(--line-height-base);
   color: var(--color-text);
-  background-color: var(--color-bg);
+  background-color: var(--wall-base);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  transition:
+    background-color var(--transition-base),
+    color var(--transition-base);
+}
+
+/* Soft ambient wall that the glass chrome floats above. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: -18%;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(46% 44% at 12% 10%, var(--wall-glow-1), transparent 64%),
+    radial-gradient(42% 40% at 88% 6%, var(--wall-glow-2), transparent 62%),
+    radial-gradient(52% 48% at 72% 96%, var(--wall-glow-3), transparent 66%);
+  animation: wall-drift 38s ease-in-out infinite alternate;
+}
+
+@keyframes wall-drift {
+  from {
+    transform: translate3d(-1.5%, -1%, 0) scale(1.02);
+  }
+
+  to {
+    transform: translate3d(1.5%, 1.5%, 0) scale(1.07);
+  }
 }
 
 h1,
@@ -101,5 +129,9 @@ textarea {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+
+  body::before {
+    animation: none;
   }
 }

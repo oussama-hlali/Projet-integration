@@ -1,11 +1,24 @@
 .topbar {
+  position: sticky;
+  top: var(--space-3);
+  z-index: var(--z-sticky);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 78px;
-  padding: var(--space-3) var(--space-6);
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
+  gap: var(--space-4);
+  min-height: 68px;
+  padding: var(--space-2) var(--space-4) var(--space-2) var(--space-5);
+  background-color: var(--glass-bg);
+  background-image: linear-gradient(180deg, var(--glass-highlight), transparent 34%);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  transition:
+    background-color var(--transition-base),
+    border-color var(--transition-base),
+    box-shadow var(--transition-base);
 }
 
 .topbar__left,
@@ -17,39 +30,47 @@
 
 .topbar__left,
 .topbar__actions {
-  gap: var(--space-4);
+  gap: var(--space-3);
 }
 
 .topbar__eyebrow {
-  margin: 0 0 var(--space-1);
+  margin: 0 0 2px;
   color: var(--color-text-muted);
-  font-size: var(--font-size-xs);
+  font-size: 0.68rem;
   font-weight: var(--font-weight-semibold);
-  letter-spacing: 0.08em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
 .topbar__title {
   margin: 0;
-  font-size: var(--font-size-xl);
+  color: var(--color-text-strong);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: -0.01em;
 }
 
 .topbar__icon-button {
   position: relative;
   display: grid;
   place-items: center;
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
   color: var(--color-text-muted);
-  background: transparent;
+  background: color-mix(in srgb, var(--color-surface) 35%, transparent);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
   cursor: pointer;
+  transition:
+    color var(--transition-fast),
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    transform var(--transition-fast);
 }
 
 .topbar__icon-button svg {
-  width: 19px;
-  height: 19px;
+  width: 18px;
+  height: 18px;
   fill: none;
   stroke: currentColor;
   stroke-linecap: round;
@@ -59,7 +80,9 @@
 
 .topbar__icon-button:hover {
   color: var(--color-accent);
-  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+  border-color: color-mix(in srgb, var(--color-accent) 40%, transparent);
+  transform: translateY(-1px);
 }
 
 .topbar__menu-button {
@@ -69,22 +92,24 @@
 .topbar__collapse-button {
   color: var(--color-accent);
   background: var(--color-accent-soft);
-  border-color: transparent;
+  border-color: color-mix(in srgb, var(--color-accent) 32%, transparent);
 }
 
 .topbar__notification-dot {
   position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 6px;
-  height: 6px;
+  top: 7px;
+  right: 7px;
+  width: 7px;
+  height: 7px;
   background: var(--color-danger);
-  border: 1px solid var(--color-surface);
+  border: 2px solid var(--color-bg);
   border-radius: var(--radius-full);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-danger) 25%, transparent);
 }
 
 .topbar__profile {
   gap: var(--space-2);
+  padding-left: var(--space-1);
 }
 
 .topbar__avatar {
@@ -95,6 +120,7 @@
   color: var(--color-accent);
   font-weight: var(--font-weight-bold);
   background: var(--color-accent-soft);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 30%, transparent);
   border-radius: var(--radius-full);
 }
 
@@ -118,17 +144,30 @@
   padding: var(--space-2) var(--space-3);
   color: var(--color-danger);
   background: transparent;
-  border: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
   cursor: pointer;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast);
 }
 
 .topbar__logout:hover {
-  text-decoration: underline;
+  background: var(--color-danger-soft);
+  border-color: color-mix(in srgb, var(--color-danger) 30%, transparent);
+  text-decoration: none;
+}
+
+@media (max-width: 1023px) {
+  .topbar__profile-copy {
+    display: none;
+  }
 }
 
 @media (max-width: 767px) {
   .topbar {
-    padding: var(--space-3) var(--space-4);
+    top: var(--space-2);
+    padding: var(--space-2) var(--space-3);
   }
 
   .topbar__menu-button {
@@ -136,9 +175,33 @@
   }
 
   .topbar__collapse-button,
+  .topbar__notification-button,
   .topbar__profile,
   .topbar__profile-copy,
   .topbar__logout {
+    display: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .topbar__eyebrow {
+    display: none;
+  }
+
+  .topbar__actions {
+    gap: var(--space-2);
+  }
+
+  .topbar__title {
+    overflow: hidden;
+    max-width: 9ch;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 380px) {
+  .topbar__left > div {
     display: none;
   }
 }

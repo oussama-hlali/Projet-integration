@@ -39,7 +39,7 @@ interface RoleOption {
         display: inline-flex;
         gap: 2px;
         padding: 3px;
-        background: var(--color-surface-muted);
+        background: color-mix(in srgb, var(--color-surface) 42%, transparent);
         border: 1px solid var(--color-border);
         border-radius: var(--radius-full);
       }
@@ -67,8 +67,8 @@ interface RoleOption {
 
       .switcher__option--active {
         color: var(--color-accent);
-        background: var(--color-surface);
-        box-shadow: var(--shadow-xs);
+        background: var(--color-accent-soft);
+        box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 24%, transparent);
       }
 
       .switcher__option:focus-visible {

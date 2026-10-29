@@ -1,11 +1,11 @@
 import { Component, inject, input, output } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
-import { RoleSwitcherComponent } from '../../shared/components';
+import { RoleSwitcherComponent, ThemeToggleComponent } from '../../shared/components';
 
 @Component({
   selector: 'app-topbar',
-  imports: [RouterLink, RoleSwitcherComponent],
+  imports: [RouterLink, RoleSwitcherComponent, ThemeToggleComponent],
   templateUrl: './topbar.html',
   styleUrl: './topbar.scss',
 })

@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, input } from '@angular/core';
 
 export type BadgeVariant = 'success' | 'warning' | 'danger' | 'info' | 'neutral';
 
@@ -6,15 +6,43 @@ export type BadgeVariant = 'success' | 'warning' | 'danger' | 'info' | 'neutral'
   selector: 'app-status-badge',
   standalone: true,
   template: `<span class="badge" [class]="variant()">{{ label() }}</span>`,
-  styles: [`
-    .badge { display:inline-block; padding:.2rem .6rem; border-radius:999px;
-             font-size:.75rem; font-weight:600; }
-    .success { background:#dcfce7; color:#166534; }
-    .warning { background:#fef3c7; color:#92400e; }
-    .danger  { background:#fee2e2; color:#991b1b; }
-    .info    { background:#dbeafe; color:#1e40af; }
-    .neutral { background:#f3f4f6; color:#374151; }
-  `],
+  styles: [
+    `
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.18rem 0.6rem;
+        font-size: 0.72rem;
+        font-weight: var(--font-weight-semibold);
+        letter-spacing: 0.02em;
+        border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+        border-radius: var(--radius-full);
+        background: color-mix(in srgb, currentColor 14%, transparent);
+      }
+
+      .success {
+        color: var(--color-success);
+      }
+
+      .warning {
+        color: var(--color-warning);
+      }
+
+      .danger {
+        color: var(--color-danger);
+      }
+
+      .info {
+        color: var(--color-info);
+      }
+
+      .neutral {
+        color: var(--color-text-muted);
+        background: color-mix(in srgb, var(--color-text-muted) 12%, transparent);
+        border-color: color-mix(in srgb, var(--color-text-muted) 26%, transparent);
+      }
+    `,
+  ],
 })
 export class StatusBadgeComponent {
   label = input.required<string>();

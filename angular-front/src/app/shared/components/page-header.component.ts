@@ -12,13 +12,42 @@ import { Component, input } from '@angular/core';
       <div class="actions"><ng-content /></div>
     </header>
   `,
-  styles: [`
-    .header { display:flex; justify-content:space-between; align-items:center;
-              gap:1rem; margin-bottom:1.5rem; }
-    h1 { margin:0; font-size:1.5rem; }
-    p { margin:.25rem 0 0; color:#6b7280; }
-    .actions { display:flex; gap:.5rem; }
-  `],
+  styles: [
+    `
+      .header {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: var(--space-4);
+        margin-bottom: var(--space-5);
+      }
+
+      h1 {
+        margin: 0;
+        color: var(--color-text-strong);
+        font-size: var(--font-size-3xl);
+        font-weight: var(--font-weight-semibold);
+        letter-spacing: -0.02em;
+      }
+
+      p {
+        margin: var(--space-1) 0 0;
+        color: var(--color-text-muted);
+      }
+
+      .actions {
+        display: flex;
+        gap: var(--space-2);
+      }
+
+      @media (max-width: 480px) {
+        .header {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+      }
+    `,
+  ],
 })
 export class PageHeaderComponent {
   title = input.required<string>();

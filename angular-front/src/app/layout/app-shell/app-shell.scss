@@ -1,11 +1,16 @@
 .shell {
   display: flex;
+  gap: var(--space-3);
   min-height: 100dvh;
-  background: var(--color-bg);
+  padding: var(--space-3);
+  background: transparent;
 }
 
 .shell__sidebar {
+  position: sticky;
+  top: var(--space-3);
   flex: none;
+  height: calc(100dvh - var(--space-3) * 2);
   transition:
     width var(--transition-base),
     opacity var(--transition-base);
@@ -20,6 +25,7 @@
   flex: 1;
   min-width: 0;
   flex-direction: column;
+  gap: var(--space-3);
 }
 
 .shell__content {
@@ -32,6 +38,10 @@
 }
 
 @media (max-width: 767px) {
+  .shell {
+    padding: var(--space-2);
+  }
+
   .shell--sidebar-collapsed .shell__sidebar {
     display: block;
   }
@@ -42,6 +52,8 @@
     top: 0;
     bottom: 0;
     left: 0;
+    height: 100dvh;
+    padding: var(--space-2);
     visibility: hidden;
     transform: translateX(-100%);
     transition:
@@ -61,6 +73,8 @@
     display: block;
     visibility: hidden;
     background: var(--color-overlay);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     opacity: 0;
     transition:
       opacity var(--transition-base),
