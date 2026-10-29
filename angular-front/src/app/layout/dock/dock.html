@@ -1,0 +1,28 @@
+<nav class="dock glass glass--thick" aria-label="Shortcuts">
+  @for (item of visibleAccount(); track item.route) {
+    <a
+      class="dock__btn"
+      [routerLink]="item.route"
+      routerLinkActive="dock__btn--active"
+      [routerLinkActiveOptions]="{ exact: true }"
+      [attr.aria-label]="item.label"
+      [attr.data-label]="item.label"
+    >
+      <app-nav-icon [name]="item.icon" />
+    </a>
+  }
+
+  <span class="dock__divider" aria-hidden="true"></span>
+
+  <app-theme-toggle class="dock__theme" />
+
+  <button
+    class="dock__btn dock__btn--quit"
+    type="button"
+    aria-label="Log out"
+    data-label="Log out"
+    (click)="logout()"
+  >
+    <app-nav-icon name="logout" />
+  </button>
+</nav>

@@ -17,15 +17,76 @@ import { Component, input, model, output } from '@angular/core';
       </div>
     }
   `,
-  styles: [`
-    .backdrop { position:fixed; inset:0; background:rgba(0,0,0,.4);
-                display:grid; place-items:center; z-index:1000; }
-    .dialog { background:#fff; border-radius:.75rem; padding:1.5rem; width:min(420px,90vw); }
-    h3 { margin:0 0 .5rem; }
-    .actions { display:flex; justify-content:flex-end; gap:.5rem; margin-top:1.25rem; }
-    button { padding:.5rem 1rem; border-radius:.5rem; border:1px solid #d1d5db; background:#fff; cursor:pointer; }
-    button.danger { background:#dc2626; border-color:#dc2626; color:#fff; }
-  `],
+  styles: [
+    `
+      .backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: var(--z-modal);
+        display: grid;
+        place-items: center;
+        background: var(--color-overlay);
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+      }
+
+      .dialog {
+        width: min(420px, 90vw);
+        padding: var(--space-5);
+        color: var(--color-text);
+        background-color: var(--glass-bg-strong);
+        background-image: linear-gradient(180deg, var(--glass-highlight), transparent 36%);
+        border: 1px solid var(--glass-border);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-lg);
+        backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+        -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+      }
+
+      h3 {
+        margin: 0 0 var(--space-2);
+        color: var(--color-text-strong);
+      }
+
+      p {
+        margin: 0;
+        color: var(--color-text-muted);
+      }
+
+      .actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: var(--space-2);
+        margin-top: var(--space-5);
+      }
+
+      button {
+        padding: var(--space-2) var(--space-4);
+        color: var(--color-text);
+        background: transparent;
+        border: 1px solid var(--color-border-strong);
+        border-radius: var(--radius-md);
+        cursor: pointer;
+        transition:
+          background-color var(--transition-fast),
+          border-color var(--transition-fast);
+      }
+
+      button:hover {
+        background: color-mix(in srgb, var(--color-text-strong) 8%, transparent);
+      }
+
+      button.danger {
+        color: #fff;
+        background: var(--color-danger);
+        border-color: var(--color-danger);
+      }
+
+      button.danger:hover {
+        background: color-mix(in srgb, var(--color-danger) 84%, black);
+      }
+    `,
+  ],
 })
 export class ConfirmDialogComponent {
   open = model(false);

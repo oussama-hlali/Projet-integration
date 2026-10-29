@@ -10,11 +10,28 @@ import { Component, input } from '@angular/core';
       <ng-content />
     </div>
   `,
-  styles: [`
-    .empty { text-align:center; padding:3rem 1rem; color:#6b7280; }
-    h3 { margin:0 0 .5rem; color:#111827; }
-    p { margin:0 0 1rem; }
-  `],
+  styles: [
+    `
+      .empty {
+        padding: var(--space-5) var(--space-4);
+        color: var(--color-text-muted);
+        text-align: center;
+        background: color-mix(in srgb, var(--color-surface) 32%, transparent);
+        border: 1px dashed var(--color-border-strong);
+        border-radius: var(--radius-lg);
+      }
+
+      h3 {
+        margin: 0 0 var(--space-2);
+        color: var(--color-text-strong);
+        font-size: var(--font-size-base);
+      }
+
+      p {
+        margin: 0 0 var(--space-3);
+      }
+    `,
+  ],
 })
 export class EmptyStateComponent {
   title = input.required<string>();

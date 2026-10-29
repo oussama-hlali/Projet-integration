@@ -1,42 +1,47 @@
 /* Smart Campus — design tokens (single source of truth).
    Exposed as CSS custom properties on :root so any standalone component,
-   teammate, or future theme can consume them without SCSS coupling. */
-:root {
-  /* Surfaces */
-  --color-bg: #f4f6fb;
-  --color-bg-subtle: #eaeef6;
-  --color-surface: #ffffff;
-  --color-surface-muted: #f8fafc;
-  --color-overlay: rgba(15, 23, 42, 0.48);
+   teammate, or future theme can consume them without SCSS coupling.
 
-  /* Text — deep navy / indigo */
-  --color-text: #1f2a44;
-  --color-text-strong: #111c3a;
-  --color-text-muted: #64748b;
+   Two layers per theme:
+   1. Semantic tokens (colour, type, spacing) — what components should use.
+   2. Surface tokens (glass, lens, wall) — what the liquid-glass utilities use. */
+
+:root {
+  color-scheme: light;
+
+  /* ── Semantic colour ─────────────────────────────────────── */
+  --color-bg: #e7eaf1;
+  --color-bg-subtle: #dfe4ee;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f4f7fb;
+  --color-overlay: rgba(12, 17, 28, 0.45);
+
+  --color-text: #16202e;
+  --color-text-strong: #0a1220;
+  --color-text-muted: #5c6b80;
   --color-text-inverse: #ffffff;
 
-  /* Accent — restrained teal / blue */
-  --color-accent: #0d7c78;
-  --color-accent-hover: #0a615e;
-  --color-accent-active: #084c4a;
-  --color-accent-soft: #d3f1ef;
+  --color-accent: #0c6f6b;
+  --color-accent-hover: #095956;
+  --color-accent-active: #074542;
+  --color-accent-soft: rgba(12, 111, 107, 0.1);
+  --color-accent-fill: #7fe0d4;
+  --color-accent-text: #0b5a56;
   --color-accent-contrast: #ffffff;
 
-  /* Borders */
-  --color-border: #e2e8f0;
-  --color-border-strong: #cbd5e1;
+  --color-border: rgba(16, 24, 40, 0.1);
+  --color-border-strong: rgba(16, 24, 40, 0.18);
 
-  /* Feedback */
-  --color-success: #15803d;
-  --color-success-soft: #dcfce7;
-  --color-warning: #b45309;
-  --color-warning-soft: #fef3c7;
-  --color-danger: #b91c1c;
-  --color-danger-soft: #fee2e2;
-  --color-info: #1d4ed8;
-  --color-info-soft: #dbeafe;
+  --color-success: #14713c;
+  --color-success-soft: rgba(20, 113, 60, 0.12);
+  --color-warning: #8a5200;
+  --color-warning-soft: rgba(180, 110, 0, 0.14);
+  --color-danger: #a52a24;
+  --color-danger-soft: rgba(165, 42, 36, 0.12);
+  --color-info: #1c4fa8;
+  --color-info-soft: rgba(28, 79, 168, 0.12);
 
-  /* Spacing scale */
+  /* ── Spacing scale ───────────────────────────────────────── */
   --space-0: 0;
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -48,27 +53,29 @@
   --space-8: 4rem;
   --space-9: 6rem;
 
-  /* Radii */
+  /* ── Radii ───────────────────────────────────────────────── */
   --radius-xs: 4px;
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 18px;
   --radius-xl: 26px;
+  --radius-card: 26px;
+  --radius-tile: 22px;
   --radius-full: 9999px;
 
-  /* Shadows */
-  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.06);
-  --shadow-sm: 0 2px 6px rgba(15, 23, 42, 0.08);
-  --shadow-md: 0 8px 20px rgba(15, 23, 42, 0.1);
-  --shadow-lg: 0 20px 45px rgba(15, 23, 42, 0.16);
+  /* ── Shadows ─────────────────────────────────────────────── */
+  --shadow-xs: 0 1px 2px rgba(16, 24, 40, 0.06);
+  --shadow-sm: 0 2px 6px rgba(16, 24, 40, 0.08);
+  --shadow-md: 0 10px 24px -12px rgba(16, 24, 40, 0.28);
+  --shadow-lg: 0 28px 60px -28px rgba(16, 24, 40, 0.45);
 
-  /* Typography */
-  --font-family-base: 'Inter', 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue',
+  /* ── Typography ──────────────────────────────────────────── */
+  --font-family-base: 'Urbanist', 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue',
     Arial, sans-serif;
   --font-family-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, 'Liberation Mono',
     monospace;
-  --font-family-display: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia,
-    'Times New Roman', serif;
+  --font-family-display: 'Urbanist', 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue',
+    Arial, sans-serif;
 
   --font-size-xs: 0.75rem;
   --font-size-sm: 0.875rem;
@@ -88,9 +95,13 @@
   --line-height-base: 1.55;
   --line-height-relaxed: 1.75;
 
-  /* Layout */
-  --container-max: 1200px;
+  /* ── Layout ──────────────────────────────────────────────── */
+  --container-max: 1320px;
   --container-narrow: 480px;
+  --app-max: 1680px;
+  --gutter: clamp(16px, 1.8vw, 30px);
+  --dock-x: 16px;
+  --dock-w: 58px;
 
   /* Breakpoints (reference for media queries) */
   --bp-sm: 480px;
@@ -107,7 +118,132 @@
   --z-modal: 500;
   --z-toast: 600;
 
-  /* Motion */
-  --transition-fast: 120ms ease;
-  --transition-base: 200ms ease;
+  /* ── Motion ──────────────────────────────────────────────── */
+  --transition-fast: 130ms var(--ease-out);
+  --transition-base: 240ms var(--ease-out);
+  --transition-slow: 420ms var(--ease-out);
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* ── Liquid-glass surfaces ───────────────────────────────── */
+  --glass-bg: rgba(255, 255, 255, 0.42);
+  --glass-bg-chrome: rgba(255, 255, 255, 0.34);
+  --glass-bg-strong: rgba(255, 255, 255, 0.78);
+  --glass-border: rgba(255, 255, 255, 0.72);
+  --glass-highlight: rgba(255, 255, 255, 0.55);
+  --glass-blur: 14px;
+  --glass-blur-thick: 28px;
+  --glass-sat: 155%;
+  --glass-bright: 1.06;
+  --glass-rim-hi: rgba(255, 255, 255, 0.92);
+  --glass-rim-mid: rgba(255, 255, 255, 0.55);
+  --glass-rim-lo: rgba(255, 255, 255, 0.18);
+  --glass-depth:
+    inset 0 1px 1px rgba(255, 255, 255, 0.95),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.45),
+    inset 4px 5px 14px -8px rgba(255, 255, 255, 0.85),
+    inset -5px -7px 16px -10px rgba(255, 255, 255, 0.55);
+  --glass-shadow:
+    var(--glass-depth),
+    0 1px 2px rgba(16, 24, 40, 0.06),
+    0 22px 44px -24px rgba(16, 24, 40, 0.35);
+
+  /* Sliding "lens" used behind the active tab / dock item */
+  --lens: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.62));
+  --lens-shadow:
+    inset 0 1px 1px #ffffff,
+    inset 0 -2px 5px rgba(255, 255, 255, 0.6),
+    0 6px 14px -8px rgba(16, 24, 40, 0.35),
+    0 1px 2px rgba(16, 24, 40, 0.12);
+
+  /* Pressed / hovered well inside glass chrome */
+  --well: rgba(20, 24, 40, 0.07);
+  --line: rgba(16, 24, 40, 0.1);
+
+  /* Text painted on saturated accent fills */
+  --color-on-accent: #ffffff;
+
+  /* ── Ambient "wall" behind the glass ─────────────────────── */
+  --wall-base: #dfe5ef;
+  --wall-glow-1: rgba(12, 111, 107, 0.2);
+  --wall-glow-2: rgba(58, 120, 246, 0.16);
+  --wall-glow-3: rgba(126, 90, 240, 0.14);
+}
+
+/* ── Dark theme ──────────────────────────────────────────── */
+html[data-theme='dark'] {
+  color-scheme: dark;
+
+  --color-bg: #0d0f13;
+  --color-bg-subtle: #12151b;
+  --color-surface: #16191f;
+  --color-surface-muted: #1b1f27;
+  --color-overlay: rgba(4, 6, 10, 0.66);
+
+  --color-text: #e9eff8;
+  --color-text-strong: #f8fafd;
+  --color-text-muted: #a4b0c2;
+  --color-text-inverse: #ffffff;
+
+  --color-accent: #6fe3d4;
+  --color-accent-hover: #8ff0e3;
+  --color-accent-active: #b3f7ee;
+  --color-accent-soft: rgba(111, 227, 212, 0.14);
+  --color-accent-fill: #2f5f5a;
+  --color-accent-text: #9df0e2;
+  --color-accent-contrast: #052420;
+
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-border-strong: rgba(255, 255, 255, 0.2);
+
+  --color-success: #8fdca8;
+  --color-success-soft: rgba(143, 220, 168, 0.14);
+  --color-warning: #f3cd7e;
+  --color-warning-soft: rgba(243, 205, 126, 0.14);
+  --color-danger: #f6a59c;
+  --color-danger-soft: rgba(246, 165, 156, 0.14);
+  --color-info: #a9cdfc;
+  --color-info-soft: rgba(169, 205, 252, 0.14);
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.45);
+  --shadow-md: 0 12px 28px -12px rgba(0, 0, 0, 0.7);
+  --shadow-lg: 0 32px 70px -28px rgba(0, 0, 0, 0.85);
+
+  --glass-bg: rgba(30, 33, 39, 0.44);
+  --glass-bg-chrome: rgba(32, 35, 42, 0.38);
+  --glass-bg-strong: rgba(24, 27, 33, 0.82);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-highlight: rgba(255, 255, 255, 0.1);
+  --glass-blur: 16px;
+  --glass-blur-thick: 30px;
+  --glass-sat: 175%;
+  --glass-bright: 0.96;
+  --glass-rim-hi: rgba(255, 255, 255, 0.55);
+  --glass-rim-mid: rgba(255, 255, 255, 0.22);
+  --glass-rim-lo: rgba(255, 255, 255, 0.08);
+  --glass-depth:
+    inset 0 1px 1px rgba(255, 255, 255, 0.16),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.06),
+    inset 4px 5px 14px -8px rgba(255, 255, 255, 0.14),
+    inset -5px -7px 16px -10px rgba(255, 255, 255, 0.08);
+  --glass-shadow:
+    var(--glass-depth),
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 24px 48px -24px rgba(0, 0, 0, 0.8);
+
+  --lens: linear-gradient(180deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.1));
+  --lens-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.35),
+    inset 0 -2px 5px rgba(255, 255, 255, 0.06),
+    0 8px 18px -10px rgba(0, 0, 0, 0.7);
+
+  --well: rgba(255, 255, 255, 0.1);
+  --line: rgba(255, 255, 255, 0.1);
+
+  --color-on-accent: #052420;
+
+  --wall-base: #0b0d11;
+  --wall-glow-1: rgba(45, 212, 191, 0.18);
+  --wall-glow-2: rgba(58, 120, 246, 0.16);
+  --wall-glow-3: rgba(126, 90, 240, 0.14);
 }
