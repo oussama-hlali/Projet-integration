@@ -38,42 +38,51 @@ interface RoleOption {
       .switcher {
         display: inline-flex;
         gap: 2px;
-        padding: 3px;
-        background: color-mix(in srgb, var(--color-surface) 42%, transparent);
-        border: 1px solid var(--color-border);
+        align-items: center;
+        padding: 2px;
         border-radius: var(--radius-full);
       }
 
       .switcher__option {
-        padding: 0.3rem 0.7rem;
+        padding: 0.45rem 0.8rem;
         font: inherit;
-        font-size: var(--font-size-xs);
+        font-size: 0.76rem;
         font-weight: var(--font-weight-semibold);
-        line-height: 1.4;
+        line-height: 1.3;
         color: var(--color-text-muted);
+        white-space: nowrap;
         background: transparent;
         border: 0;
         border-radius: var(--radius-full);
         cursor: pointer;
         transition:
           color var(--transition-fast),
-          background var(--transition-fast),
+          background-color var(--transition-fast),
           box-shadow var(--transition-fast);
       }
 
       .switcher__option:hover {
         color: var(--color-text-strong);
+        background: var(--well);
       }
 
-      .switcher__option--active {
-        color: var(--color-accent);
-        background: var(--color-accent-soft);
-        box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 24%, transparent);
+      .switcher__option--active,
+      .switcher__option--active:hover {
+        color: var(--color-text-strong);
+        background: var(--lens);
+        box-shadow: var(--lens-shadow);
       }
 
       .switcher__option:focus-visible {
         outline: 2px solid var(--color-accent);
         outline-offset: 2px;
+      }
+
+      @media (max-width: 430px) {
+        .switcher__option {
+          padding: 0.42rem 0.6rem;
+          font-size: 0.72rem;
+        }
       }
     `,
   ],

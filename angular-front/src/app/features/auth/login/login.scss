@@ -5,6 +5,8 @@
 }
 
 .login__theme-toggle {
+  --theme-toggle-size: 40px;
+
   margin-left: auto;
 }
 
@@ -46,12 +48,13 @@
 
 .login__content {
   display: flex;
-  flex: 1;
   flex-direction: column;
   justify-content: center;
   width: 100%;
-  max-width: 400px;
-  margin-inline: auto;
+  max-width: 440px;
+  margin: auto;
+  padding: var(--space-6) var(--space-5);
+  border-radius: var(--radius-xl);
 }
 
 .login__header {

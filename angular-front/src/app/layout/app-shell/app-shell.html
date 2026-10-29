@@ -1,22 +1,12 @@
-<div class="shell" [class.shell--sidebar-collapsed]="sidebarCollapsed()">
-  <div
-    class="shell__mobile-overlay"
-    [class.shell__mobile-overlay--visible]="mobileMenuOpen()"
-    aria-hidden="true"
-    (click)="closeMobileMenu()"
-  ></div>
+<a class="skip-link" href="#main-content">Skip to content</a>
 
-  <div class="shell__sidebar" [class.shell__sidebar--open]="mobileMenuOpen()">
-    <app-sidebar (closeRequested)="closeMobileMenu()" />
-  </div>
+<div class="shell">
+  <app-dock />
 
   <div class="shell__body">
-    <app-topbar
-      [sidebarCollapsed]="sidebarCollapsed()"
-      (menuRequested)="openMobileMenu()"
-      (collapseRequested)="toggleSidebar()"
-    />
-    <main class="shell__content">
+    <app-topbar />
+
+    <main class="shell__content" id="main-content">
       <router-outlet />
     </main>
   </div>

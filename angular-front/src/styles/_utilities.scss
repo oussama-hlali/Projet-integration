@@ -12,7 +12,7 @@
   width: 100%;
   max-width: var(--container-max);
   margin-inline: auto;
-  padding: var(--space-6) var(--space-4);
+  padding: var(--space-2) 0 var(--space-6);
 }
 
 .page__title {
@@ -51,6 +51,103 @@
 
 .text-muted {
   color: var(--color-text-muted);
+}
+
+/* ── Liquid glass ─────────────────────────────────────────────
+   Layered sheen over a translucent fill, a blur/saturate/brightness
+   backdrop filter, inset depth shadows and a 1.25px conic rim drawn
+   with a mask. Everything is driven by the surface tokens so both
+   themes share one recipe. */
+.glass {
+  position: relative;
+  background:
+    linear-gradient(172deg, var(--glass-highlight) 0%, transparent 34%),
+    var(--glass-bg);
+  box-shadow: var(--glass-shadow);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat))
+    brightness(var(--glass-bright));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat))
+    brightness(var(--glass-bright));
+  transition:
+    background-color var(--transition-base),
+    box-shadow var(--transition-base),
+    color var(--transition-base);
+}
+
+.glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  padding: 1.25px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: conic-gradient(
+    from 300deg,
+    var(--glass-rim-hi) 0deg,
+    var(--glass-rim-lo) 55deg,
+    transparent 90deg,
+    var(--glass-rim-lo) 140deg,
+    var(--glass-rim-mid) 180deg,
+    var(--glass-rim-lo) 220deg,
+    transparent 270deg,
+    var(--glass-rim-lo) 315deg,
+    var(--glass-rim-hi) 360deg
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box exclude,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+
+/* Lighter variant used by the header chrome (brand, tab rail, tools). */
+.glass--chrome {
+  --glass-bg: var(--glass-bg-chrome);
+}
+
+/* Denser, more opaque variant for panels that hold lots of text. */
+.glass--thick {
+  --glass-bg: var(--glass-bg-strong);
+  --glass-blur: var(--glass-blur-thick);
+}
+
+/* Raised "lens" that marks the selected item in a rail. */
+.lens {
+  background: var(--lens);
+  box-shadow: var(--lens-shadow);
+}
+
+/* Round, borderless icon button used across the floating chrome. */
+.icon-btn {
+  --nav-icon-size: 20px;
+
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition:
+    color var(--transition-fast),
+    background-color var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.icon-btn:hover {
+  color: var(--color-text-strong);
+  background: var(--well);
+}
+
+.icon-btn:active {
+  transform: scale(0.95);
 }
 
 .visually-hidden {

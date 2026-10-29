@@ -4,10 +4,12 @@ import { Component, input } from '@angular/core';
   selector: 'app-stat-card',
   standalone: true,
   template: `
-    <div class="card">
+    <div class="card glass glass--thick">
       <span class="label">{{ label() }}</span>
       <strong class="value">{{ value() }}</strong>
-      @if (hint()) { <span class="hint">{{ hint() }}</span> }
+      @if (hint()) {
+        <span class="hint">{{ hint() }}</span>
+      }
     </div>
   `,
   styles: [
@@ -17,38 +19,30 @@ import { Component, input } from '@angular/core';
         flex-direction: column;
         gap: var(--space-1);
         padding: var(--space-4) var(--space-5);
-        background-color: var(--glass-bg);
-        background-image: linear-gradient(180deg, var(--glass-highlight), transparent 42%);
-        border: 1px solid var(--glass-border);
-        border-radius: var(--radius-lg);
-        box-shadow: var(--glass-shadow);
-        backdrop-filter: blur(18px) saturate(140%);
-        -webkit-backdrop-filter: blur(18px) saturate(140%);
+        border-radius: var(--radius-tile);
         transition:
-          transform var(--transition-fast),
-          border-color var(--transition-fast),
+          transform var(--transition-base),
           background-color var(--transition-base);
       }
 
       .card:hover {
-        transform: translateY(-2px);
-        border-color: color-mix(in srgb, var(--color-accent) 34%, var(--glass-border));
+        transform: translateY(-3px);
       }
 
       .label {
         color: var(--color-text-muted);
-        font-size: var(--font-size-xs);
+        font-size: 0.68rem;
         font-weight: var(--font-weight-semibold);
-        letter-spacing: 0.08em;
+        letter-spacing: 0.1em;
         text-transform: uppercase;
       }
 
       .value {
         color: var(--color-text-strong);
-        font-size: var(--font-size-3xl);
+        font-size: 2rem;
         font-weight: var(--font-weight-semibold);
         line-height: 1.1;
-        letter-spacing: -0.02em;
+        letter-spacing: -0.03em;
       }
 
       .hint {

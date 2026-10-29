@@ -1,38 +1,20 @@
-<header class="topbar">
-  <div class="topbar__left">
-    <button class="topbar__icon-button topbar__menu-button" type="button" aria-label="Open navigation menu" (click)="menuRequested.emit()">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
-    </button>
-    <button
-      class="topbar__icon-button topbar__collapse-button"
-      type="button"
-      [attr.aria-label]="sidebarCollapsed() ? 'Show sidebar' : 'Hide sidebar'"
-      (click)="collapseRequested.emit()"
-    >
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path [attr.d]="sidebarCollapsed() ? 'm10 6 6 6-6 6' : 'm14 6-6 6 6 6'" />
-      </svg>
-    </button>
-    <div>
-      <p class="topbar__eyebrow">Smart Campus</p>
-      <h1 class="topbar__title">{{ title }}</h1>
-    </div>
-  </div>
+<header class="top">
+  <a class="brand glass glass--chrome" routerLink="/dashboard" aria-label="Smart Campus home">
+    <span class="brand__mark" aria-hidden="true">SC</span>
+    <span class="brand__name">Smart Campus</span>
+  </a>
 
-  <div class="topbar__actions">
+  <app-tab-nav class="top__tabs" />
+
+  <div class="top__tools glass glass--chrome">
     <app-role-switcher />
-    <app-theme-toggle />
-    <a class="topbar__icon-button topbar__notification-button" routerLink="/notifications" aria-label="Notifications">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9ZM10 21h4" /></svg>
-      <span class="topbar__notification-dot" aria-hidden="true"></span>
+    <a
+      class="top__me"
+      routerLink="/profile"
+      [attr.aria-label]="'Signed in as ' + roleLabel + ' — open profile'"
+      [attr.title]="roleLabel"
+    >
+      <span class="top__avatar" aria-hidden="true">{{ auth.isAdmin() ? 'A' : 'S' }}</span>
     </a>
-    <div class="topbar__profile">
-      <span class="topbar__avatar" aria-hidden="true">{{ auth.isAdmin() ? 'A' : 'S' }}</span>
-      <span class="topbar__profile-copy">
-        <strong>{{ auth.isAdmin() ? 'Administrator' : 'Student' }}</strong>
-        <small>Demo account</small>
-      </span>
-    </div>
-    <button class="topbar__logout" type="button" (click)="logout()">Log out</button>
   </div>
 </header>

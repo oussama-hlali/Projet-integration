@@ -2,8 +2,8 @@ import { Component, inject } from '@angular/core';
 import { ThemeService } from '../../core/services/theme.service';
 
 /**
- * Light/dark switch. Small glass pill with a sliding knob; the active icon
- * reflects the current theme and the whole control is a single button.
+ * Light/dark switch rendered as a single round icon button: the sun and moon
+ * swap with a small rotation. Size follows `--theme-toggle-size`.
  */
 @Component({
   selector: 'app-theme-toggle',
@@ -12,112 +12,90 @@ import { ThemeService } from '../../core/services/theme.service';
     <button
       class="theme-toggle"
       type="button"
+      [class.theme-toggle--dark]="isDark()"
       [attr.aria-label]="isDark() ? 'Switch to light theme' : 'Switch to dark theme'"
       [attr.title]="isDark() ? 'Switch to light theme' : 'Switch to dark theme'"
+      [attr.aria-pressed]="isDark()"
       (click)="toggle()"
     >
-      <span class="theme-toggle__track" [class.theme-toggle__track--dark]="isDark()" aria-hidden="true">
-        <svg class="theme-toggle__icon theme-toggle__icon--sun" viewBox="0 0 24 24">
-          <circle cx="12" cy="12" r="4" />
-          <path d="M12 2.5v2M12 19.5v2M4.6 4.6 6 6M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4" />
-        </svg>
-        <svg class="theme-toggle__icon theme-toggle__icon--moon" viewBox="0 0 24 24">
-          <path d="M19.5 14.5A8 8 0 0 1 9.5 4.5a8 8 0 1 0 10 10Z" />
-        </svg>
-        <span class="theme-toggle__knob"></span>
-      </span>
+      <svg class="theme-toggle__icon theme-toggle__icon--sun" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="4" />
+        <path
+          d="M12 2.5v2M12 19.5v2M4.6 4.6 6 6M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"
+        />
+      </svg>
+      <svg class="theme-toggle__icon theme-toggle__icon--moon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M19.5 14.5A8 8 0 0 1 9.5 4.5a8 8 0 1 0 10 10Z" />
+      </svg>
     </button>
   `,
-  styles: [
-    `
-      .theme-toggle {
-        display: inline-flex;
-        padding: 0;
-        background: none;
-        border: 0;
-        border-radius: var(--radius-full);
-        cursor: pointer;
-      }
+  styles: `
+    :host {
+      display: inline-flex;
+    }
 
-      .theme-toggle__track {
-        position: relative;
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        align-items: center;
-        place-items: center;
-        width: 58px;
-        height: 30px;
-        padding: 3px;
-        color: var(--color-text-muted);
-        background: color-mix(in srgb, var(--color-surface) 45%, transparent);
-        border: 1px solid var(--color-border);
-        border-radius: var(--radius-full);
-        transition:
-          background-color var(--transition-base),
-          border-color var(--transition-base);
-      }
+    .theme-toggle {
+      display: grid;
+      place-items: center;
+      width: var(--theme-toggle-size, 44px);
+      height: var(--theme-toggle-size, 44px);
+      padding: 0;
+      color: var(--color-text-muted);
+      background: transparent;
+      border: 0;
+      border-radius: var(--radius-full);
+      cursor: pointer;
+      transition:
+        color var(--transition-fast),
+        background-color var(--transition-fast),
+        transform var(--transition-fast);
+    }
 
-      .theme-toggle__track:hover {
-        border-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-border));
-      }
+    .theme-toggle:hover {
+      color: var(--color-text-strong);
+      background: var(--well);
+    }
 
-      .theme-toggle__icon {
-        position: relative;
-        z-index: 1;
-        width: 14px;
-        height: 14px;
-        fill: none;
-        stroke: currentColor;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-        stroke-width: 1.7;
-        transition:
-          color var(--transition-base),
-          opacity var(--transition-base);
-      }
+    .theme-toggle:active {
+      transform: scale(0.94);
+    }
 
-      .theme-toggle__icon--sun {
-        color: var(--color-text-strong);
-      }
+    .theme-toggle__icon {
+      grid-area: 1 / 1;
+      width: calc(var(--theme-toggle-size, 44px) * 0.44);
+      height: calc(var(--theme-toggle-size, 44px) * 0.44);
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.7;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      transition:
+        opacity 180ms var(--ease-out),
+        transform 420ms var(--ease-out);
+    }
 
-      .theme-toggle__icon--moon {
-        opacity: 0.55;
-      }
+    .theme-toggle__icon--sun {
+      color: var(--color-warning);
+      opacity: 1;
+      transform: rotate(0deg) scale(1);
+    }
 
-      .theme-toggle__track--dark .theme-toggle__icon--sun {
-        color: var(--color-text-muted);
-        opacity: 0.55;
-      }
+    .theme-toggle__icon--moon {
+      opacity: 0;
+      transform: rotate(-70deg) scale(0.55);
+    }
 
-      .theme-toggle__track--dark .theme-toggle__icon--moon {
-        color: var(--color-accent);
-        opacity: 1;
-      }
+    .theme-toggle--dark .theme-toggle__icon--sun {
+      opacity: 0;
+      transform: rotate(70deg) scale(0.55);
+    }
 
-      .theme-toggle__knob {
-        position: absolute;
-        top: 2px;
-        left: 2px;
-        z-index: 0;
-        width: 24px;
-        height: 24px;
-        background: var(--color-surface);
-        border: 1px solid var(--color-border);
-        border-radius: var(--radius-full);
-        box-shadow: var(--shadow-xs);
-        transition: transform var(--transition-slow);
-      }
-
-      .theme-toggle__track--dark .theme-toggle__knob {
-        transform: translateX(28px);
-      }
-
-      .theme-toggle:focus-visible {
-        outline: 2px solid var(--color-accent);
-        outline-offset: 3px;
-      }
-    `,
-  ],
+    .theme-toggle--dark .theme-toggle__icon--moon {
+      color: var(--color-accent);
+      opacity: 1;
+      transform: rotate(0deg) scale(1);
+    }
+  `,
 })
 export class ThemeToggleComponent {
   private readonly themeService = inject(ThemeService);

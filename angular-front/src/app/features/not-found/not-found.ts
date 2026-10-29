@@ -14,6 +14,7 @@ import { RouterLink } from '@angular/router';
   `,
   styles: `
     .not-found {
+      padding: clamp(56px, 14vh, 140px) var(--space-4) var(--space-6);
       text-align: center;
     }
 

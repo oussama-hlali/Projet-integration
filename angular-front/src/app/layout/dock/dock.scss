@@ -1,0 +1,156 @@
+:host {
+  display: block;
+}
+
+.dock {
+  position: fixed;
+  z-index: var(--z-sticky);
+  top: 50%;
+  left: var(--dock-x);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: center;
+  max-height: calc(100dvh - 24px);
+  padding: 6px;
+  border-radius: var(--radius-full);
+  translate: 0 -50%;
+}
+
+.dock__btn {
+  --nav-icon-size: 20px;
+
+  position: relative;
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    color var(--transition-fast),
+    background-color var(--transition-fast),
+    box-shadow var(--transition-base),
+    transform var(--transition-fast);
+}
+
+.dock__btn:hover {
+  color: var(--color-text-strong);
+  background: var(--well);
+  text-decoration: none;
+}
+
+.dock__btn:active {
+  transform: scale(0.94);
+}
+
+.dock__btn--active {
+  color: var(--color-text-strong);
+  background: var(--lens);
+  box-shadow: var(--lens-shadow);
+}
+
+/* Hover/focus label, hidden on the mobile bottom bar. */
+.dock__btn::after {
+  content: attr(data-label);
+  position: absolute;
+  top: 50%;
+  left: calc(100% + 12px);
+  padding: 6px 11px;
+  font-size: 0.72rem;
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.2;
+  color: var(--color-text-strong);
+  white-space: nowrap;
+  pointer-events: none;
+  background: var(--glass-bg-strong);
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-sm);
+  opacity: 0;
+  transform: translate(-4px, -50%);
+  transition:
+    opacity var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.dock__btn:hover::after,
+.dock__btn:focus-visible::after {
+  opacity: 1;
+  transform: translate(0, -50%);
+}
+
+.dock__btn--quit:hover {
+  color: var(--color-danger);
+  background: var(--color-danger-soft);
+}
+
+.dock__divider {
+  flex: none;
+  width: 22px;
+  height: 1px;
+  margin: 3px 0;
+  background: var(--line);
+}
+
+.dock__theme {
+  --theme-toggle-size: 46px;
+}
+
+@media (max-height: 720px) {
+  .dock {
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+
+  .dock::-webkit-scrollbar {
+    display: none;
+  }
+
+  .dock__btn::after {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .dock {
+    top: auto;
+    right: 0;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    left: 0;
+    flex-direction: row;
+    justify-content: center;
+    width: fit-content;
+    max-width: calc(100% - 24px);
+    margin-inline: auto;
+    padding: 5px;
+    border-radius: var(--radius-full);
+    translate: none;
+  }
+
+  .dock__btn {
+    --nav-icon-size: 19px;
+
+    width: 42px;
+    height: 42px;
+  }
+
+  .dock__theme {
+    --theme-toggle-size: 42px;
+  }
+
+  .dock__btn::after {
+    display: none;
+  }
+
+  .dock__divider {
+    width: 1px;
+    height: 22px;
+    margin: 0 3px;
+  }
+}

@@ -1,0 +1,24 @@
+<nav class="tabs glass glass--chrome" aria-label="Sections">
+  <div class="tabs__track" #track>
+    <span
+      class="tabs__lens"
+      [class.tabs__lens--ready]="lens().ready"
+      [style.transform]="'translate3d(' + lens().x + 'px,' + lens().y + 'px,0)'"
+      [style.width.px]="lens().width"
+      [style.height.px]="lens().height"
+      aria-hidden="true"
+    ></span>
+
+    @for (item of items; track item.route) {
+      <a
+        class="tab"
+        [routerLink]="item.route"
+        routerLinkActive="tab--active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        <app-nav-icon class="tab__icon" [name]="item.icon" />
+        <span class="tab__label">{{ item.label }}</span>
+      </a>
+    }
+  </div>
+</nav>

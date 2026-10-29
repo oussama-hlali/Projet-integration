@@ -48,7 +48,7 @@ interface RoomHighlight {
       </div>
 
       <div class="grid">
-        <article class="panel">
+        <article class="panel glass glass--thick">
           <h2>Today's schedule</h2>
           @for (item of schedule; track item.time) {
             <div class="row">
@@ -61,7 +61,7 @@ interface RoomHighlight {
           }
         </article>
 
-        <article class="panel">
+        <article class="panel glass glass--thick">
           <h2>Upcoming events</h2>
           @for (event of upcomingEvents(); track event.id) {
             <div class="row">
@@ -75,7 +75,7 @@ interface RoomHighlight {
           <a class="link" routerLink="/events">See all events</a>
         </article>
 
-        <article class="panel">
+        <article class="panel glass glass--thick">
           <h2>Announcements</h2>
           @for (announcement of latestAnnouncements(); track announcement.id) {
             <div class="row">
@@ -92,7 +92,7 @@ interface RoomHighlight {
           <a class="link" routerLink="/announcements">See all announcements</a>
         </article>
 
-        <article class="panel">
+        <article class="panel glass glass--thick">
           <h2>Room highlights</h2>
           @for (room of rooms; track room.name) {
             <div class="row">
@@ -122,24 +122,20 @@ interface RoomHighlight {
       display: flex;
       flex-direction: column;
       gap: var(--space-3);
-      padding: var(--space-4) var(--space-5);
-      background-color: var(--glass-bg-strong);
-      background-image: linear-gradient(180deg, var(--glass-highlight), transparent 30%);
-      border: 1px solid var(--glass-border);
-      border-radius: var(--radius-lg);
-      box-shadow: var(--glass-shadow);
-      backdrop-filter: blur(18px) saturate(140%);
-      -webkit-backdrop-filter: blur(18px) saturate(140%);
+      padding: var(--space-5);
+      border-radius: var(--radius-card);
       transition:
-        border-color var(--transition-fast),
+        transform var(--transition-base),
         background-color var(--transition-base);
     }
     .panel:hover {
-      border-color: color-mix(in srgb, var(--color-accent) 28%, var(--glass-border));
+      transform: translateY(-2px);
     }
     h2 {
       margin: 0;
-      font-size: var(--font-size-lg);
+      font-size: 1.05rem;
+      font-weight: var(--font-weight-semibold);
+      letter-spacing: -0.01em;
       color: var(--color-text-strong);
     }
     .row {
