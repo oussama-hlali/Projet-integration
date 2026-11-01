@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { adminGuard } from './core/guards/admin.guard';
 import { authGuard } from './core/guards/auth.guard';
 import { AppShell } from './layout/app-shell/app-shell';
+import { RoomsSearchComponent } from './shared/components/rooms-search.component';
 
 export const routes: Routes = [
   {
@@ -103,6 +104,7 @@ export const routes: Routes = [
             (m) => m.AdminAnnouncements,
           ),
       },
+      { path: 'rooms', component: RoomsSearchComponent },
       {
         path: 'admin/users',
         title: 'Admin · Users',
