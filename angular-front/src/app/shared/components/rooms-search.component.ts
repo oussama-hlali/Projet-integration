@@ -64,7 +64,7 @@ import { StatusBadgeComponent, EmptyStateComponent, BadgeVariant } from './index
   `],
 })
 export class RoomsSearchComponent {
-  rooms = signal<Room[]>([]); // à remplir depuis ton service/API
+  rooms = signal<Room[]>([]);
 
   building = signal('');
   minCapacity = signal<number | null>(null);
