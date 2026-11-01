@@ -1,0 +1,162 @@
+<section class="reservations-page" aria-labelledby="reservations-title">
+  <header class="page-header">
+    <div>
+      <h1 id="reservations-title">Reservations</h1>
+      <p class="page-header__description">
+        Book a room for your next study session or project meeting.
+      </p>
+    </div>
+  </header>
+
+  <div class="reservations-layout">
+    <section class="card form-card" aria-labelledby="new-reservation-title">
+      <div class="card__header">
+        <div>
+          <h2 id="new-reservation-title">Create a reservation</h2>
+          <p>Each student can have one active reservation at a time.</p>
+        </div>
+        <span class="card__icon" aria-hidden="true">+</span>
+      </div>
+
+      @if (reservationCreated()) {
+        <p class="success-message" role="status">Reservation created successfully.</p>
+      }
+
+      @if (hasReservations()) {
+        <p class="limit-message" role="status">
+          You already have an active reservation. Remove it before creating another one.
+        </p>
+      }
+
+      <form [formGroup]="reservationForm" (ngSubmit)="submitReservation()" novalidate>
+        <fieldset [disabled]="!canCreateReservation()">
+          <legend class="sr-only">Reservation details</legend>
+          <div class="form-field">
+            <label for="room">Room <span aria-hidden="true">*</span></label>
+            <select
+              id="room"
+              formControlName="room"
+              [class.form-control--invalid]="isInvalid('room')"
+            >
+              <option value="" disabled>Select a room</option>
+              <option>Innovation Lab</option>
+              <option>Study Room A</option>
+              <option>Study Room B</option>
+              <option>Conference Room</option>
+            </select>
+            @if (isInvalid('room')) {
+              <p class="field-error" id="room-error">Please select a room.</p>
+            }
+          </div>
+
+          <div class="form-field">
+            <label for="date">Date <span aria-hidden="true">*</span></label>
+            <input
+              id="date"
+              type="date"
+              formControlName="date"
+              [min]="today"
+              [class.form-control--invalid]="isInvalid('date')"
+            />
+            @if (isInvalid('date')) {
+              <p class="field-error" id="date-error">Please choose a date from today onwards.</p>
+            }
+          </div>
+
+          <div class="form-row">
+            <div class="form-field">
+              <label for="startTime">Start time <span aria-hidden="true">*</span></label>
+              <input
+                id="startTime"
+                type="time"
+                formControlName="startTime"
+                [class.form-control--invalid]="isInvalid('startTime')"
+              />
+              @if (isInvalid('startTime')) {
+                <p class="field-error" id="start-time-error">Enter a start time.</p>
+              }
+            </div>
+            <div class="form-field">
+              <label for="endTime">End time <span aria-hidden="true">*</span></label>
+              <input
+                id="endTime"
+                type="time"
+                formControlName="endTime"
+                [class.form-control--invalid]="isInvalid('endTime')"
+              />
+              @if (isInvalid('endTime') && hasValidTimeRange()) {
+                <p class="field-error" id="end-time-error">Enter an end time.</p>
+              }
+              @if (!hasValidTimeRange()) {
+                <p class="field-error" id="time-range-error">End time must be after start time.</p>
+              }
+            </div>
+          </div>
+
+          <div class="form-field">
+            <label for="purpose">Purpose <span aria-hidden="true">*</span></label>
+            <textarea
+              id="purpose"
+              formControlName="purpose"
+              rows="3"
+              placeholder="What will you use the room for?"
+              [class.form-control--invalid]="isInvalid('purpose')"
+            ></textarea>
+            @if (isInvalid('purpose')) {
+              <p class="field-error" id="purpose-error">Enter between 10 and 120 characters.</p>
+            }
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="button button--secondary" (click)="cancel()">
+              Cancel
+            </button>
+            <button type="submit" class="button button--primary">Create reservation</button>
+          </div>
+        </fieldset>
+      </form>
+    </section>
+
+    <section class="card upcoming-card" aria-labelledby="upcoming-title">
+      <div class="card__header">
+        <div>
+          <h2 id="upcoming-title">Your reservations</h2>
+          <p>{{ reservations().length }} active room booking</p>
+        </div>
+        <span class="reservation-count">{{ reservations().length }}</span>
+      </div>
+
+      @if (hasReservations()) {
+        <ul class="reservation-list">
+          @for (reservation of reservations(); track reservation.id) {
+            <li class="reservation-item">
+              <div class="reservation-item__date" aria-hidden="true">
+                <span>{{ reservation.date | date: 'MMM' }}</span>
+                <strong>{{ reservation.date | date: 'd' }}</strong>
+              </div>
+              <div class="reservation-item__details">
+                <h3>{{ reservation.room }}</h3>
+                <p>{{ reservation.startTime }} – {{ reservation.endTime }}</p>
+                <span>{{ reservation.purpose }}</span>
+              </div>
+              <button
+                type="button"
+                class="remove-button"
+                [attr.aria-label]="'Remove reservation for ' + reservation.room"
+                (click)="removeReservation(reservation.id)"
+              >
+                Remove
+              </button>
+            </li>
+          }
+        </ul>
+      } @else {
+        <div class="empty-state">
+          <span class="empty-state__icon" aria-hidden="true">□</span>
+          <h3>No reservations yet</h3>
+          <p>Your new room bookings will appear here.</p>
+        </div>
+      }
+    </section>
+  </div>
+</section>
