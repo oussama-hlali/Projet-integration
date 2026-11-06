@@ -1,162 +1,280 @@
-<section class="reservations-page" aria-labelledby="reservations-title">
-  <header class="page-header">
-    <div>
-      <h1 id="reservations-title">Reservations</h1>
-      <p class="page-header__description">
-        Book a room for your next study session or project meeting.
-      </p>
+<section class="page reservations">
+  <app-page-header
+    title="Reservations"
+    subtitle="Book a room, review your bookings and cancel when plans change."
+  >
+    <a class="button button--primary" href="#new-reservation">Book a room</a>
+  </app-page-header>
+
+  <div class="metrics">
+    @for (metric of metrics(); track metric.label) {
+      <app-stat-card [label]="metric.label" [value]="metric.value" [hint]="metric.hint" />
+    }
+  </div>
+
+  @if (feedback()) {
+    <div class="feedback" role="status">
+      <span>{{ feedback() }}</span>
+      <button
+        type="button"
+        class="feedback__close"
+        aria-label="Dismiss message"
+        (click)="dismissFeedback()"
+      >
+        &times;
+      </button>
     </div>
-  </header>
+  }
 
-  <div class="reservations-layout">
-    <section class="card form-card" aria-labelledby="new-reservation-title">
-      <div class="card__header">
+  <div class="layout">
+    <section class="panel glass glass--thick" aria-labelledby="list-title">
+      <div class="panel__head">
         <div>
-          <h2 id="new-reservation-title">Create a reservation</h2>
-          <p>Each student can have one active reservation at a time.</p>
+          <h2 id="list-title">Your reservations</h2>
+          <p class="muted">
+            Showing {{ filtered().length }} of {{ reservations().length }} bookings
+          </p>
         </div>
-        <span class="card__icon" aria-hidden="true">+</span>
       </div>
 
-      @if (reservationCreated()) {
-        <p class="success-message" role="status">Reservation created successfully.</p>
-      }
-
-      @if (hasReservations()) {
-        <p class="limit-message" role="status">
-          You already have an active reservation. Remove it before creating another one.
-        </p>
-      }
-
-      <form [formGroup]="reservationForm" (ngSubmit)="submitReservation()" novalidate>
-        <fieldset [disabled]="!canCreateReservation()">
-          <legend class="sr-only">Reservation details</legend>
-          <div class="form-field">
-            <label for="room">Room <span aria-hidden="true">*</span></label>
-            <select
-              id="room"
-              formControlName="room"
-              [class.form-control--invalid]="isInvalid('room')"
+      <div class="toolbar">
+        <div class="segmented" role="group" aria-label="Filter by status">
+          @for (option of statusOptions; track option.value) {
+            <button
+              type="button"
+              class="segmented__option"
+              [class.segmented__option--active]="statusFilter() === option.value"
+              [attr.aria-pressed]="statusFilter() === option.value"
+              (click)="setStatus(option.value)"
             >
-              <option value="" disabled>Select a room</option>
-              <option>Innovation Lab</option>
-              <option>Study Room A</option>
-              <option>Study Room B</option>
-              <option>Conference Room</option>
-            </select>
-            @if (isInvalid('room')) {
-              <p class="field-error" id="room-error">Please select a room.</p>
-            }
-          </div>
-
-          <div class="form-field">
-            <label for="date">Date <span aria-hidden="true">*</span></label>
-            <input
-              id="date"
-              type="date"
-              formControlName="date"
-              [min]="today"
-              [class.form-control--invalid]="isInvalid('date')"
-            />
-            @if (isInvalid('date')) {
-              <p class="field-error" id="date-error">Please choose a date from today onwards.</p>
-            }
-          </div>
-
-          <div class="form-row">
-            <div class="form-field">
-              <label for="startTime">Start time <span aria-hidden="true">*</span></label>
-              <input
-                id="startTime"
-                type="time"
-                formControlName="startTime"
-                [class.form-control--invalid]="isInvalid('startTime')"
-              />
-              @if (isInvalid('startTime')) {
-                <p class="field-error" id="start-time-error">Enter a start time.</p>
-              }
-            </div>
-            <div class="form-field">
-              <label for="endTime">End time <span aria-hidden="true">*</span></label>
-              <input
-                id="endTime"
-                type="time"
-                formControlName="endTime"
-                [class.form-control--invalid]="isInvalid('endTime')"
-              />
-              @if (isInvalid('endTime') && hasValidTimeRange()) {
-                <p class="field-error" id="end-time-error">Enter an end time.</p>
-              }
-              @if (!hasValidTimeRange()) {
-                <p class="field-error" id="time-range-error">End time must be after start time.</p>
-              }
-            </div>
-          </div>
-
-          <div class="form-field">
-            <label for="purpose">Purpose <span aria-hidden="true">*</span></label>
-            <textarea
-              id="purpose"
-              formControlName="purpose"
-              rows="3"
-              placeholder="What will you use the room for?"
-              [class.form-control--invalid]="isInvalid('purpose')"
-            ></textarea>
-            @if (isInvalid('purpose')) {
-              <p class="field-error" id="purpose-error">Enter between 10 and 120 characters.</p>
-            }
-          </div>
-
-          <div class="form-actions">
-            <button type="button" class="button button--secondary" (click)="cancel()">
-              Cancel
+              {{ option.label }}
+              <span class="segmented__count">{{ counts()[option.value] }}</span>
             </button>
-            <button type="submit" class="button button--primary">Create reservation</button>
-          </div>
-        </fieldset>
-      </form>
-    </section>
-
-    <section class="card upcoming-card" aria-labelledby="upcoming-title">
-      <div class="card__header">
-        <div>
-          <h2 id="upcoming-title">Your reservations</h2>
-          <p>{{ reservations().length }} active room booking</p>
+          }
         </div>
-        <span class="reservation-count">{{ reservations().length }}</span>
+
+        <div class="filters">
+          <label class="field field--room">
+            <span class="field__label">Room</span>
+            <select class="control" [value]="roomFilter()" (change)="setRoom($event)">
+              <option value="all">All rooms</option>
+              @for (room of filterRooms(); track room) {
+                <option [value]="room">{{ room }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="field field--search">
+            <span class="field__label">Search</span>
+            <input
+              class="control"
+              type="search"
+              placeholder="Room, purpose or date"
+              [value]="search()"
+              (input)="setSearch($event)"
+            />
+          </label>
+
+          @if (hasFilters()) {
+            <button type="button" class="button button--quiet" (click)="clearFilters()">
+              Clear filters
+            </button>
+          }
+        </div>
       </div>
 
-      @if (hasReservations()) {
-        <ul class="reservation-list">
-          @for (reservation of reservations(); track reservation.id) {
-            <li class="reservation-item">
-              <div class="reservation-item__date" aria-hidden="true">
-                <span>{{ reservation.date | date: 'MMM' }}</span>
-                <strong>{{ reservation.date | date: 'd' }}</strong>
+      @if (filtered().length) {
+        <ul class="bookings">
+          @for (reservation of filtered(); track reservation.id) {
+            <li class="booking" [class.booking--muted]="reservation.state === 'cancelled'">
+              <div class="booking__date" aria-hidden="true">
+                <span>{{ monthOf(reservation.date) }}</span>
+                <strong>{{ dayOf(reservation.date) }}</strong>
+                <small>{{ weekdayOf(reservation.date) }}</small>
               </div>
-              <div class="reservation-item__details">
-                <h3>{{ reservation.room }}</h3>
-                <p>{{ reservation.startTime }} – {{ reservation.endTime }}</p>
-                <span>{{ reservation.purpose }}</span>
+
+              <div class="booking__body">
+                <div class="booking__heading">
+                  <h3>{{ reservation.room }}</h3>
+                  <app-status-badge
+                    [label]="phaseLabel(reservation)"
+                    [variant]="phaseVariant(reservation)"
+                  />
+                </div>
+                <p class="booking__time">
+                  {{ longDate(reservation.date) }} · {{ reservation.startTime }} –
+                  {{ reservation.endTime }}
+                </p>
+                <p class="booking__purpose">{{ reservation.purpose }}</p>
               </div>
-              <button
-                type="button"
-                class="remove-button"
-                [attr.aria-label]="'Remove reservation for ' + reservation.room"
-                (click)="removeReservation(reservation.id)"
-              >
-                Remove
-              </button>
+
+              @if (canCancel(reservation)) {
+                <button
+                  type="button"
+                  class="button button--danger"
+                  [attr.aria-label]="
+                    'Cancel reservation for ' +
+                    reservation.room +
+                    ' on ' +
+                    longDate(reservation.date)
+                  "
+                  (click)="requestCancel(reservation)"
+                >
+                  Cancel
+                </button>
+              }
             </li>
           }
         </ul>
       } @else {
-        <div class="empty-state">
-          <span class="empty-state__icon" aria-hidden="true">□</span>
-          <h3>No reservations yet</h3>
-          <p>Your new room bookings will appear here.</p>
-        </div>
+        <app-empty-state
+          [title]="hasFilters() ? 'No reservations match these filters' : 'No reservations yet'"
+          [message]="
+            hasFilters()
+              ? 'Try another status, room or search term.'
+              : 'Book a room and it will appear here.'
+          "
+        >
+          @if (hasFilters()) {
+            <button type="button" class="button button--quiet" (click)="clearFilters()">
+              Clear filters
+            </button>
+          }
+        </app-empty-state>
       }
     </section>
+
+    <form
+      id="new-reservation"
+      class="panel glass glass--thick form-panel"
+      [formGroup]="form"
+      (ngSubmit)="submitReservation()"
+      novalidate
+      aria-labelledby="new-reservation-title"
+    >
+      <div class="panel__head">
+        <div>
+          <h2 id="new-reservation-title">Book a room</h2>
+          <p class="muted">A room can only hold one booking per time slot.</p>
+        </div>
+      </div>
+
+      @if (formError()) {
+        <p class="alert" role="alert">{{ formError() }}</p>
+      }
+
+      <fieldset>
+        <legend class="sr-only">Reservation details</legend>
+
+        <div class="form-field">
+          <label for="room">Room <span aria-hidden="true">*</span></label>
+          <select
+            id="room"
+            class="control"
+            formControlName="room"
+            [class.control--invalid]="isInvalid('room')"
+            [attr.aria-invalid]="isInvalid('room')"
+            [attr.aria-describedby]="isInvalid('room') ? 'room-error' : null"
+          >
+            <option value="" disabled>Select a room</option>
+            @for (room of rooms; track room) {
+              <option [value]="room">{{ room }}</option>
+            }
+          </select>
+          @if (isInvalid('room')) {
+            <p class="field-error" id="room-error">Please select a room.</p>
+          }
+        </div>
+
+        <div class="form-field">
+          <label for="date">Date <span aria-hidden="true">*</span></label>
+          <input
+            id="date"
+            class="control"
+            type="date"
+            formControlName="date"
+            [min]="today"
+            [class.control--invalid]="isInvalid('date')"
+            [attr.aria-invalid]="isInvalid('date')"
+            [attr.aria-describedby]="isInvalid('date') ? 'date-error' : null"
+          />
+          @if (isInvalid('date')) {
+            <p class="field-error" id="date-error">Please choose a date from today onwards.</p>
+          }
+        </div>
+
+        <div class="form-row">
+          <div class="form-field">
+            <label for="startTime">Start time <span aria-hidden="true">*</span></label>
+            <input
+              id="startTime"
+              class="control"
+              type="time"
+              formControlName="startTime"
+              [class.control--invalid]="isInvalid('startTime')"
+              [attr.aria-invalid]="isInvalid('startTime')"
+              [attr.aria-describedby]="isInvalid('startTime') ? 'start-time-error' : null"
+            />
+            @if (isInvalid('startTime')) {
+              <p class="field-error" id="start-time-error">Enter a start time.</p>
+            }
+          </div>
+
+          <div class="form-field">
+            <label for="endTime">End time <span aria-hidden="true">*</span></label>
+            <input
+              id="endTime"
+              class="control"
+              type="time"
+              formControlName="endTime"
+              [class.control--invalid]="isInvalid('endTime') || !hasValidTimeRange()"
+              [attr.aria-invalid]="isInvalid('endTime') || !hasValidTimeRange()"
+              [attr.aria-describedby]="
+                !hasValidTimeRange() ? 'time-range-error' : isInvalid('endTime') ? 'end-time-error' : null
+              "
+            />
+            @if (!hasValidTimeRange()) {
+              <p class="field-error" id="time-range-error">End time must be after start time.</p>
+            } @else if (isInvalid('endTime')) {
+              <p class="field-error" id="end-time-error">Enter an end time.</p>
+            }
+          </div>
+        </div>
+
+        <div class="form-field">
+          <label for="purpose">Purpose <span aria-hidden="true">*</span></label>
+          <textarea
+            id="purpose"
+            class="control"
+            formControlName="purpose"
+            rows="3"
+            placeholder="What will you use the room for?"
+            [class.control--invalid]="isInvalid('purpose')"
+            [attr.aria-invalid]="isInvalid('purpose')"
+            [attr.aria-describedby]="isInvalid('purpose') ? 'purpose-error' : null"
+          ></textarea>
+          @if (isInvalid('purpose')) {
+            <p class="field-error" id="purpose-error">Enter between 10 and 120 characters.</p>
+          }
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="button button--quiet" (click)="resetForm()">Reset</button>
+          <button type="submit" class="button button--primary">Create reservation</button>
+        </div>
+      </fieldset>
+    </form>
   </div>
+
+  <app-confirm-dialog
+    [open]="dialogOpen()"
+    (openChange)="dialogOpen.set($event)"
+    title="Cancel reservation"
+    [message]="dialogMessage()"
+    confirmLabel="Cancel reservation"
+    cancelLabel="Keep booking"
+    [danger]="true"
+    (confirmed)="confirmCancel()"
+    (cancelled)="dismissCancel()"
+  />
 </section>
