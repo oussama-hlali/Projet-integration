@@ -44,6 +44,12 @@ export const routes: Routes = [
         loadComponent: () => import('./features/events/events').then((m) => m.Events),
       },
       {
+        path: 'events/:id',
+        title: 'Event · Smart Campus',
+        loadComponent: () =>
+          import('./features/events/event-detail').then((m) => m.EventDetail),
+      },
+      {
         path: 'announcements',
         title: 'Announcements · Smart Campus',
         loadComponent: () =>

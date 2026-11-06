@@ -1,0 +1,130 @@
+<section class="page events">
+  <app-page-header
+    title="Events"
+    subtitle="Browse what is happening on campus and open an event for the full details."
+  >
+    <span class="total-pill">{{ counts().all }} events</span>
+  </app-page-header>
+
+  @if (nextEvent(); as next) {
+    <a class="next-up glass glass--thick" [routerLink]="['/events', next.id]">
+      <span class="next-up__tile" aria-hidden="true">
+        <span>{{ next.date | date: 'MMM' }}</span>
+        <strong>{{ next.date | date: 'd' }}</strong>
+      </span>
+      <span class="next-up__body">
+        <span class="next-up__eyebrow">Next up · {{ next.date | date: 'EEEE HH:mm' }}</span>
+        <strong class="next-up__title">{{ next.title }}</strong>
+        <span class="next-up__meta">{{ next.location }} · {{ categoryLabel(next.category) }}</span>
+      </span>
+      <span class="next-up__cta">View details <span aria-hidden="true">→</span></span>
+    </a>
+  }
+
+  <section class="filters glass glass--thick" aria-label="Filter events">
+    <div class="chips" role="group" aria-label="Filter by category">
+      <button
+        type="button"
+        class="chip"
+        [class.chip--active]="categoryFilter() === 'all'"
+        [attr.aria-pressed]="categoryFilter() === 'all'"
+        (click)="setCategory('all')"
+      >
+        All
+        <span class="chip__count">{{ counts().all }}</span>
+      </button>
+
+      @for (category of categories; track category) {
+        <button
+          type="button"
+          class="chip"
+          [class.chip--active]="categoryFilter() === category"
+          [attr.aria-pressed]="categoryFilter() === category"
+          (click)="setCategory(category)"
+        >
+          {{ categoryLabel(category) }}
+          <span class="chip__count">{{ counts()[category] }}</span>
+        </button>
+      }
+    </div>
+
+    <div class="filters__tools">
+      <label class="field" for="date-filter">
+        <span class="field__label">When</span>
+        <select id="date-filter" class="control" [value]="dateFilter()" (change)="setDate($event)">
+          @for (option of dateOptions; track option.value) {
+            <option [value]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </label>
+
+      @if (hasFilters()) {
+        <button type="button" class="button button--quiet" (click)="resetFilters()">
+          Clear filters
+        </button>
+      }
+    </div>
+  </section>
+
+  <p class="results" role="status">
+    Showing {{ filtered().length }} of {{ counts().all }} events
+  </p>
+
+  @if (filtered().length) {
+    <div class="grid">
+      @for (event of filtered(); track event.id) {
+        <a class="event-card glass glass--thick" [routerLink]="['/events', event.id]">
+          <span class="event-card__top">
+            <span class="date-tile" aria-hidden="true">
+              <span>{{ event.date | date: 'MMM' }}</span>
+              <strong>{{ event.date | date: 'd' }}</strong>
+              <small>{{ event.date | date: 'EEE' }}</small>
+            </span>
+
+            <span class="badges">
+              <app-status-badge
+                [label]="categoryLabel(event.category)"
+                [variant]="categoryVariant(event.category)"
+              />
+              @if (isPast(event)) {
+                <app-status-badge label="Past" variant="neutral" />
+              }
+            </span>
+          </span>
+
+          <h2>{{ event.title }}</h2>
+          <span class="event-card__description">{{ event.description }}</span>
+
+          <span class="event-card__meta">
+            <span class="meta">
+              <span class="meta__label">Where</span>
+              <span class="meta__value">{{ event.location }}</span>
+            </span>
+            <span class="meta">
+              <span class="meta__label">When</span>
+              <span class="meta__value">
+                {{ event.date | date: 'HH:mm' }}
+                @if (event.endDate) {
+                  – {{ event.endDate | date: 'HH:mm' }}
+                }
+              </span>
+            </span>
+          </span>
+
+          <span class="event-card__cta">View details <span aria-hidden="true">→</span></span>
+        </a>
+      }
+    </div>
+  } @else {
+    <app-empty-state
+      title="No events match these filters"
+      message="Try another category or date range."
+    >
+      @if (hasFilters()) {
+        <button type="button" class="button button--quiet" (click)="resetFilters()">
+          Clear filters
+        </button>
+      }
+    </app-empty-state>
+  }
+</section>
