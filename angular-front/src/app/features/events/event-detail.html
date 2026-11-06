@@ -1,0 +1,112 @@
+<section class="page event-detail">
+  <a class="back-link" routerLink="/events">
+    <span aria-hidden="true">←</span>
+    All events
+  </a>
+
+  @if (event; as item) {
+    <header class="hero glass glass--thick">
+      <span class="hero__tile" aria-hidden="true">
+        <span>{{ item.date | date: 'MMM' }}</span>
+        <strong>{{ item.date | date: 'd' }}</strong>
+        <small>{{ item.date | date: 'yyyy' }}</small>
+      </span>
+
+      <div class="hero__body">
+        <div class="badges">
+          <app-status-badge
+            [label]="categoryLabel(item.category)"
+            [variant]="categoryVariant(item.category)"
+          />
+          <app-status-badge
+            [label]="past ? 'Past event' : 'Upcoming'"
+            [variant]="past ? 'neutral' : 'success'"
+          />
+        </div>
+
+        <h1>{{ item.title }}</h1>
+
+        <p class="hero__meta">
+          <span>{{ item.date | date: 'EEEE d MMMM y' }}</span>
+          <span aria-hidden="true">·</span>
+          <span>
+            {{ item.date | date: 'HH:mm' }}
+            @if (item.endDate) {
+              – {{ item.endDate | date: 'HH:mm' }}
+            }
+          </span>
+          <span aria-hidden="true">·</span>
+          <span>{{ item.location }}</span>
+        </p>
+      </div>
+    </header>
+
+    <div class="detail-grid">
+      <section class="panel glass glass--thick" aria-labelledby="about-title">
+        <h2 id="about-title">About this event</h2>
+        <p class="description">{{ item.description }}</p>
+
+        <div class="note" role="note">
+          <span class="note__icon" aria-hidden="true">i</span>
+          <p>
+            {{
+              past
+                ? 'This event has already taken place.'
+                : 'This event is open to Smart Campus students.'
+            }}
+          </p>
+        </div>
+      </section>
+
+      <aside class="panel glass glass--thick" aria-labelledby="facts-title">
+        <h2 id="facts-title">Event details</h2>
+
+        <dl class="facts">
+          <div class="fact">
+            <dt>Date</dt>
+            <dd>{{ item.date | date: 'EEEE d MMMM y' }}</dd>
+          </div>
+          <div class="fact">
+            <dt>Time</dt>
+            <dd>
+              {{ item.date | date: 'HH:mm' }}
+              @if (item.endDate) {
+                – {{ item.endDate | date: 'HH:mm' }}
+              }
+            </dd>
+          </div>
+          <div class="fact">
+            <dt>Location</dt>
+            <dd>{{ item.location }}</dd>
+          </div>
+          <div class="fact">
+            <dt>Capacity</dt>
+            <dd>{{ item.capacity }} seats</dd>
+          </div>
+          <div class="fact">
+            <dt>Category</dt>
+            <dd>{{ categoryLabel(item.category) }}</dd>
+          </div>
+        </dl>
+
+        <div class="organizer">
+          <span class="organizer__avatar" aria-hidden="true">{{ organizerInitial() }}</span>
+          <span class="organizer__body">
+            <span class="organizer__label">Organized by</span>
+            <strong>{{ organizer()?.fullName ?? 'Campus team' }}</strong>
+            @if (organizer(); as person) {
+              <a [href]="'mailto:' + person.email">{{ person.email }}</a>
+            }
+          </span>
+        </div>
+      </aside>
+    </div>
+  } @else {
+    <app-empty-state
+      title="Event not found"
+      message="It may have been removed or the link is out of date."
+    >
+      <a class="button" routerLink="/events">Back to events</a>
+    </app-empty-state>
+  }
+</section>
