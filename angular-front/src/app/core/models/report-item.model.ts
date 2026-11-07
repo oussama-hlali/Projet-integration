@@ -9,3 +9,9 @@ export interface ReportItemPayload {
   date: string;
   contactPhone?: string;
 }
+
+/** A report as stored in the Lost & Found list. */
+export interface ReportItem extends ReportItemPayload {
+  id: number;
+  resolved: boolean;
+}

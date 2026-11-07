@@ -1,0 +1,18 @@
+<section class="page rooms">
+  <app-page-header
+    title="Rooms"
+    subtitle="Find a room by building, capacity, status or facilities."
+  >
+    <span class="total-pill">{{ rooms.length }} rooms</span>
+  </app-page-header>
+
+  <div class="metrics">
+    @for (metric of metrics(); track metric.label) {
+      <app-stat-card [label]="metric.label" [value]="metric.value" [hint]="metric.hint" />
+    }
+  </div>
+
+  <section class="panel glass glass--thick" aria-label="Room search">
+    <app-rooms-search [rooms]="rooms" />
+  </section>
+</section>
