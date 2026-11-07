@@ -1,7 +1,6 @@
 import { Component, inject } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
-import { RoleSwitcherComponent } from '../../shared/components';
 import { TabNavComponent } from '../tab-nav/tab-nav';
 
 /**
@@ -11,14 +10,20 @@ import { TabNavComponent } from '../tab-nav/tab-nav';
  */
 @Component({
   selector: 'app-topbar',
-  imports: [RouterLink, RoleSwitcherComponent, TabNavComponent],
+  imports: [RouterLink, TabNavComponent],
   templateUrl: './topbar.html',
   styleUrl: './topbar.scss',
 })
 export class Topbar {
   protected readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
 
   protected get roleLabel(): string {
     return this.auth.isAdmin() ? 'Administrator' : 'Student';
+  }
+
+  protected async logout(): Promise<void> {
+    this.auth.logout();
+    await this.router.navigateByUrl('/login');
   }
 }

@@ -7,7 +7,7 @@
   <app-tab-nav class="top__tabs" />
 
   <div class="top__tools glass glass--chrome">
-    <app-role-switcher />
+    <span class="top__user">{{ auth.currentUser()?.fullName }} · {{ roleLabel }}</span>
     <a
       class="top__me"
       routerLink="/profile"
@@ -16,5 +16,8 @@
     >
       <span class="top__avatar" aria-hidden="true">{{ auth.isAdmin() ? 'A' : 'S' }}</span>
     </a>
+    <button type="button" class="top__logout" (click)="logout()" aria-label="Sign out" title="Sign out">
+      ⎋
+    </button>
   </div>
 </header>
