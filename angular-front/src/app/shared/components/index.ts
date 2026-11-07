@@ -6,3 +6,6 @@ export * from './page-header.component';
 export * from './role-switcher.component';
 export * from './theme-toggle.component';
 export * from './nav-icon.component';
+export * from './rooms-search.component';
+export * from './feed.component';
+export * from './report-item.component';

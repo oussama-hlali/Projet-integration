@@ -1,102 +1,326 @@
-import { Component, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Component, inject, output, signal } from '@angular/core';
+import {
+  AbstractControl,
+  FormBuilder,
+  ReactiveFormsModule,
+  ValidationErrors,
+  Validators,
+} from '@angular/forms';
 import type { ReportItemPayload } from '../../core/models/report-item.model';
-import { PageHeaderComponent } from './page-header.component';
 
+/**
+ * Report form for Lost & Found.
+ *
+ * The component validates and emits the report; the page owns the list so it
+ * can prefix the new item without a backend.
+ */
 @Component({
   selector: 'app-report-item',
   standalone: true,
-  imports: [ReactiveFormsModule, PageHeaderComponent],
+  imports: [ReactiveFormsModule],
   template: `
-    <app-page-header title="Signaler un objet" subtitle="Objet perdu ou trouvé" />
-
     <form [formGroup]="form" (ngSubmit)="submit()" novalidate class="form">
+      <div class="form-row">
+        <div class="form-field">
+          <label for="report-type">Type <span aria-hidden="true">*</span></label>
+          <select id="report-type" class="control" formControlName="type">
+            <option value="lost">Lost</option>
+            <option value="found">Found</option>
+          </select>
+        </div>
 
-      <label>Type
-        <select formControlName="type">
-          <option value="lost">Perdu</option>
-          <option value="found">Trouvé</option>
-        </select>
-      </label>
-
-      <label>Titre
-        <input formControlName="title" />
-        @if (invalid('title')) {
-          <small class="error">
-            @if (form.controls.title.hasError('required')) { Le titre est obligatoire. }
-            @else if (form.controls.title.hasError('minlength')) { 3 caractères minimum. }
-            @else if (form.controls.title.hasError('maxlength')) { 80 caractères maximum. }
-          </small>
-        }
-      </label>
-
-      <label>Catégorie
-        <select formControlName="category">
-          <option value="">-- Choisir --</option>
-          @for (c of categories; track c) { <option [value]="c">{{ c }}</option> }
-        </select>
-        @if (invalid('category')) { <small class="error">Choisissez une catégorie.</small> }
-      </label>
-
-      <label>Description
-        <textarea rows="4" formControlName="description"></textarea>
-        @if (invalid('description')) {
-          <small class="error">
-            @if (form.controls.description.hasError('required')) { La description est obligatoire. }
-            @else if (form.controls.description.hasError('minlength')) { 10 caractères minimum. }
-          </small>
-        }
-      </label>
-
-      <label>Lieu
-        <input formControlName="location" />
-        @if (invalid('location')) { <small class="error">Le lieu est obligatoire.</small> }
-      </label>
-
-      <label>Date
-        <input type="date" formControlName="date" [max]="today" />
-        @if (invalid('date')) {
-          <small class="error">
-            @if (form.controls.date.hasError('required')) { La date est obligatoire. }
-            @else if (form.controls.date.hasError('futureDate')) { La date ne peut pas être dans le futur. }
-          </small>
-        }
-      </label>
-
-      <label>Téléphone (optionnel)
-        <input formControlName="contactPhone" placeholder="12345678" />
-        @if (invalid('contactPhone')) { <small class="error">8 chiffres attendus.</small> }
-      </label>
-
-      <div class="actions">
-        <button type="button" (click)="form.reset({ type: 'lost' })">Effacer</button>
-        <button type="submit" [disabled]="submitting()">Envoyer</button>
+        <div class="form-field">
+          <label for="report-category">Category <span aria-hidden="true">*</span></label>
+          <select
+            id="report-category"
+            class="control"
+            formControlName="category"
+            [class.control--invalid]="invalid('category')"
+            [attr.aria-invalid]="invalid('category')"
+          >
+            <option value="" disabled>Select a category</option>
+            @for (category of categories; track category) {
+              <option [value]="category">{{ category }}</option>
+            }
+          </select>
+          @if (invalid('category')) {
+            <p class="field-error">Choose a category.</p>
+          }
+        </div>
       </div>
 
-      @if (success()) { <p class="success">Signalement envoyé.</p> }
+      <div class="form-field">
+        <label for="report-title">Title <span aria-hidden="true">*</span></label>
+        <input
+          id="report-title"
+          class="control"
+          formControlName="title"
+          placeholder="e.g. Carte étudiante"
+          [class.control--invalid]="invalid('title')"
+          [attr.aria-invalid]="invalid('title')"
+        />
+        @if (invalid('title')) {
+          <p class="field-error">
+            @if (form.controls.title.hasError('required')) {
+              The title is required.
+            } @else if (form.controls.title.hasError('minlength')) {
+              Use at least 3 characters.
+            } @else {
+              Use at most 80 characters.
+            }
+          </p>
+        }
+      </div>
+
+      <div class="form-field">
+        <label for="report-description">Description <span aria-hidden="true">*</span></label>
+        <textarea
+          id="report-description"
+          class="control"
+          rows="3"
+          formControlName="description"
+          placeholder="Colour, brand, distinguishing details…"
+          [class.control--invalid]="invalid('description')"
+          [attr.aria-invalid]="invalid('description')"
+        ></textarea>
+        @if (invalid('description')) {
+          <p class="field-error">
+            @if (form.controls.description.hasError('required')) {
+              The description is required.
+            } @else {
+              Use at least 10 characters.
+            }
+          </p>
+        }
+      </div>
+
+      <div class="form-row">
+        <div class="form-field">
+          <label for="report-location">Location <span aria-hidden="true">*</span></label>
+          <input
+            id="report-location"
+            class="control"
+            formControlName="location"
+            placeholder="e.g. Bibliothèque"
+            [class.control--invalid]="invalid('location')"
+            [attr.aria-invalid]="invalid('location')"
+          />
+          @if (invalid('location')) {
+            <p class="field-error">The location is required.</p>
+          }
+        </div>
+
+        <div class="form-field">
+          <label for="report-date">Date <span aria-hidden="true">*</span></label>
+          <input
+            id="report-date"
+            class="control"
+            type="date"
+            formControlName="date"
+            [max]="today"
+            [class.control--invalid]="invalid('date')"
+            [attr.aria-invalid]="invalid('date')"
+          />
+          @if (invalid('date')) {
+            <p class="field-error">
+              @if (form.controls.date.hasError('required')) {
+                The date is required.
+              } @else {
+                The date cannot be in the future.
+              }
+            </p>
+          }
+        </div>
+      </div>
+
+      <div class="form-field">
+        <label for="report-phone">Phone (optional)</label>
+        <input
+          id="report-phone"
+          class="control"
+          formControlName="contactPhone"
+          inputmode="numeric"
+          placeholder="12345678"
+          [class.control--invalid]="invalid('contactPhone')"
+          [attr.aria-invalid]="invalid('contactPhone')"
+        />
+        @if (invalid('contactPhone')) {
+          <p class="field-error">Use 8 digits.</p>
+        }
+      </div>
+
+      <div class="actions">
+        <button type="button" class="button button--quiet" (click)="clear()">Clear</button>
+        <button type="submit" class="button button--primary">Submit report</button>
+      </div>
+
+      @if (success()) {
+        <p class="success" role="status">Report submitted. It now appears in the list.</p>
+      }
     </form>
   `,
-  styles: [`
-    .form { display:flex; flex-direction:column; gap:1rem; max-width:480px; }
-    label { display:flex; flex-direction:column; gap:.25rem; font-size:.9rem; }
-    input, select, textarea { padding:.5rem; border:1px solid #d1d5db; border-radius:.5rem; font:inherit; }
-    input.ng-invalid.ng-touched, select.ng-invalid.ng-touched, textarea.ng-invalid.ng-touched { border-color:#dc2626; }
-    .error { color:#dc2626; }
-    .success { color:#166534; }
-    .actions { display:flex; justify-content:flex-end; gap:.5rem; }
-  `],
+  styles: [
+    `
+      :host {
+        display: block;
+      }
+
+      .form {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-3);
+      }
+
+      .form-field {
+        margin-bottom: var(--space-3);
+      }
+
+      label {
+        display: block;
+        margin-bottom: var(--space-2);
+        color: var(--color-text-strong);
+        font-size: var(--font-size-sm);
+        font-weight: var(--font-weight-semibold);
+      }
+
+      label span {
+        color: var(--color-danger);
+      }
+
+      .control {
+        width: 100%;
+        padding: 0.62rem 0.75rem;
+        color: var(--color-text);
+        background: color-mix(in srgb, var(--color-surface) 55%, transparent);
+        border: 1px solid var(--color-border-strong);
+        border-radius: var(--radius-md);
+        font: inherit;
+        font-size: var(--font-size-sm);
+        transition:
+          border-color var(--transition-fast),
+          box-shadow var(--transition-fast),
+          background-color var(--transition-fast);
+      }
+
+      .control:hover {
+        border-color: color-mix(in srgb, var(--color-accent) 40%, var(--color-border-strong));
+      }
+
+      .control:focus {
+        background: var(--color-surface);
+        border-color: var(--color-accent);
+        box-shadow: 0 0 0 3px var(--color-accent-soft);
+        outline: none;
+      }
+
+      textarea.control {
+        resize: vertical;
+      }
+
+      .control--invalid {
+        border-color: var(--color-danger);
+      }
+
+      .field-error {
+        margin: var(--space-1) 0 0;
+        color: var(--color-danger);
+        font-size: var(--font-size-xs);
+      }
+
+      .actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: var(--space-2);
+        margin-top: var(--space-2);
+      }
+
+      .success {
+        margin: var(--space-3) 0 0;
+        padding: var(--space-3);
+        color: var(--color-success);
+        background: var(--color-success-soft);
+        border: 1px solid color-mix(in srgb, var(--color-success) 30%, transparent);
+        border-radius: var(--radius-md);
+        font-size: var(--font-size-sm);
+        font-weight: var(--font-weight-medium);
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.55rem 0.95rem;
+        border: 1px solid transparent;
+        border-radius: var(--radius-full);
+        cursor: pointer;
+        font: inherit;
+        font-size: var(--font-size-sm);
+        font-weight: var(--font-weight-semibold);
+        white-space: nowrap;
+        transition:
+          background-color var(--transition-fast),
+          border-color var(--transition-fast),
+          color var(--transition-fast),
+          transform var(--transition-fast);
+      }
+
+      .button:active {
+        transform: scale(0.98);
+      }
+
+      .button--primary {
+        color: var(--color-accent-contrast);
+        background: var(--color-accent);
+        box-shadow: 0 8px 20px -12px var(--color-accent);
+      }
+
+      .button--primary:hover {
+        background: var(--color-accent-hover);
+      }
+
+      .button--quiet {
+        color: var(--color-text);
+        background: transparent;
+        border-color: var(--color-border-strong);
+      }
+
+      .button--quiet:hover {
+        background: var(--well);
+      }
+
+      @media (max-width: 560px) {
+        .form-row {
+          grid-template-columns: 1fr;
+          gap: 0;
+        }
+
+        .actions {
+          flex-direction: column-reverse;
+        }
+
+        .actions .button {
+          width: 100%;
+        }
+      }
+    `,
+  ],
 })
 export class ReportItemComponent {
-  private fb = inject(FormBuilder).nonNullable;
+  private readonly formBuilder = inject(FormBuilder).nonNullable;
 
-  categories = ['Électronique', 'Documents', 'Vêtements', 'Clés', 'Autre'];
-  today = new Date().toISOString().split('T')[0];
+  readonly reported = output<ReportItemPayload>();
+  readonly success = signal(false);
 
-  submitting = signal(false);
-  success = signal(false);
+  readonly categories = ['Électronique', 'Documents', 'Vêtements', 'Clés', 'Autre'];
+  readonly today = new Date().toISOString().split('T')[0];
 
-  form = this.fb.group({
-    type: ['lost', Validators.required],
+  readonly form = this.formBuilder.group({
+    type: ['lost' as 'lost' | 'found', Validators.required],
     title: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(80)]],
     category: ['', Validators.required],
     description: ['', [Validators.required, Validators.minLength(10)]],
@@ -105,26 +329,30 @@ export class ReportItemComponent {
     contactPhone: ['', Validators.pattern(/^\d{8}$/)],
   });
 
-  invalid(name: keyof typeof this.form.controls) {
-    const c = this.form.controls[name];
-    return c.invalid && (c.touched || c.dirty);
+  invalid(name: keyof typeof this.form.controls): boolean {
+    const control = this.form.controls[name];
+    return control.invalid && (control.touched || control.dirty);
   }
 
-  private notInFuture(control: { value: string }) {
-    return control.value && new Date(control.value) > new Date() ? { futureDate: true } : null;
-  }
-
-  submit() {
+  clear(): void {
     this.success.set(false);
+    this.form.reset({ type: 'lost' });
+  }
+
+  submit(): void {
+    this.success.set(false);
+
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
     }
-    this.submitting.set(true);
-    const payload = this.form.getRawValue() as ReportItemPayload;
-    console.log(payload); // remplace par l'appel au service/API
-    this.submitting.set(false);
+
+    this.reported.emit(this.form.getRawValue() as ReportItemPayload);
     this.success.set(true);
     this.form.reset({ type: 'lost' });
+  }
+
+  private notInFuture(control: AbstractControl): ValidationErrors | null {
+    return control.value && new Date(control.value) > new Date() ? { futureDate: true } : null;
   }
 }

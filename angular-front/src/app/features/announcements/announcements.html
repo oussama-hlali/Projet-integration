@@ -1,0 +1,96 @@
+<section class="page announcements">
+  <app-page-header
+    title="Announcements"
+    subtitle="Campus notices, exam updates, events and maintenance alerts."
+  >
+    <button
+      type="button"
+      class="button button--quiet"
+      [disabled]="!unreadCount()"
+      (click)="markAllRead()"
+    >
+      Mark all read
+    </button>
+    <span class="total-pill">{{ counts().all }} published</span>
+  </app-page-header>
+
+  <div class="metrics">
+    @for (metric of metrics(); track metric.label) {
+      <app-stat-card [label]="metric.label" [value]="metric.value" [hint]="metric.hint" />
+    }
+  </div>
+
+  <section class="filters glass glass--thick" aria-label="Filter announcements">
+    <div class="chips" role="group" aria-label="Filter by category">
+      <button
+        type="button"
+        class="chip"
+        [class.chip--active]="categoryFilter() === 'all'"
+        [attr.aria-pressed]="categoryFilter() === 'all'"
+        (click)="setCategory('all')"
+      >
+        All
+        <span class="chip__count">{{ counts().all }}</span>
+      </button>
+
+      @for (category of categories; track category) {
+        <button
+          type="button"
+          class="chip"
+          [class.chip--active]="categoryFilter() === category"
+          [attr.aria-pressed]="categoryFilter() === category"
+          (click)="setCategory(category)"
+        >
+          {{ categoryLabels[category] }}
+          <span class="chip__count">{{ counts()[category] }}</span>
+        </button>
+      }
+    </div>
+
+    <div class="filters__tools">
+      <label class="field field--search">
+        <span class="field__label">Search</span>
+        <input
+          class="control"
+          type="search"
+          placeholder="Title or content"
+          [value]="search()"
+          (input)="setSearch($event)"
+        />
+      </label>
+
+      <button
+        type="button"
+        class="toggle"
+        [class.toggle--active]="unreadOnly()"
+        [attr.aria-pressed]="unreadOnly()"
+        (click)="toggleUnreadOnly()"
+      >
+        Unread only
+        <span class="chip__count">{{ unreadCount() }}</span>
+      </button>
+
+      @if (hasFilters()) {
+        <button type="button" class="button button--quiet" (click)="resetFilters()">
+          Clear filters
+        </button>
+      }
+    </div>
+  </section>
+
+  <p class="results" role="status">
+    Showing {{ filtered().length }} of {{ counts().all }} announcements
+  </p>
+
+  <app-feed
+    [items]="filtered()"
+    [readIds]="readIds()"
+    (readToggled)="toggleRead($event)"
+  >
+    @if (hasFilters()) {
+      <button type="button" class="button button--quiet" (click)="resetFilters()">
+        Clear filters
+      </button>
+    }
+  </app-feed>
+</section>
