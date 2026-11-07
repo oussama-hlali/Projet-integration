@@ -9,68 +9,64 @@
     <div class="login__content glass glass--thick">
       <header class="login__header">
         <h1 id="login-title" class="login__title">Sign in</h1>
-        <p class="login__subtitle">Choose a demo account to explore the platform.</p>
+        <p class="login__subtitle">Use your campus account to access the platform.</p>
       </header>
 
-      <form class="login__form" [formGroup]="form" (ngSubmit)="submit()">
-        <fieldset class="login__fieldset">
-          <legend class="login__legend">Demo account</legend>
+      @if (error()) {
+        <div class="login__error" role="alert">{{ error() }}</div>
+      }
 
-          <label
-            class="login__option"
-            [class.login__option--selected]="form.controls.role.value === 'STUDENT'"
-          >
-            <input
-              class="login__radio"
-              type="radio"
-              formControlName="role"
-              value="STUDENT"
-            />
-            <span class="login__option-body">
-              <span class="login__option-title">Student</span>
-              <span class="login__option-desc">
-                Browse rooms, events, transport and reservations.
-              </span>
-            </span>
-            <span class="login__option-check" aria-hidden="true">
-              <svg viewBox="0 0 16 16" focusable="false">
-                <path
-                  d="M6.2 11.3 3.4 8.5l1.1-1.1 1.7 1.7 4.9-4.9 1.1 1.1z"
-                  fill="currentColor"
-                />
-              </svg>
-            </span>
-          </label>
+      <form class="login__form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        <div class="login__field">
+          <label for="login-email">Email</label>
+          <input
+            id="login-email"
+            class="login__input"
+            type="email"
+            formControlName="email"
+            autocomplete="username"
+            [class.login__input--invalid]="isInvalid('email')"
+            placeholder="you@campus.tn"
+          />
+          @if (isInvalid('email')) {
+            <p class="login__field-error">
+              @if (form.controls.email.hasError('required')) {
+                Email is required.
+              } @else {
+                Enter a valid email address.
+              }
+            </p>
+          }
+        </div>
 
-          <label
-            class="login__option"
-            [class.login__option--selected]="form.controls.role.value === 'ADMINISTRATOR'"
-          >
-            <input
-              class="login__radio"
-              type="radio"
-              formControlName="role"
-              value="ADMINISTRATOR"
-            />
-            <span class="login__option-body">
-              <span class="login__option-title">Administrator</span>
-              <span class="login__option-desc">
-                Manage rooms, events, announcements and users.
-              </span>
-            </span>
-            <span class="login__option-check" aria-hidden="true">
-              <svg viewBox="0 0 16 16" focusable="false">
-                <path
-                  d="M6.2 11.3 3.4 8.5l1.1-1.1 1.7 1.7 4.9-4.9 1.1 1.1z"
-                  fill="currentColor"
-                />
-              </svg>
-            </span>
-          </label>
-        </fieldset>
+        <div class="login__field">
+          <label for="login-password">Password</label>
+          <input
+            id="login-password"
+            class="login__input"
+            type="password"
+            formControlName="password"
+            autocomplete="current-password"
+            [class.login__input--invalid]="isInvalid('password')"
+            placeholder="••••••••"
+          />
+          @if (isInvalid('password')) {
+            <p class="login__field-error">
+              @if (form.controls.password.hasError('required')) {
+                Password is required.
+              } @else {
+                Password must be at least 8 characters.
+              }
+            </p>
+          }
+        </div>
 
-        <button class="login__submit" type="submit" [disabled]="form.invalid">
-          Continue
+        <button class="login__submit" type="submit" [disabled]="loading() || form.invalid">
+          @if (loading()) {
+            Signing in…
+          } @else {
+            Sign in
+          }
           <svg class="login__submit-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
             <path
               d="M8.7 3.3 13.4 8l-4.7 4.7-1.1-1.1 2.9-2.9H2.5V8h8l-2.9-2.9z"
@@ -80,7 +76,18 @@
         </button>
       </form>
 
-      <p class="login__note" role="note">Demo sign-in — no real authentication.</p>
+      <p class="login__note" role="note">
+        New to Smart Campus?
+        <a routerLink="/register">Create an account</a>.
+      </p>
+
+      <details class="login__demo">
+        <summary>Demo accounts</summary>
+        <ul>
+          <li><strong>Student:</strong> ahmed.wardi@campus.tn / student123</li>
+          <li><strong>Admin:</strong> sami.benali@campus.tn / admin123</li>
+        </ul>
+      </details>
     </div>
 
     <p class="login__footnote">Smart Campus 2026</p>

@@ -10,6 +10,21 @@ export const routes: Routes = [
     loadComponent: () => import('./features/auth/login/login').then((m) => m.Login),
   },
   {
+    path: 'register',
+    title: 'Create account · Smart Campus',
+    loadComponent: () => import('./features/auth/register/register').then((m) => m.Register),
+  },
+  {
+    path: 'verify-otp',
+    title: 'Two-factor verification · Smart Campus',
+    loadComponent: () => import('./features/auth/verify-otp/verify-otp').then((m) => m.VerifyOtp),
+  },
+  {
+    path: 'setup-2fa',
+    title: 'Set up two-factor auth · Smart Campus',
+    loadComponent: () => import('./features/auth/setup-2fa/setup-2fa').then((m) => m.Setup2fa),
+  },
+  {
     path: '',
     pathMatch: 'full',
     title: 'Smart Campus',

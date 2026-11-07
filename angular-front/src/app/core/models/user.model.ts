@@ -27,6 +27,14 @@ export interface User {
   role: UserRole;
   avatarUrl: string;
   preferences: Preferences;
+  /** SHA-256 hex digest of `salt + password`, never the plaintext. */
+  passwordHash?: string;
+  /** Random salt used when hashing the password. */
+  salt?: string;
+  /** Base32 TOTP secret for Google Authenticator (RFC 6238). */
+  totpSecret?: string;
+  /** True once the user has confirmed a TOTP code. */
+  totpEnabled?: boolean;
 }
 
 /** Values collected by the profile form. */

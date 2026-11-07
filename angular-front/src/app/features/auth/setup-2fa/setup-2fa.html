@@ -1,0 +1,85 @@
+<div class="login">
+  <div class="login__pane">
+    <div class="login__brand">
+      <span class="login__logo" aria-hidden="true">SC</span>
+      <span class="login__wordmark">Smart Campus</span>
+      <app-theme-toggle class="login__theme-toggle" />
+    </div>
+
+    <div class="login__content glass glass--thick">
+      <header class="login__header">
+        <h1 class="login__title">Set up two-factor auth</h1>
+        <p class="login__subtitle">
+          Scan the QR code with Google Authenticator, then enter the code it shows.
+        </p>
+      </header>
+
+      @if (error()) {
+        <div class="login__error" role="alert">{{ error() }}</div>
+      }
+
+      <div class="login__field" style="align-items:center;">
+        @if (qrUrl) {
+          <img [src]="qrUrl" alt="Google Authenticator QR code" width="220" height="220" />
+        }
+      </div>
+
+      <div class="login__field">
+        <label>Secret key</label>
+        <code class="login__input" style="display:block; word-break:break-all;">{{ secret }}</code>
+        <p class="login__field-error" style="color:var(--color-text-muted);">
+          Enter this key manually if you cannot scan the QR code.
+        </p>
+      </div>
+
+      <details class="login__demo">
+        <summary>Demo helper</summary>
+        <p>Current valid code: <strong>{{ demoCode() }}</strong></p>
+      </details>
+
+      <form class="login__form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        <div class="login__field">
+          <label for="setup-code">Authentication code</label>
+          <input
+            id="setup-code"
+            class="login__input"
+            type="text"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+            maxlength="6"
+            formControlName="code"
+            [class.login__input--invalid]="form.controls.code.invalid && (form.controls.code.touched || form.controls.code.dirty)"
+            placeholder="123456"
+          />
+          @if (form.controls.code.invalid && (form.controls.code.touched || form.controls.code.dirty)) {
+            <p class="login__field-error">Enter the 6-digit code.</p>
+          }
+        </div>
+
+        <button class="login__submit" type="submit" [disabled]="loading() || form.invalid">
+          @if (loading()) {
+            Verifying…
+          } @else {
+            Enable & continue
+          }
+        </button>
+      </form>
+
+      <p class="login__note" role="note">
+        <a href="#" (click)="cancel(); $event.preventDefault()">Back to sign in</a>
+      </p>
+    </div>
+
+    <p class="login__footnote">Smart Campus 2026</p>
+  </div>
+
+  <div class="login__visual" aria-hidden="true">
+    <div class="login__visual-inner">
+      <div class="login__visual-glow"></div>
+      <div class="login__visual-body">
+        <p class="login__visual-eyebrow">Secure sign-in</p>
+        <p class="login__visual-title">Set up your authenticator app.</p>
+      </div>
+    </div>
+  </div>
+</div>

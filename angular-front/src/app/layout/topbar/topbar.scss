@@ -115,6 +115,35 @@
 }
 
 /* ── Responsive ─────────────────────────────────────────────── */
+.top__user {
+  padding: 0 10px 0 4px;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}
+
+.top__logout {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  font-size: 1rem;
+  transition:
+    color var(--transition-fast),
+    background-color var(--transition-fast);
+}
+
+.top__logout:hover {
+  color: var(--color-danger);
+  background: var(--well);
+}
+
 @media (max-width: 1400px) {
   .top {
     grid-template-columns: auto minmax(0, 1fr);

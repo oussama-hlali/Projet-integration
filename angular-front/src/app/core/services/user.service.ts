@@ -1,4 +1,4 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import {
   Preferences,
@@ -7,7 +7,6 @@ import {
   User,
   UserRole,
 } from '../models/user.model';
-import { AuthService } from './auth.service';
 
 const STORAGE_KEY = 'smart-campus.users';
 
@@ -20,16 +19,9 @@ const STORAGE_KEY = 'smart-campus.users';
  */
 @Injectable({ providedIn: 'root' })
 export class UserService {
-  private readonly auth = inject(AuthService);
   private readonly state = signal<User[]>(this.load());
 
   readonly users = this.state.asReadonly();
-
-  /** Profile of the signed-in demo user (student by default). */
-  readonly currentUser = computed<User>(() => {
-    const role: UserRole = this.auth.isAdmin() ? 'ADMINISTRATOR' : 'STUDENT';
-    return this.state().find((user) => user.role === role) ?? this.state()[0];
-  });
 
   getUsers(): Observable<User[]> {
     return of(this.state());
@@ -41,6 +33,22 @@ export class UserService {
 
   findById(id: string): User | undefined {
     return this.state().find((user) => user.id === id);
+  }
+
+  findByEmail(email: string): User | undefined {
+    const normalized = email.trim().toLowerCase();
+    return this.state().find((user) => user.email.toLowerCase() === normalized);
+  }
+
+  setTotp(id: string, secret: string, enabled: boolean): User | undefined {
+    const target = this.findById(id);
+    if (!target) {
+      return undefined;
+    }
+
+    const updated: User = { ...target, totpSecret: secret, totpEnabled: enabled };
+    this.commit(this.state().map((user) => (user.id === id ? updated : user)));
+    return updated;
   }
 
   updateProfile(id: string, input: UpdateProfileInput): User | undefined {
@@ -136,6 +144,10 @@ export class UserService {
         role: 'STUDENT',
         avatarUrl: 'assets/avatars/u1.png',
         preferences: { language: 'fr', notificationsEnabled: true, theme: 'dark' },
+        passwordHash: 'cb5ba77cc305c0f6e99c41352f5261dca56a76d9135a2d28b571cf85cf823b9e',
+        salt: 'cf060c360fe6637876ea9844a2252ab0',
+        totpSecret: 'C6BW5GGCYLP5ZDTRVQPKZY2WYRJ2GAV6',
+        totpEnabled: false,
       },
       {
         id: 'u2',
@@ -144,6 +156,10 @@ export class UserService {
         role: 'STUDENT',
         avatarUrl: 'assets/avatars/u2.png',
         preferences: { language: 'fr', notificationsEnabled: false, theme: 'light' },
+        passwordHash: '0552c44c1eae75009478524e66e28cfac4f122051c8d5b79d0ae26243f4982df',
+        salt: '4410f0feb080ff75a3bd9f978efbdbee',
+        totpSecret: 'XWWBATZPESR7JVGGC2YPSNSUN5ZGPNFU',
+        totpEnabled: false,
       },
       {
         id: 'u3',
@@ -152,6 +168,10 @@ export class UserService {
         role: 'ADMINISTRATOR',
         avatarUrl: 'assets/avatars/u3.png',
         preferences: { language: 'fr', notificationsEnabled: true, theme: 'light' },
+        passwordHash: '6548c2caf22d23a5c3b4311a647f6640e13a923fe0afdfedd031afdcb42fbbc3',
+        salt: '86b0ce37966b9824d1a1eeddfbcce485',
+        totpSecret: 'TTRQ3NPFJL3EDRFEC3YRXYKOQVZ446EM',
+        totpEnabled: false,
       },
     ];
   }
