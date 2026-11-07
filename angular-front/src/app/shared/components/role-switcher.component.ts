@@ -92,8 +92,8 @@ export class RoleSwitcherComponent {
   private readonly router = inject(Router);
 
   protected readonly options: readonly RoleOption[] = [
-    { value: 'student', label: 'Student' },
-    { value: 'administrator', label: 'Admin' },
+    { value: 'STUDENT', label: 'Student' },
+    { value: 'ADMINISTRATOR', label: 'Admin' },
   ];
 
   protected isActive(role: UserRole): boolean {
@@ -109,7 +109,7 @@ export class RoleSwitcherComponent {
 
     // Guards only run on navigation, so leaving the admin area must be explicit.
     const path = this.router.url.split('?')[0];
-    if (role !== 'administrator' && path.startsWith('/admin')) {
+    if (role !== 'ADMINISTRATOR' && path.startsWith('/admin')) {
       void this.router.navigateByUrl('/dashboard');
     }
   }

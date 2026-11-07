@@ -3,7 +3,7 @@
     title="Rooms"
     subtitle="Find a room by building, capacity, status or facilities."
   >
-    <span class="total-pill">{{ rooms.length }} rooms</span>
+    <span class="total-pill">{{ rooms().length }} rooms</span>
   </app-page-header>
 
   <div class="metrics">
@@ -13,6 +13,6 @@
   </div>
 
   <section class="panel glass glass--thick" aria-label="Room search">
-    <app-rooms-search [rooms]="rooms" />
+    <app-rooms-search [rooms]="rooms()" />
   </section>
 </section>

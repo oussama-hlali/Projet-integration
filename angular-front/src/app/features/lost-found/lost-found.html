@@ -38,37 +38,29 @@
       </div>
 
       <div class="toolbar">
-        <div class="chips" role="group" aria-label="Filter by report type">
+        <div class="chips" role="group" aria-label="Filter by status">
           <button
             type="button"
             class="chip"
-            [class.chip--active]="typeFilter() === 'all'"
-            [attr.aria-pressed]="typeFilter() === 'all'"
-            (click)="setType('all')"
+            [class.chip--active]="statusFilter() === 'all'"
+            [attr.aria-pressed]="statusFilter() === 'all'"
+            (click)="setStatus('all')"
           >
             All
             <span class="chip__count">{{ counts().all }}</span>
           </button>
-          <button
-            type="button"
-            class="chip"
-            [class.chip--active]="typeFilter() === 'lost'"
-            [attr.aria-pressed]="typeFilter() === 'lost'"
-            (click)="setType('lost')"
-          >
-            Lost
-            <span class="chip__count">{{ counts().lost }}</span>
-          </button>
-          <button
-            type="button"
-            class="chip"
-            [class.chip--active]="typeFilter() === 'found'"
-            [attr.aria-pressed]="typeFilter() === 'found'"
-            (click)="setType('found')"
-          >
-            Found
-            <span class="chip__count">{{ counts().found }}</span>
-          </button>
+          @for (status of statuses; track status) {
+            <button
+              type="button"
+              class="chip"
+              [class.chip--active]="statusFilter() === status"
+              [attr.aria-pressed]="statusFilter() === status"
+              (click)="setStatus(status)"
+            >
+              {{ statusLabels[status] }}
+              <span class="chip__count">{{ counts()[status] }}</span>
+            </button>
+          }
         </div>
 
         <div class="filters">
@@ -94,18 +86,15 @@
       @if (filtered().length) {
         <ul class="reports">
           @for (report of filtered(); track report.id) {
-            <li class="report" [class.report--resolved]="report.resolved">
+            <li class="report" [class.report--resolved]="report.status === 'CLAIMED'">
               <div class="report__head">
                 <div class="report__badges">
                   <app-status-badge
-                    [label]="typeLabel(report.type)"
-                    [variant]="typeVariant(report.type)"
+                    [label]="statusLabel(report.status)"
+                    [variant]="statusVariant(report.status)"
                   />
-                  @if (report.resolved) {
-                    <app-status-badge label="Reunited" variant="success" />
-                  }
                 </div>
-                <span class="report__date">{{ dateLabel(report.date) }}</span>
+                <span class="report__date">{{ dateLabel(report.reportedAt) }}</span>
               </div>
 
               <h3>{{ report.title }}</h3>
@@ -129,9 +118,15 @@
               </dl>
 
               <div class="report__actions">
-                <button type="button" class="button button--quiet" (click)="toggleResolved(report.id)">
-                  {{ report.resolved ? 'Reopen report' : 'Mark as reunited' }}
-                </button>
+                @if (report.status !== 'CLAIMED') {
+                  <button
+                    type="button"
+                    class="button button--quiet"
+                    (click)="claimReport(report)"
+                  >
+                    Mark as claimed
+                  </button>
+                }
               </div>
             </li>
           }

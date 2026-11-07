@@ -1,5 +1,10 @@
 import { Component, computed, input, signal } from '@angular/core';
-import { Room, RoomStatus } from '../../core/models/room.model';
+import {
+  ROOM_STATUSES,
+  ROOM_STATUS_LABELS,
+  Room,
+  RoomStatus,
+} from '../../core/models/room.model';
 import { EmptyStateComponent } from './empty-state.component';
 import { BadgeVariant, StatusBadgeComponent } from './status-badge.component';
 
@@ -42,9 +47,9 @@ import { BadgeVariant, StatusBadgeComponent } from './status-badge.component';
         <span class="field__label">Status</span>
         <select class="control" [value]="status()" (change)="setStatus($event)">
           <option value="">All statuses</option>
-          <option value="available">Available</option>
-          <option value="occupied">Occupied</option>
-          <option value="maintenance">Maintenance</option>
+          @for (option of roomStatuses; track option) {
+            <option [value]="option">{{ statusLabel[option] }}</option>
+          }
         </select>
       </label>
 
@@ -365,16 +370,15 @@ export class RoomsSearchComponent {
       this.facilities().length > 0,
   );
 
-  readonly statusLabel: Record<RoomStatus, string> = {
-    available: 'Available',
-    occupied: 'Occupied',
-    maintenance: 'Maintenance',
-  };
+  readonly statusLabel: Record<RoomStatus, string> = ROOM_STATUS_LABELS;
+
+  readonly roomStatuses = ROOM_STATUSES;
 
   readonly statusVariant: Record<RoomStatus, BadgeVariant> = {
-    available: 'success',
-    occupied: 'warning',
-    maintenance: 'danger',
+    AVAILABLE: 'success',
+    OCCUPIED: 'warning',
+    RESERVED: 'info',
+    MAINTENANCE: 'danger',
   };
 
   setBuilding(event: Event): void {

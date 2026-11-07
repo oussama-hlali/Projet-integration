@@ -4,14 +4,14 @@ import { UserRole } from '../models/user.model';
 const STORAGE_KEY = 'smart-campus.auth.role';
 
 /**
- * PB-05 — Demo authentication.
+ * PB-05 �?" Demo authentication.
  *
  * This is a DEMO ONLY. There is no real authentication, no token, and no
  * security boundary here. It exists so the team can switch between the
- * student and administrator experiences while building Sprint 1.
+ * student and administrator experiences while building the app.
  *
- * The state is signal-based so any standalone component or template can react
- * to role changes without subscriptions.
+ * The stored values are the diagram's uppercase `UserRole` constants; the
+ * older lowercase values are migrated when read.
  */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -24,7 +24,7 @@ export class AuthService {
   readonly isAuthenticated = computed(() => this.roleState() !== null);
 
   /** Convenience flag for administrator-only surfaces. */
-  readonly isAdmin = computed(() => this.roleState() === 'administrator');
+  readonly isAdmin = computed(() => this.roleState() === 'ADMINISTRATOR');
 
   /** Sign in with a demo role. Persists the choice for page reloads. */
   login(role: UserRole): void {
@@ -44,7 +44,19 @@ export class AuthService {
     }
 
     const stored = localStorage.getItem(STORAGE_KEY);
-    return stored === 'student' || stored === 'administrator' ? stored : null;
+    if (stored === 'STUDENT' || stored === 'ADMINISTRATOR') {
+      return stored;
+    }
+
+    // Migrate values written by earlier builds.
+    if (stored === 'student') {
+      return 'STUDENT';
+    }
+    if (stored === 'administrator') {
+      return 'ADMINISTRATOR';
+    }
+
+    return null;
   }
 
   private persistRole(role: UserRole | null): void {

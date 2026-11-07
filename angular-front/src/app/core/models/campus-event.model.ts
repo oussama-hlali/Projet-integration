@@ -28,4 +28,6 @@ export interface CampusEvent {
   category: EventCategory;
   capacity: number;
   organizerId: string;
+  /** Optional `CampusEvent "0..*" -- "0..1" Room` association. */
+  roomId?: string;
 }

@@ -17,7 +17,7 @@ export class Login {
   private readonly route = inject(ActivatedRoute);
 
   protected readonly form = new FormGroup({
-    role: new FormControl<UserRole>('student', {
+    role: new FormControl<UserRole>('STUDENT', {
       nonNullable: true,
       validators: [Validators.required],
     }),

@@ -18,13 +18,13 @@
 
           <label
             class="login__option"
-            [class.login__option--selected]="form.controls.role.value === 'student'"
+            [class.login__option--selected]="form.controls.role.value === 'STUDENT'"
           >
             <input
               class="login__radio"
               type="radio"
               formControlName="role"
-              value="student"
+              value="STUDENT"
             />
             <span class="login__option-body">
               <span class="login__option-title">Student</span>
@@ -44,13 +44,13 @@
 
           <label
             class="login__option"
-            [class.login__option--selected]="form.controls.role.value === 'administrator'"
+            [class.login__option--selected]="form.controls.role.value === 'ADMINISTRATOR'"
           >
             <input
               class="login__radio"
               type="radio"
               formControlName="role"
-              value="administrator"
+              value="ADMINISTRATOR"
             />
             <span class="login__option-body">
               <span class="login__option-title">Administrator</span>
