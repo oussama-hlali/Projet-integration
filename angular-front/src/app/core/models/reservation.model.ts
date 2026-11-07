@@ -1,44 +1,53 @@
 /**
- * PB-09 — Room reservations.
+ * Reservation model, aligned with `SmartCampus_ClassDiagram_V0`.
  *
- * Rooms live in one tuple so the booking form, the filter bar and the demo
- * data cannot drift apart.
+ * A reservation stores real start/end `Date` values plus one of the four
+ * diagram statuses. The list still derives an upcoming/past phase so the
+ * filter chips remain useful, but the persisted source of truth is `status`.
  */
-export const RESERVATION_ROOMS = [
-  'Innovation Lab',
-  'Study Room A',
-  'Study Room B',
-  'Conference Room',
-] as const;
 
-export type ReservationRoom = (typeof RESERVATION_ROOMS)[number];
+export type ReservationStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED';
 
-/**
- * What we persist. A booking is confirmed until the student cancels it;
- * "past" is derived from the clock rather than stored, so a booking cannot
- * go stale if the tab stays open for days.
- */
-export type ReservationState = 'confirmed' | 'cancelled';
+export const RESERVATION_STATUSES: readonly ReservationStatus[] = [
+  'PENDING',
+  'CONFIRMED',
+  'CANCELLED',
+  'COMPLETED',
+];
+
+export const RESERVATION_STATUS_LABELS: Record<ReservationStatus, string> = {
+  PENDING: 'Pending',
+  CONFIRMED: 'Confirmed',
+  CANCELLED: 'Cancelled',
+  COMPLETED: 'Completed',
+};
 
 /** What the list shows and filters on. */
 export type ReservationPhase = 'upcoming' | 'past' | 'cancelled';
 
 export interface Reservation {
   id: string;
+  roomId: string;
+  /** Room name kept alongside the id so every screen can render a row. */
   room: string;
-  /** Local ISO date, `YYYY-MM-DD`. */
-  date: string;
-  /** 24h clock, `HH:mm`. */
-  startTime: string;
-  endTime: string;
+  startTime: Date;
+  endTime: Date;
   purpose: string;
-  state: ReservationState;
+  status: ReservationStatus;
+  userId: string;
 }
 
-/** Everything the form collects; the service owns the id and state. */
-export type CreateReservationInput = Omit<Reservation, 'id' | 'state'>;
+/** Everything the form collects; the service owns the id and the status. */
+export interface CreateReservationInput {
+  roomId: string;
+  room: string;
+  startTime: Date;
+  endTime: Date;
+  purpose: string;
+  userId?: string;
+}
 
-export type CreateReservationFailure = 'invalid-range' | 'conflict';
+export type CreateReservationFailure = 'invalid-range' | 'conflict' | 'unavailable';
 
 export type CreateReservationResult =
   | { ok: true; reservation: Reservation }

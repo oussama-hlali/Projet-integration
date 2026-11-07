@@ -7,13 +7,15 @@ import {
   Validators,
 } from '@angular/forms';
 import {
-  CreateReservationInput,
-  RESERVATION_ROOMS,
+  RESERVATION_STATUS_LABELS,
   Reservation,
   ReservationPhase,
+  ReservationStatus,
   ReservationStatusFilter,
 } from '../../core/models/reservation.model';
+import { NotificationService } from '../../core/services/notification.service';
 import { ReservationService } from '../../core/services/reservation.service';
+import { RoomService } from '../../core/services/room.service';
 import {
   BadgeVariant,
   ConfirmDialogComponent,
@@ -46,6 +48,13 @@ const PHASE_VARIANTS: Record<ReservationPhase, BadgeVariant> = {
   cancelled: 'danger',
 };
 
+const STATUS_VARIANTS: Record<ReservationStatus, BadgeVariant> = {
+  PENDING: 'warning',
+  CONFIRMED: 'success',
+  CANCELLED: 'danger',
+  COMPLETED: 'neutral',
+};
+
 const PHASE_ORDER: Record<ReservationPhase, number> = {
   upcoming: 0,
   past: 1,
@@ -55,9 +64,10 @@ const PHASE_ORDER: Record<ReservationPhase, number> = {
 /**
  * PB-09 — Reservations.
  *
- * Students list their bookings, narrow them with status / room / text filters
- * and cancel one after confirming in a dialog. Creation stays available from
- * the side panel (SCRUM-16) and now refuses overlapping slots.
+ * Students list their bookings, narrow them with phase / room / text filters
+ * and cancel one after confirming in a dialog. The form books a real room
+ * from `RoomService`; the stored row follows the diagram's `Reservation`
+ * shape with a `ReservationStatus`.
  */
 @Component({
   selector: 'app-reservations',
@@ -74,9 +84,10 @@ const PHASE_ORDER: Record<ReservationPhase, number> = {
 })
 export class Reservations {
   private readonly reservationService = inject(ReservationService);
+  private readonly roomService = inject(RoomService);
+  private readonly notifications = inject(NotificationService);
   private readonly formBuilder = inject(FormBuilder);
 
-  readonly rooms = RESERVATION_ROOMS;
   readonly statusOptions: readonly StatusOption[] = [
     { value: 'all', label: 'All' },
     { value: 'upcoming', label: 'Upcoming' },
@@ -86,6 +97,14 @@ export class Reservations {
 
   readonly reservations = this.reservationService.reservations;
   readonly counts = this.reservationService.counts;
+
+  /** Rooms that can be booked; maintenance rooms are excluded. */
+  readonly rooms = computed(() =>
+    this.roomService
+      .rooms()
+      .filter((room) => room.status !== 'MAINTENANCE')
+      .sort((a, b) => a.name.localeCompare(b.name)),
+  );
 
   readonly statusFilter = signal<ReservationStatusFilter>('all');
   readonly roomFilter = signal<string>('all');
@@ -100,7 +119,7 @@ export class Reservations {
   readonly dialogOpen = signal(false);
 
   readonly form = this.formBuilder.nonNullable.group({
-    room: ['', Validators.required],
+    roomId: ['', Validators.required],
     date: ['', [Validators.required, dateNotInPast(this.today)]],
     startTime: ['', Validators.required],
     endTime: ['', Validators.required],
@@ -108,11 +127,28 @@ export class Reservations {
   });
 
   readonly metrics = computed(() => {
-    const counts = this.counts();
+    const reservations = this.reservations();
     return [
-      { label: 'Upcoming', value: counts.upcoming, hint: 'Confirmed bookings' },
-      { label: 'Past', value: counts.past, hint: 'Already attended' },
-      { label: 'Cancelled', value: counts.cancelled, hint: 'Cancelled by you' },
+      {
+        label: 'Upcoming',
+        value: this.counts().upcoming,
+        hint: 'Confirmed or pending',
+      },
+      {
+        label: 'Pending',
+        value: reservations.filter((reservation) => reservation.status === 'PENDING').length,
+        hint: 'Awaiting approval',
+      },
+      {
+        label: 'Completed',
+        value: reservations.filter((reservation) => reservation.status === 'COMPLETED').length,
+        hint: 'Attended',
+      },
+      {
+        label: 'Cancelled',
+        value: this.counts().cancelled,
+        hint: 'Cancelled by you',
+      },
     ];
   });
 
@@ -138,7 +174,7 @@ export class Reservations {
 
       return (
         !term ||
-        `${reservation.room} ${reservation.purpose} ${reservation.date}`
+        `${reservation.room} ${reservation.purpose} ${reservation.startTime.toISOString()}`
           .toLowerCase()
           .includes(term)
       );
@@ -154,8 +190,8 @@ export class Reservations {
       }
 
       return phaseA === 'upcoming'
-        ? this.startsAt(a) - this.startsAt(b)
-        : this.startsAt(b) - this.startsAt(a);
+        ? a.startTime.getTime() - b.startTime.getTime()
+        : b.startTime.getTime() - a.startTime.getTime();
     });
   });
 
@@ -166,13 +202,15 @@ export class Reservations {
   readonly dialogMessage = computed(() => {
     const target = this.cancelTarget();
     return target
-      ? `Cancel your booking for ${target.room} on ${this.formatDateMoment(target.date)} from ${
-          target.startTime
-        } to ${target.endTime}? The booking stays in your history.`
+      ? `Cancel your booking for ${target.room} on ${this.formatDateMoment(
+          target.startTime,
+        )} from ${this.formatTime(target.startTime)} to ${this.formatTime(
+          target.endTime,
+        )}? The booking stays in your history.`
       : '';
   });
 
-  // ── Form ──────────────────────────────────────────────────
+  // ── Form ────────────────────────────────────────────────────────────────────
 
   isInvalid(controlName: keyof typeof this.form.controls): boolean {
     const control = this.form.controls[controlName];
@@ -200,31 +238,43 @@ export class Reservations {
     }
 
     const value = this.form.getRawValue();
-    const input: CreateReservationInput = {
-      room: value.room,
-      date: value.date,
-      startTime: value.startTime,
-      endTime: value.endTime,
-      purpose: value.purpose.trim(),
-    };
+    const room = this.roomService.findById(value.roomId);
+    if (!room) {
+      this.formError.set('Pick a room from the list.');
+      return;
+    }
 
-    const result = this.reservationService.create(input);
+    const result = this.reservationService.create({
+      roomId: room.id,
+      room: room.name,
+      startTime: this.toMoment(value.date, value.startTime),
+      endTime: this.toMoment(value.date, value.endTime),
+      purpose: value.purpose.trim(),
+    });
 
     if (!result.ok) {
       this.formError.set(
         result.reason === 'conflict'
-          ? `${input.room} is already booked for that slot. Pick another room or time.`
-          : 'End time must be after start time.',
+          ? `${room.name} is already booked for that slot. Pick another room or time.`
+          : result.reason === 'unavailable'
+            ? `${room.name} is under maintenance and cannot be booked.`
+            : 'End time must be after start time.',
       );
       return;
     }
+
+    this.notifications.add({
+      message: `Votre réservation pour ${result.reservation.room} est confirmée.`,
+      type: 'RESERVATION',
+      reservationId: result.reservation.id,
+    });
 
     this.form.reset();
     this.submitted.set(false);
     this.clearFilters();
     this.feedback.set(
       `Reservation confirmed for ${result.reservation.room} on ${this.formatDateMoment(
-        result.reservation.date,
+        result.reservation.startTime,
       )}.`,
     );
   }
@@ -235,7 +285,7 @@ export class Reservations {
     this.formError.set(null);
   }
 
-  // ── Filters ───────────────────────────────────────────────
+  // ── Filters ─────────────────────────────────────────────────────────────────
 
   setStatus(status: ReservationStatusFilter): void {
     this.statusFilter.set(status);
@@ -255,7 +305,7 @@ export class Reservations {
     this.search.set('');
   }
 
-  // ── Cancellation ──────────────────────────────────────────
+  // ── Cancellation ────────────────────────────────────────────────────────────
 
   requestCancel(reservation: Reservation): void {
     this.cancelTarget.set(reservation);
@@ -279,7 +329,7 @@ export class Reservations {
     if (cancelled) {
       this.feedback.set(
         `Reservation for ${cancelled.room} on ${this.formatDateMoment(
-          cancelled.date,
+          cancelled.startTime,
         )} was cancelled.`,
       );
     }
@@ -289,7 +339,7 @@ export class Reservations {
     this.feedback.set(null);
   }
 
-  // ── View helpers ──────────────────────────────────────────
+  // ── View helpers ────────────────────────────────────────────────────────────
 
   phaseOf(reservation: Reservation): ReservationPhase {
     return this.reservationService.phaseOf(reservation);
@@ -299,55 +349,59 @@ export class Reservations {
     return PHASE_LABELS[this.phaseOf(reservation)];
   }
 
+  statusLabel(reservation: Reservation): string {
+    return RESERVATION_STATUS_LABELS[reservation.status];
+  }
+
+  statusVariant(reservation: Reservation): BadgeVariant {
+    return STATUS_VARIANTS[reservation.status];
+  }
+
   phaseVariant(reservation: Reservation): BadgeVariant {
     return PHASE_VARIANTS[this.phaseOf(reservation)];
   }
 
   canCancel(reservation: Reservation): boolean {
-    return reservation.state === 'confirmed' && this.phaseOf(reservation) === 'upcoming';
+    return (
+      (reservation.status === 'CONFIRMED' || reservation.status === 'PENDING') &&
+      this.phaseOf(reservation) === 'upcoming'
+    );
   }
 
-  monthOf(isoDate: string): string {
-    return this.parseDate(isoDate).toLocaleDateString('en-GB', { month: 'short' });
+  monthOf(date: Date): string {
+    return date.toLocaleDateString('en-GB', { month: 'short' });
   }
 
-  dayOf(isoDate: string): string {
-    return String(this.parseDate(isoDate).getDate());
+  dayOf(date: Date): string {
+    return String(date.getDate());
   }
 
-  weekdayOf(isoDate: string): string {
-    return this.parseDate(isoDate).toLocaleDateString('en-GB', { weekday: 'short' });
+  weekdayOf(date: Date): string {
+    return date.toLocaleDateString('en-GB', { weekday: 'short' });
   }
 
-  longDate(isoDate: string): string {
-    return this.parseDate(isoDate).toLocaleDateString('en-GB', {
+  longDate(date: Date): string {
+    return date.toLocaleDateString('en-GB', {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
     });
   }
 
-  private formatDateMoment(isoDate: string): string {
-    return this.parseDate(isoDate).toLocaleDateString('en-GB', {
+  formatTime(date: Date): string {
+    return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  private formatDateMoment(date: Date): string {
+    return date.toLocaleDateString('en-GB', {
       weekday: 'short',
       day: 'numeric',
       month: 'short',
     });
   }
 
-  private startsAt(reservation: Reservation): number {
-    return this.parseDate(reservation.date).getTime() + this.toMinutes(reservation.startTime);
-  }
-
-  private toMinutes(time: string): number {
-    const [hours, minutes] = time.split(':').map(Number);
-    return hours * 60 + minutes;
-  }
-
-  /** Parses `YYYY-MM-DD` as a local date (DatePipe would treat it as UTC). */
-  private parseDate(isoDate: string): Date {
-    const [year, month, day] = isoDate.split('-').map(Number);
-    return new Date(year, month - 1, day);
+  private toMoment(date: string, time: string): Date {
+    return new Date(`${date}T${time}:00`);
   }
 
   private toDateInputValue(date: Date): string {

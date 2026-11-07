@@ -86,24 +86,28 @@
       @if (filtered().length) {
         <ul class="bookings">
           @for (reservation of filtered(); track reservation.id) {
-            <li class="booking" [class.booking--muted]="reservation.state === 'cancelled'">
+            <li class="booking" [class.booking--muted]="reservation.status === 'CANCELLED'">
               <div class="booking__date" aria-hidden="true">
-                <span>{{ monthOf(reservation.date) }}</span>
-                <strong>{{ dayOf(reservation.date) }}</strong>
-                <small>{{ weekdayOf(reservation.date) }}</small>
+                <span>{{ monthOf(reservation.startTime) }}</span>
+                <strong>{{ dayOf(reservation.startTime) }}</strong>
+                <small>{{ weekdayOf(reservation.startTime) }}</small>
               </div>
 
               <div class="booking__body">
                 <div class="booking__heading">
                   <h3>{{ reservation.room }}</h3>
                   <app-status-badge
+                    [label]="statusLabel(reservation)"
+                    [variant]="statusVariant(reservation)"
+                  />
+                  <app-status-badge
                     [label]="phaseLabel(reservation)"
                     [variant]="phaseVariant(reservation)"
                   />
                 </div>
                 <p class="booking__time">
-                  {{ longDate(reservation.date) }} · {{ reservation.startTime }} –
-                  {{ reservation.endTime }}
+                  {{ longDate(reservation.startTime) }} · {{ formatTime(reservation.startTime) }} –
+                  {{ formatTime(reservation.endTime) }}
                 </p>
                 <p class="booking__purpose">{{ reservation.purpose }}</p>
               </div>
@@ -116,7 +120,7 @@
                     'Cancel reservation for ' +
                     reservation.room +
                     ' on ' +
-                    longDate(reservation.date)
+                    longDate(reservation.startTime)
                   "
                   (click)="requestCancel(reservation)"
                 >
@@ -171,17 +175,17 @@
           <select
             id="room"
             class="control"
-            formControlName="room"
-            [class.control--invalid]="isInvalid('room')"
-            [attr.aria-invalid]="isInvalid('room')"
-            [attr.aria-describedby]="isInvalid('room') ? 'room-error' : null"
+            formControlName="roomId"
+            [class.control--invalid]="isInvalid('roomId')"
+            [attr.aria-invalid]="isInvalid('roomId')"
+            [attr.aria-describedby]="isInvalid('roomId') ? 'room-error' : null"
           >
             <option value="" disabled>Select a room</option>
-            @for (room of rooms; track room) {
-              <option [value]="room">{{ room }}</option>
+            @for (room of rooms(); track room.id) {
+              <option [value]="room.id">{{ room.name }} — {{ room.building }}</option>
             }
           </select>
-          @if (isInvalid('room')) {
+          @if (isInvalid('roomId')) {
             <p class="field-error" id="room-error">Please select a room.</p>
           }
         </div>

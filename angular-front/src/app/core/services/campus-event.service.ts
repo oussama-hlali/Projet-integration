@@ -1,10 +1,26 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import { Observable, of } from 'rxjs';
-import { CampusEvent } from '../models/campus-event.model';
+import { CampusEvent, EventCategory } from '../models/campus-event.model';
 
+export interface CampusEventInput {
+  title: string;
+  description: string;
+  date: Date;
+  endDate?: Date;
+  location: string;
+  category: EventCategory;
+  capacity: number;
+  organizerId?: string;
+  roomId?: string;
+}
+
+/**
+ * Campus events store. The list, detail, dashboard and admin screens read the
+ * same signal so an administrator's change is reflected immediately.
+ */
 @Injectable({ providedIn: 'root' })
 export class CampusEventService {
-  private events: CampusEvent[] = [
+  private readonly state = signal<CampusEvent[]>([
     {
       id: 'e1',
       title: 'Journée portes ouvertes',
@@ -15,6 +31,7 @@ export class CampusEventService {
       category: 'SOCIAL',
       capacity: 200,
       organizerId: 'u3',
+      roomId: 'room-1',
     },
     {
       id: 'e2',
@@ -26,6 +43,7 @@ export class CampusEventService {
       category: 'CAREER',
       capacity: 60,
       organizerId: 'u3',
+      roomId: 'room-3',
     },
     {
       id: 'e3',
@@ -41,7 +59,7 @@ export class CampusEventService {
     {
       id: 'e4',
       title: 'Ciné-club : soirée science-fiction',
-      description: 'Projection suivie d’un débat avec le club cinéma.',
+      description: "Projection suivie d'un débat avec le club cinéma.",
       date: new Date('2026-11-08T18:00:00'),
       endDate: new Date('2026-11-08T21:00:00'),
       location: 'Auditorium',
@@ -59,6 +77,7 @@ export class CampusEventService {
       category: 'ACADEMIC',
       capacity: 30,
       organizerId: 'u3',
+      roomId: 'room-8',
     },
     {
       id: 'e6',
@@ -103,10 +122,11 @@ export class CampusEventService {
       category: 'ACADEMIC',
       capacity: 120,
       organizerId: 'u3',
+      roomId: 'room-1',
     },
     {
       id: 'e10',
-      title: 'Dîner de fin d’année',
+      title: "Dîner de fin d'année",
       description: 'Repas partagé avec les associations étudiantes.',
       date: new Date('2026-12-10T19:00:00'),
       endDate: new Date('2026-12-10T22:00:00'),
@@ -118,26 +138,69 @@ export class CampusEventService {
     {
       id: 'e11',
       title: 'Conférence intelligence artificielle',
-      description: 'Panorama des usages de l’IA dans la recherche.',
+      description: "Panorama des usages de l'IA dans la recherche.",
       date: new Date('2026-10-10T14:00:00'),
       endDate: new Date('2026-10-10T16:00:00'),
       location: 'Amphi A',
       category: 'ACADEMIC',
       capacity: 150,
       organizerId: 'u3',
+      roomId: 'room-1',
     },
-  ];
+  ]);
+
+  readonly events = this.state.asReadonly();
 
   getEvents(): Observable<CampusEvent[]> {
-    return of(this.events);
+    return of(this.state());
   }
 
   getEventById(id: string): Observable<CampusEvent | undefined> {
-    return of(this.events.find((event) => event.id === id));
+    return of(this.state().find((event) => event.id === id));
   }
 
   /** Synchronous lookup used by the event detail page. */
   findById(id: string): CampusEvent | undefined {
-    return this.events.find((event) => event.id === id);
+    return this.state().find((event) => event.id === id);
+  }
+
+  add(input: CampusEventInput): CampusEvent {
+    const event: CampusEvent = {
+      ...input,
+      id: `e_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+      title: input.title.trim(),
+      description: input.description.trim(),
+      organizerId: input.organizerId ?? 'u3',
+    };
+
+    this.state.update((events) => [event, ...events]);
+    return event;
+  }
+
+  update(id: string, changes: Partial<CampusEventInput>): CampusEvent | undefined {
+    const target = this.findById(id);
+    if (!target) {
+      return undefined;
+    }
+
+    const updated: CampusEvent = {
+      ...target,
+      ...changes,
+      id,
+      title: changes.title?.trim() ?? target.title,
+      description: changes.description?.trim() ?? target.description,
+    };
+
+    this.state.update((events) => events.map((event) => (event.id === id ? updated : event)));
+    return updated;
+  }
+
+  remove(id: string): boolean {
+    if (!this.findById(id)) {
+      return false;
+    }
+
+    this.state.update((events) => events.filter((event) => event.id !== id));
+    return true;
   }
 }

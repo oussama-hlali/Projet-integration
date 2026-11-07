@@ -1,9 +1,18 @@
 /**
- * Minimal user model for the Sprint 1 foundation.
- * Teammate 3 owns and extends this file — do NOT delete it.
+ * User model, aligned with `SmartCampus_ClassDiagram_V0`.
+ *
+ * A user owns exactly one `Preferences` object (composition in the diagram).
+ * Profile and preference edits are exposed by `UserService`.
  */
 
-export type UserRole = 'student' | 'administrator';
+export type UserRole = 'STUDENT' | 'ADMINISTRATOR';
+
+export const USER_ROLES: readonly UserRole[] = ['STUDENT', 'ADMINISTRATOR'];
+
+export const USER_ROLE_LABELS: Record<UserRole, string> = {
+  STUDENT: 'Student',
+  ADMINISTRATOR: 'Administrator',
+};
 
 export interface Preferences {
   language: string;
@@ -16,6 +25,11 @@ export interface User {
   fullName: string;
   email: string;
   role: UserRole;
-  avatarUrl?: string;
+  avatarUrl: string;
   preferences: Preferences;
 }
+
+/** Values collected by the profile form. */
+export type UpdateProfileInput = Pick<User, 'fullName' | 'email' | 'avatarUrl'>;
+
+export type UpdatePreferencesInput = Preferences;

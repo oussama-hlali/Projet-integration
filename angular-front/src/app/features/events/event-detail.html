@@ -101,6 +101,68 @@
         </div>
       </aside>
     </div>
+
+    <section class="registration glass glass--thick" aria-labelledby="registration-title">
+      <div class="registration__head">
+        <div>
+          <h2 id="registration-title">Registration</h2>
+          <p class="registration__count">
+            {{ registeredCount() }} of {{ item.capacity }} seats taken
+          </p>
+        </div>
+        <app-status-badge
+          [label]="registered() ? 'Registered' : past ? 'Closed' : 'Open'"
+          [variant]="registered() ? 'success' : past ? 'neutral' : 'info'"
+        />
+      </div>
+
+      @if (feedback()) {
+        <div class="registration__feedback" role="status">
+          <span>{{ feedback() }}</span>
+          <button type="button" aria-label="Dismiss message" (click)="dismissFeedback()">
+            &times;
+          </button>
+        </div>
+      }
+
+      @if (registration(); as reg) {
+        <div class="registration__body">
+          <div class="qr" role="img" [attr.aria-label]="'QR code ' + reg.qrCode">
+            @for (cell of qrCells(); track $index) {
+              <span [class.qr__on]="cell"></span>
+            }
+          </div>
+          <div class="registration__details">
+            <p class="registration__label">Your entry code</p>
+            <code>{{ reg.qrCode }}</code>
+            <p class="registration__hint">
+              Registered {{ reg.registeredAt | date: 'd MMM y, HH:mm' }}. Show this code at the
+              entrance.
+            </p>
+            <button type="button" class="button button--danger" (click)="requestUnregister()">
+              Unregister
+            </button>
+          </div>
+        </div>
+      } @else if (past) {
+        <p class="registration__hint">Registration is closed because this event has ended.</p>
+      } @else {
+        <button type="button" class="button button--primary" (click)="register()">
+          Register for this event
+        </button>
+      }
+    </section>
+
+    <app-confirm-dialog
+      [open]="dialogOpen()"
+      (openChange)="dialogOpen.set($event)"
+      title="Cancel registration"
+      [message]="'Unregister from ' + item.title + '? Your QR code will be removed.'"
+      confirmLabel="Unregister"
+      cancelLabel="Keep registration"
+      [danger]="true"
+      (confirmed)="confirmUnregister()"
+    />
   } @else {
     <app-empty-state
       title="Event not found"

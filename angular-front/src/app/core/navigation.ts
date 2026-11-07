@@ -23,7 +23,7 @@ export interface NavItem {
   readonly label: string;
   readonly route: string;
   readonly icon: NavIconName;
-  /** Hidden unless the demo role is `administrator`. */
+  /** Hidden unless the demo role is `ADMINISTRATOR`. */
   readonly adminOnly?: boolean;
 }
 

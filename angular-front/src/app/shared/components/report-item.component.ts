@@ -6,13 +6,13 @@ import {
   ValidationErrors,
   Validators,
 } from '@angular/forms';
-import type { ReportItemPayload } from '../../core/models/report-item.model';
+import type { LostFoundReportInput } from '../../core/models/lost-found.model';
 
 /**
  * Report form for Lost & Found.
  *
- * The component validates and emits the report; the page owns the list so it
- * can prefix the new item without a backend.
+ * The component validates and emits the report; the page owns the store so a
+ * submitted report appears in the list immediately.
  */
 @Component({
   selector: 'app-report-item',
@@ -22,10 +22,10 @@ import type { ReportItemPayload } from '../../core/models/report-item.model';
     <form [formGroup]="form" (ngSubmit)="submit()" novalidate class="form">
       <div class="form-row">
         <div class="form-field">
-          <label for="report-type">Type <span aria-hidden="true">*</span></label>
-          <select id="report-type" class="control" formControlName="type">
-            <option value="lost">Lost</option>
-            <option value="found">Found</option>
+          <label for="report-status">Status <span aria-hidden="true">*</span></label>
+          <select id="report-status" class="control" formControlName="status">
+            <option value="LOST">I lost something</option>
+            <option value="FOUND">I found something</option>
           </select>
         </div>
 
@@ -116,14 +116,14 @@ import type { ReportItemPayload } from '../../core/models/report-item.model';
             id="report-date"
             class="control"
             type="date"
-            formControlName="date"
+            formControlName="reportedAt"
             [max]="today"
-            [class.control--invalid]="invalid('date')"
-            [attr.aria-invalid]="invalid('date')"
+            [class.control--invalid]="invalid('reportedAt')"
+            [attr.aria-invalid]="invalid('reportedAt')"
           />
-          @if (invalid('date')) {
+          @if (invalid('reportedAt')) {
             <p class="field-error">
-              @if (form.controls.date.hasError('required')) {
+              @if (form.controls.reportedAt.hasError('required')) {
                 The date is required.
               } @else {
                 The date cannot be in the future.
@@ -313,19 +313,19 @@ import type { ReportItemPayload } from '../../core/models/report-item.model';
 export class ReportItemComponent {
   private readonly formBuilder = inject(FormBuilder).nonNullable;
 
-  readonly reported = output<ReportItemPayload>();
+  readonly reported = output<LostFoundReportInput>();
   readonly success = signal(false);
 
   readonly categories = ['Électronique', 'Documents', 'Vêtements', 'Clés', 'Autre'];
   readonly today = new Date().toISOString().split('T')[0];
 
   readonly form = this.formBuilder.group({
-    type: ['lost' as 'lost' | 'found', Validators.required],
+    status: ['LOST' as 'LOST' | 'FOUND', Validators.required],
     title: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(80)]],
     category: ['', Validators.required],
     description: ['', [Validators.required, Validators.minLength(10)]],
     location: ['', Validators.required],
-    date: ['', [Validators.required, this.notInFuture]],
+    reportedAt: ['', [Validators.required, this.notInFuture]],
     contactPhone: ['', Validators.pattern(/^\d{8}$/)],
   });
 
@@ -336,7 +336,7 @@ export class ReportItemComponent {
 
   clear(): void {
     this.success.set(false);
-    this.form.reset({ type: 'lost' });
+    this.form.reset({ status: 'LOST' });
   }
 
   submit(): void {
@@ -347,9 +347,18 @@ export class ReportItemComponent {
       return;
     }
 
-    this.reported.emit(this.form.getRawValue() as ReportItemPayload);
+    const value = this.form.getRawValue();
+    this.reported.emit({
+      status: value.status,
+      title: value.title,
+      category: value.category,
+      description: value.description,
+      location: value.location,
+      contactPhone: value.contactPhone || undefined,
+      reportedAt: new Date(`${value.reportedAt}T12:00:00`),
+    });
     this.success.set(true);
-    this.form.reset({ type: 'lost' });
+    this.form.reset({ status: 'LOST' });
   }
 
   private notInFuture(control: AbstractControl): ValidationErrors | null {
