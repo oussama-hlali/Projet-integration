@@ -1,9 +1,10 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import {
   LostFoundItem,
   LostFoundReportInput,
   LostFoundStatus,
 } from '../models/lost-found.model';
+import { NotificationService } from './notification.service';
 
 const STORAGE_KEY = 'smart-campus.lost-found';
 const DEMO_USER_ID = 'u1';
@@ -15,6 +16,7 @@ const DEMO_USER_ID = 'u1';
  */
 @Injectable({ providedIn: 'root' })
 export class LostFoundService {
+  private readonly notifications = inject(NotificationService);
   private readonly state = signal<LostFoundItem[]>(this.load());
 
   readonly items = this.state.asReadonly();
@@ -37,6 +39,11 @@ export class LostFoundService {
     };
 
     this.commit([item, ...this.state()]);
+    this.notifications.add({
+      message: `Un nouvel objet « ${item.title} » a été signalé à ${item.location}.`,
+      type: 'LOST_FOUND',
+      lostFoundId: item.id,
+    });
     return item;
   }
 
@@ -52,7 +59,15 @@ export class LostFoundService {
   }
 
   claim(id: string): LostFoundItem | undefined {
-    return this.setStatus(id, 'CLAIMED');
+    const claimed = this.setStatus(id, 'CLAIMED');
+    if (claimed) {
+      this.notifications.add({
+        message: `L'objet « ${claimed.title} » a été réclamé.`,
+        type: 'LOST_FOUND',
+        lostFoundId: claimed.id,
+      });
+    }
+    return claimed;
   }
 
   remove(id: string): boolean {

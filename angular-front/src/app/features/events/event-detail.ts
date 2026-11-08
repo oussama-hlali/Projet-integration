@@ -3,7 +3,6 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { CampusEventService } from '../../core/services/campus-event.service';
-import { NotificationService } from '../../core/services/notification.service';
 import { RegistrationService } from '../../core/services/registration.service';
 import { UserService } from '../../core/services/user.service';
 import {
@@ -32,7 +31,6 @@ export class EventDetail {
   private readonly eventService = inject(CampusEventService);
   private readonly userService = inject(UserService);
   private readonly registrationService = inject(RegistrationService);
-  private readonly notifications = inject(NotificationService);
   private readonly route = inject(ActivatedRoute);
 
   readonly event = this.eventService.findById(this.route.snapshot.paramMap.get('id') ?? '');
@@ -74,11 +72,6 @@ export class EventDetail {
     }
 
     const registration = this.registrationService.register(event.id);
-    this.notifications.add({
-      message: `Votre inscription à « ${event.title} » est enregistrée. Votre QR code est prêt.`,
-      type: 'EVENT',
-      eventId: event.id,
-    });
     this.feedback.set(
       `You are registered. Show QR ${registration.qrCode} at the entrance.`,
     );

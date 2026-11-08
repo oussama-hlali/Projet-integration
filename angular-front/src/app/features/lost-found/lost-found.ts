@@ -7,7 +7,6 @@ import {
   LostFoundStatus,
 } from '../../core/models/lost-found.model';
 import { LostFoundService } from '../../core/services/lost-found.service';
-import { NotificationService } from '../../core/services/notification.service';
 import {
   BadgeVariant,
   EmptyStateComponent,
@@ -40,7 +39,6 @@ type StatusFilter = 'all' | LostFoundStatus;
 })
 export class LostFound {
   private readonly lostFoundService = inject(LostFoundService);
-  private readonly notifications = inject(NotificationService);
 
   readonly reports = this.lostFoundService.items;
 
@@ -119,11 +117,6 @@ export class LostFound {
   addReport(input: LostFoundReportInput): void {
     const item = this.lostFoundService.create(input);
     this.resetFilters();
-    this.notifications.add({
-      message: `Un nouvel objet « ${item.title} » a été signalé à ${item.location}.`,
-      type: 'LOST_FOUND',
-      lostFoundId: item.id,
-    });
     this.feedback.set(`"${item.title}" was added to the list.`);
   }
 
