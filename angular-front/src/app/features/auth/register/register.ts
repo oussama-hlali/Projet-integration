@@ -59,6 +59,13 @@ export class Register {
     const result = await this.auth.register({ fullName, email, password });
     this.loading.set(false);
 
+    // Self-registration always creates a student account. The account is not
+    // usable until the authenticator is set up, so send the new student there.
+    if (!result.ok && result.reason === 'setup-required') {
+      await this.router.navigateByUrl('/setup-2fa');
+      return;
+    }
+
     if (!result.ok) {
       this.error.set(
         result.reason === 'email-taken'
@@ -68,6 +75,6 @@ export class Register {
       return;
     }
 
-    await this.router.navigateByUrl('/dashboard');
+    await this.router.navigateByUrl(this.auth.homeRoute());
   }
 }

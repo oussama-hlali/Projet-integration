@@ -108,7 +108,13 @@ export class AuthService {
       : { ok: false, reason: 'setup-required' };
   }
 
-  /** Create a student account. OTP setup is required on first sign-in. */
+  /**
+   * Create a student account. OTP setup is required on first sign-in.
+   *
+   * Public self-registration is student-only: the role is fixed here and is
+   * never taken from the form, so a visitor cannot sign themselves up as an
+   * administrator. Only the admin console (`createManagedUser`) may do that.
+   */
   async register(input: RegisterInput): Promise<AuthResult> {
     const password = input.password ?? '';
     if (password.length < 8) {
@@ -122,6 +128,10 @@ export class AuthService {
     const salt = this.generateSalt();
     const passwordHash = await this.sha256Hex(salt + password);
     const totpSecret = this.generateTotpSecret();
+
+    // Drop any existing session so a newly registered student never inherits
+    // the role of the account that happened to be signed in before.
+    this.clearSession();
 
     const user = this.userService.add({
       fullName: input.fullName.trim(),
