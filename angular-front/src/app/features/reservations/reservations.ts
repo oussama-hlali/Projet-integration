@@ -13,7 +13,6 @@ import {
   ReservationStatus,
   ReservationStatusFilter,
 } from '../../core/models/reservation.model';
-import { NotificationService } from '../../core/services/notification.service';
 import { ReservationService } from '../../core/services/reservation.service';
 import { RoomService } from '../../core/services/room.service';
 import {
@@ -85,7 +84,6 @@ const PHASE_ORDER: Record<ReservationPhase, number> = {
 export class Reservations {
   private readonly reservationService = inject(ReservationService);
   private readonly roomService = inject(RoomService);
-  private readonly notifications = inject(NotificationService);
   private readonly formBuilder = inject(FormBuilder);
 
   readonly statusOptions: readonly StatusOption[] = [
@@ -262,12 +260,6 @@ export class Reservations {
       );
       return;
     }
-
-    this.notifications.add({
-      message: `Votre réservation pour ${result.reservation.room} est confirmée.`,
-      type: 'RESERVATION',
-      reservationId: result.reservation.id,
-    });
 
     this.form.reset();
     this.submitted.set(false);

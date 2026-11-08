@@ -7,6 +7,7 @@ import {
   ReservationPhase,
   ReservationStatus,
 } from '../models/reservation.model';
+import { NotificationService } from './notification.service';
 import { RoomService } from './room.service';
 
 const STORAGE_KEY = 'smart-campus-reservations';
@@ -23,7 +24,12 @@ const DEMO_USER_ID = 'u1';
 @Injectable({ providedIn: 'root' })
 export class ReservationService {
   private readonly rooms = inject(RoomService);
+  private readonly notifications = inject(NotificationService);
   private readonly state = signal<Reservation[]>(this.load());
+
+  constructor() {
+    this.syncCompleted();
+  }
 
   /** All bookings; the page sorts them for display. */
   readonly reservations = this.state.asReadonly();
@@ -91,6 +97,11 @@ export class ReservationService {
     };
 
     this.commit([...this.state(), reservation]);
+    this.notifications.add({
+      message: `Votre réservation pour ${reservation.room} est confirmée.`,
+      type: 'RESERVATION',
+      reservationId: reservation.id,
+    });
     return { ok: true, reservation };
   }
 
@@ -101,7 +112,60 @@ export class ReservationService {
       return undefined;
     }
 
-    return this.setStatus(id, 'CANCELLED');
+    const cancelled = this.setStatus(id, 'CANCELLED');
+    if (cancelled) {
+      this.notifications.add({
+        message: `Votre réservation pour ${cancelled.room} a été annulée.`,
+        type: 'RESERVATION',
+        reservationId: cancelled.id,
+      });
+    }
+    return cancelled;
+  }
+
+  /** Approve a pending booking. */
+  approve(id: string): Reservation | undefined {
+    const target = this.state().find((reservation) => reservation.id === id);
+    if (!target || target.status !== 'PENDING') {
+      return undefined;
+    }
+
+    const approved = this.setStatus(id, 'CONFIRMED');
+    if (approved) {
+      this.notifications.add({
+        message: `Votre réservation pour ${approved.room} est confirmée.`,
+        type: 'RESERVATION',
+        reservationId: approved.id,
+      });
+    }
+    return approved;
+  }
+
+  /** Mark a booking as completed once its slot is over. */
+  complete(id: string): Reservation | undefined {
+    const target = this.state().find((reservation) => reservation.id === id);
+    if (!target || target.status === 'CANCELLED' || target.status === 'COMPLETED') {
+      return undefined;
+    }
+
+    return this.setStatus(id, 'COMPLETED');
+  }
+
+  /** Refresh statuses so past confirmed bookings become completed. */
+  syncCompleted(): void {
+    const now = new Date();
+    let changed = false;
+    const next = this.state().map((reservation) => {
+      if (reservation.status === 'CONFIRMED' && reservation.endTime <= now) {
+        changed = true;
+        return { ...reservation, status: 'COMPLETED' as ReservationStatus };
+      }
+      return reservation;
+    });
+
+    if (changed) {
+      this.commit(next);
+    }
   }
 
   /** Administrator transitions used by the management screens. */

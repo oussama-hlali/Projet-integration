@@ -1,6 +1,7 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { CampusEvent, EventCategory } from '../models/campus-event.model';
+import { NotificationService } from './notification.service';
 
 export interface CampusEventInput {
   title: string;
@@ -20,6 +21,7 @@ export interface CampusEventInput {
  */
 @Injectable({ providedIn: 'root' })
 export class CampusEventService {
+  private readonly notifications = inject(NotificationService);
   private readonly state = signal<CampusEvent[]>([
     {
       id: 'e1',
@@ -174,6 +176,11 @@ export class CampusEventService {
     };
 
     this.state.update((events) => [event, ...events]);
+    this.notifications.add({
+      message: `Un nouvel événement « ${event.title} » a été publié.`,
+      type: 'EVENT',
+      eventId: event.id,
+    });
     return event;
   }
 
