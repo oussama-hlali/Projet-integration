@@ -70,6 +70,12 @@ export class Login {
     }
 
     const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
-    await this.router.navigateByUrl(returnUrl && returnUrl !== '/login' ? returnUrl : '/dashboard');
+    const destination =
+      returnUrl && returnUrl !== '/login'
+        ? returnUrl
+        : this.auth.isAdmin()
+          ? '/admin'
+          : '/dashboard';
+    await this.router.navigateByUrl(destination);
   }
 }
