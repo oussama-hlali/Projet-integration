@@ -45,7 +45,7 @@ export class VerifyOtp implements OnDestroy {
       return;
     }
 
-    await this.router.navigateByUrl('/dashboard');
+    await this.router.navigateByUrl(this.auth.isAdmin() ? '/admin' : '/dashboard');
   }
 
   cancel(): void {

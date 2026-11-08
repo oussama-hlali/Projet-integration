@@ -7,7 +7,10 @@
   <app-tab-nav class="top__tabs" />
 
   <div class="top__tools glass glass--chrome">
-    <span class="top__user">{{ auth.currentUser()?.fullName }} · {{ roleLabel }}</span>
+    <span class="top__user">
+      {{ auth.currentUser()?.fullName }}
+      <span class="top__role" [class.top__role--admin]="auth.isAdmin()">{{ roleLabel }}</span>
+    </span>
     <a
       class="top__me"
       routerLink="/profile"

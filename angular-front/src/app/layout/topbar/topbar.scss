@@ -116,11 +116,30 @@
 
 /* ── Responsive ─────────────────────────────────────────────── */
 .top__user {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 0 10px 0 4px;
   color: var(--color-text-muted);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
   white-space: nowrap;
+}
+
+.top__role {
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: var(--well);
+  color: var(--color-text-muted);
+  font-size: 0.68rem;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.top__role--admin {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-text);
 }
 
 .top__logout {
