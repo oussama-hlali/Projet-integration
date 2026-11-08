@@ -1,0 +1,119 @@
+<section class="page profile">
+  <app-page-header
+    title="Profile"
+    subtitle="Update your account details and personal preferences."
+  />
+
+  @if (user(); as current) {
+    <div class="profile__grid">
+      <section class="panel glass glass--thick" aria-labelledby="profile-title">
+        <div class="panel__head">
+          <div>
+            <h2 id="profile-title">Account details</h2>
+            <p class="muted">Your name, email and avatar.</p>
+          </div>
+        </div>
+
+        @if (profileFeedback()) {
+          <div class="feedback" role="status">
+            <span>{{ profileFeedback() }}</span>
+            <button type="button" class="feedback__close" aria-label="Dismiss" (click)="dismissProfileFeedback()">
+              &times;
+            </button>
+          </div>
+        }
+
+        <form [formGroup]="profileForm" (ngSubmit)="saveProfile()" novalidate class="form">
+          <div class="form-field">
+            <label for="profile-name">Full name <span aria-hidden="true">*</span></label>
+            <input
+              id="profile-name"
+              class="control"
+              formControlName="fullName"
+              [class.control--invalid]="isProfileInvalid('fullName')"
+            />
+            @if (isProfileInvalid('fullName')) {
+              <p class="field-error">Name is required.</p>
+            }
+          </div>
+
+          <div class="form-field">
+            <label for="profile-email">Email <span aria-hidden="true">*</span></label>
+            <input
+              id="profile-email"
+              class="control"
+              type="email"
+              formControlName="email"
+              [class.control--invalid]="isProfileInvalid('email')"
+            />
+            @if (isProfileInvalid('email')) {
+              <p class="field-error">Enter a valid email.</p>
+            }
+          </div>
+
+          <div class="form-field">
+            <label for="profile-avatar">Avatar URL</label>
+            <input id="profile-avatar" class="control" formControlName="avatarUrl" placeholder="assets/avatars/u1.png" />
+          </div>
+
+          <div class="actions">
+            <button type="submit" class="button button--primary" [disabled]="savingProfile() || profileForm.invalid">
+              @if (savingProfile()) { Saving… } @else { Save profile }
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel glass glass--thick" aria-labelledby="preferences-title">
+        <div class="panel__head">
+          <div>
+            <h2 id="preferences-title">Preferences</h2>
+            <p class="muted">Language, notifications and theme.</p>
+          </div>
+        </div>
+
+        @if (preferencesFeedback()) {
+          <div class="feedback" role="status">
+            <span>{{ preferencesFeedback() }}</span>
+            <button type="button" class="feedback__close" aria-label="Dismiss" (click)="dismissPreferencesFeedback()">
+              &times;
+            </button>
+          </div>
+        }
+
+        <form [formGroup]="preferencesForm" (ngSubmit)="savePreferences()" novalidate class="form">
+          <div class="form-field">
+            <label for="pref-language">Language</label>
+            <select id="pref-language" class="control" formControlName="language">
+              <option value="fr">Français</option>
+              <option value="en">English</option>
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label class="checkbox">
+              <input type="checkbox" formControlName="notificationsEnabled" />
+              <span>Enable notifications</span>
+            </label>
+          </div>
+
+          <div class="form-field">
+            <label for="pref-theme">Theme</label>
+            <select id="pref-theme" class="control" formControlName="theme">
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </select>
+          </div>
+
+          <div class="actions">
+            <button type="submit" class="button button--primary" [disabled]="savingPreferences() || preferencesForm.invalid">
+              @if (savingPreferences()) { Saving… } @else { Save preferences }
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
+  } @else {
+    <app-empty-state title="Not signed in" message="Sign in to edit your profile." />
+  }
+</section>
