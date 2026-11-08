@@ -230,3 +230,20 @@
     padding: 0 7px;
   }
 }
+.brand__logo {
+  width: 40px;
+  height: 40px;
+  display: block;
+}
+
+.brand__logo--dark {
+  display: none;
+}
+
+:host-context([data-theme="dark"]) .brand__logo--light {
+  display: none;
+}
+
+:host-context([data-theme="dark"]) .brand__logo--dark {
+  display: block;
+}
