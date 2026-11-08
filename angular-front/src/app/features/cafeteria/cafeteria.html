@@ -1,0 +1,98 @@
+<section class="page cafeteria">
+  <app-page-header
+    title="Cafeteria"
+    subtitle="Explore the menu and find meals that fit your preferences."
+  />
+
+  <div class="notice glass glass--thick" role="note">
+    <span class="notice__icon" aria-hidden="true">i</span>
+    <p>
+      <strong>Menu information</strong>
+      <span>This is demo data. Recipes and allergen information may change. Please ask cafeteria staff if you have an allergy.</span>
+    </p>
+  </div>
+
+  <section class="menu-panel glass glass--thick" aria-label="Cafeteria menu">
+    <div class="day-tabs" role="tablist" aria-label="Choose a day">
+      @for (day of days; track day.date; let index = $index) {
+        <button
+          type="button"
+          class="day-tab"
+          [class.day-tab--active]="selectedDay() === index"
+          [attr.aria-selected]="selectedDay() === index"
+          (click)="setDay(index)"
+        >
+          <span>{{ day.closed ? 'Closed' : (isToday(day.date) ? 'Today' : (day.date | date: 'EEE')) }}</span>
+          <strong>{{ day.date | date: 'd MMM' }}</strong>
+        </button>
+      }
+    </div>
+
+    <div class="menu-toolbar">
+      <div class="meal-tabs" role="tablist" aria-label="Choose a meal">
+        @for (meal of meals; track meal) {
+          <button
+            type="button"
+            class="meal-tab"
+            [class.meal-tab--active]="selectedMeal() === meal"
+            [attr.aria-selected]="selectedMeal() === meal"
+            (click)="setMeal(meal)"
+          >
+            {{ meal }}
+          </button>
+        }
+      </div>
+
+      <div class="dietary-tabs" role="group" aria-label="Filter by dietary preference">
+        <button type="button" [class.active]="dietaryFilter() === 'all'" (click)="setDietaryFilter('all')">All</button>
+        <button type="button" [class.active]="dietaryFilter() === 'vegetarian'" (click)="setDietaryFilter('vegetarian')">Vegetarian</button>
+        <button type="button" [class.active]="dietaryFilter() === 'vegan'" (click)="setDietaryFilter('vegan')">Vegan</button>
+      </div>
+    </div>
+
+    @if (days[selectedDay()].closed) {
+      <div class="closed-state">
+        <span class="closed-state__icon" aria-hidden="true">🔒</span>
+        <h2>Cafeteria closed on Sunday</h2>
+        <p>We are open every other day. Check back tomorrow for the next menu.</p>
+      </div>
+    } @else {
+    <header class="menu-heading">
+      <div>
+        <p class="eyebrow">{{ days[selectedDay()].date | date: 'EEEE, d MMMM' }}</p>
+        <h2>{{ selectedMeal() }} menu</h2>
+      </div>
+      <span class="item-count">{{ selectedItems().length }} options</span>
+    </header>
+
+    @if (selectedItems().length) {
+      <div class="items">
+        @for (item of selectedItems(); track item.name) {
+          <article class="menu-item">
+            <div class="menu-item__icon" aria-hidden="true">🍽</div>
+            <div class="menu-item__body">
+              <div class="menu-item__title">
+                <h3>{{ item.name }}</h3>
+              </div>
+              <p>{{ item.description }}</p>
+              <div class="labels">
+                @for (diet of item.dietary; track diet) {
+                  <span class="label label--diet">{{ diet }}</span>
+                }
+                @for (allergen of item.allergens; track allergen) {
+                  <span class="label">Contains {{ allergen }}</span>
+                }
+                @if (!item.allergens.length) {
+                  <span class="label label--safe">No listed allergens</span>
+                }
+              </div>
+            </div>
+          </article>
+        }
+      </div>
+    } @else {
+      <p class="empty">No {{ dietaryFilter() }} options are available for this meal.</p>
+    }
+    }
+  </section>
+</section>
