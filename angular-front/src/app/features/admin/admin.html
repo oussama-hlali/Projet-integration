@@ -1,0 +1,45 @@
+<section class="page admin">
+  <app-page-header
+    title="Admin dashboard"
+    subtitle="Campus KPIs and operational overview."
+  />
+
+  <div class="metrics">
+    <app-stat-card label="Rooms" [value]="analytics.roomsTotal()" hint="Total rooms" />
+    <app-stat-card label="Available" [value]="analytics.roomsAvailable()" hint="Ready to book" />
+    <app-stat-card label="Occupied" [value]="analytics.roomsOccupied()" hint="In use now" />
+    <app-stat-card label="Reserved" [value]="analytics.roomsReserved()" hint="Booked" />
+    <app-stat-card label="Maintenance" [value]="analytics.roomsMaintenance()" hint="Closed" />
+    <app-stat-card label="Occupancy" [value]="percent(analytics.occupancyRate())" hint="Occupied + reserved" />
+  </div>
+
+  <div class="metrics">
+    <app-stat-card label="Events" [value]="analytics.eventsTotal()" hint="Total events" />
+    <app-stat-card label="Upcoming" [value]="analytics.upcomingEvents()" hint="Future events" />
+    <app-stat-card label="Past" [value]="analytics.pastEvents()" hint="Archived" />
+    <app-stat-card label="Reservations" [value]="analytics.reservationsTotal()" hint="Total bookings" />
+    <app-stat-card label="Pending" [value]="analytics.pendingReservations()" hint="Awaiting" />
+    <app-stat-card label="Cancelled" [value]="analytics.cancelledReservations()" hint="Cancelled" />
+  </div>
+
+  <div class="metrics">
+    <app-stat-card label="Announcements" [value]="analytics.announcementsTotal()" hint="Published" />
+    <app-stat-card label="Pinned" [value]="analytics.pinnedAnnouncements()" hint="Important" />
+    <app-stat-card label="Lost & Found" [value]="analytics.lostFoundTotal()" hint="Total reports" />
+    <app-stat-card label="Open reports" [value]="analytics.openLostFound()" hint="Unclaimed" />
+    <app-stat-card label="Users" [value]="analytics.usersTotal()" hint="Accounts" />
+    <app-stat-card label="Students" [value]="analytics.studentsCount()" hint="Student accounts" />
+    <app-stat-card label="Admins" [value]="analytics.adminsCount()" hint="Admin accounts" />
+    <app-stat-card label="Unread notif." [value]="analytics.unreadNotifications()" hint="Notifications" />
+  </div>
+
+  <div class="metrics">
+    <app-stat-card label="Transport routes" [value]="analytics.transportRoutes()" hint="Lines" />
+    <app-stat-card label="Transport stops" [value]="analytics.transportStops()" hint="Stops" />
+    <app-stat-card
+      label="Today's menu"
+      [value]="analytics.todayMenu()?.meal ?? '—'"
+      [hint]="analytics.todayMenu()?.openingHours ?? ''"
+    />
+  </div>
+</section>
