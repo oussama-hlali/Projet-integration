@@ -1,15 +1,14 @@
 import { Component, effect, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 
 import { AuthService } from '../../core/services/auth.service';
 import { ThemeService } from '../../core/services/theme.service';
 import { UserService } from '../../core/services/user.service';
-import { PageHeaderComponent } from '../../shared/components';
+import { EmptyStateComponent, PageHeaderComponent } from '../../shared/components';
 
 @Component({
   selector: 'app-profile',
-  imports: [ReactiveFormsModule, RouterLink, PageHeaderComponent],
+  imports: [ReactiveFormsModule, EmptyStateComponent, PageHeaderComponent],
   templateUrl: './profile.html',
   styleUrl: './profile.scss',
 })
