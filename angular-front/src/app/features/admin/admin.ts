@@ -1,12 +1,18 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
+
+import { AnalyticsService } from '../../core/services/analytics.service';
+import { PageHeaderComponent, StatCardComponent } from '../../shared/components';
 
 @Component({
   selector: 'app-admin',
-  template: `
-    <section class="page">
-      <h1 class="page__title">Admin</h1>
-      <p class="page__hint">Placeholder — this page is built in a later sprint.</p>
-    </section>
-  `,
+  imports: [PageHeaderComponent, StatCardComponent],
+  templateUrl: './admin.html',
+  styleUrl: './admin.scss',
 })
-export class Admin {}
+export class Admin {
+  protected readonly analytics = inject(AnalyticsService);
+
+  protected percent(value: number): string {
+    return `${Math.round(value * 100)}%`;
+  }
+}
