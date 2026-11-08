@@ -1,0 +1,245 @@
+<section class="page admin">
+  <app-page-header
+    title="Room management"
+    subtitle="Add rooms, update facilities and keep availability accurate."
+  >
+    <span class="pill">{{ rooms().length }} rooms</span>
+  </app-page-header>
+
+  <div class="metrics">
+    @for (metric of metrics(); track metric.label) {
+      <app-stat-card [label]="metric.label" [value]="metric.value" [hint]="metric.hint" />
+    }
+  </div>
+
+  @if (feedback()) {
+    <div class="feedback" role="status">
+      <span>{{ feedback() }}</span>
+      <button
+        type="button"
+        class="feedback__close"
+        aria-label="Dismiss message"
+        (click)="dismissFeedback()"
+      >
+        &times;
+      </button>
+    </div>
+  }
+
+  @if (error()) {
+    <div class="feedback feedback--danger" role="alert">
+      <span>{{ error() }}</span>
+      <button
+        type="button"
+        class="feedback__close"
+        aria-label="Dismiss message"
+        (click)="dismissError()"
+      >
+        &times;
+      </button>
+    </div>
+  }
+
+  <div class="admin-layout">
+    <section class="admin-panel glass glass--thick" aria-labelledby="rooms-list-title">
+      <div class="admin-panel__head">
+        <div>
+          <h2 id="rooms-list-title">Catalogue</h2>
+          <p class="muted">Showing {{ filtered().length }} of {{ rooms().length }} rooms</p>
+        </div>
+      </div>
+
+      <div class="admin-toolbar glass">
+        <div class="admin-toolbar__group">
+          <label class="field">
+            <span class="field__label">Status</span>
+            <select class="control" [value]="statusFilter()" (change)="setStatus($event)">
+              <option value="all">All statuses</option>
+              @for (status of statuses; track status) {
+                <option [value]="status">{{ statusLabels[status] }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="field search">
+            <span class="field__label">Search</span>
+            <input
+              class="control"
+              type="search"
+              placeholder="Room, building or facility"
+              [value]="search()"
+              (input)="setSearch($event)"
+            />
+          </label>
+
+          @if (hasFilters()) {
+            <button type="button" class="button button--small" (click)="clearFilters()">
+              Clear
+            </button>
+          }
+        </div>
+      </div>
+
+      @if (filtered().length) {
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th scope="col">Room</th>
+                <th scope="col">Capacity</th>
+                <th scope="col">Facilities</th>
+                <th scope="col">Status</th>
+                <th scope="col"><span class="visually-hidden">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (room of filtered(); track room.id) {
+                <tr>
+                  <td>
+                    <span class="admin-table__title">{{ room.name }}</span>
+                    <span class="admin-table__meta">{{ room.building }}</span>
+                  </td>
+                  <td>{{ room.capacity }} seats</td>
+                  <td>{{ room.facilities.length ? room.facilities.join(', ') : '—' }}</td>
+                  <td>
+                    <app-status-badge
+                      [label]="statusLabel(room.status)"
+                      [variant]="statusVariant(room.status)"
+                    />
+                  </td>
+                  <td>
+                    <div class="admin-table__actions">
+                      <button
+                        type="button"
+                        class="button button--small"
+                        (click)="startEdit(room)"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        class="button button--small button--danger"
+                        (click)="requestDelete(room)"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <app-empty-state
+          title="No rooms match"
+          message="Adjust the filters or add a new room with the form."
+        />
+      }
+    </section>
+
+    <section class="admin-panel glass glass--thick" aria-labelledby="room-form-title">
+      <div class="admin-panel__head">
+        <div>
+          <h2 id="room-form-title">{{ editingId() ? 'Edit room' : 'Add a room' }}</h2>
+          <p class="muted">
+            {{ editingId() ? 'Update the details and save.' : 'Register a new bookable space.' }}
+          </p>
+        </div>
+      </div>
+
+      <form class="admin-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        <div class="form-grid">
+          <label class="form-field">
+            <span class="field__label">Name</span>
+            <input
+              class="control"
+              type="text"
+              formControlName="name"
+              [class.control--invalid]="isInvalid('name')"
+              placeholder="Salle 204"
+            />
+            @if (isInvalid('name')) {
+              <p class="field-error">A room name is required.</p>
+            }
+          </label>
+
+          <label class="form-field">
+            <span class="field__label">Building</span>
+            <select
+              class="control"
+              formControlName="buildingId"
+              [class.control--invalid]="isInvalid('buildingId')"
+            >
+              <option value="">Choose a building</option>
+              @for (building of buildings(); track building.id) {
+                <option [value]="building.id">{{ building.name }}</option>
+              }
+            </select>
+            @if (isInvalid('buildingId')) {
+              <p class="field-error">Pick the building this room belongs to.</p>
+            }
+          </label>
+
+          <label class="form-field">
+            <span class="field__label">Capacity</span>
+            <input
+              class="control"
+              type="number"
+              min="1"
+              max="1000"
+              formControlName="capacity"
+              [class.control--invalid]="isInvalid('capacity')"
+            />
+            @if (isInvalid('capacity')) {
+              <p class="field-error">Capacity must be between 1 and 1000.</p>
+            }
+          </label>
+
+          <label class="form-field">
+            <span class="field__label">Status</span>
+            <select class="control" formControlName="status">
+              @for (status of statuses; track status) {
+                <option [value]="status">{{ statusLabels[status] }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="form-field form-field--full">
+            <span class="field__label">Facilities</span>
+            <input
+              class="control"
+              type="text"
+              formControlName="facilities"
+              placeholder="Wi-Fi, Projecteur, Tableau blanc"
+            />
+          </label>
+        </div>
+
+        <div class="form-actions">
+          @if (editingId()) {
+            <button type="button" class="button" (click)="startCreate()">Cancel edit</button>
+          }
+          <button type="submit" class="button button--primary">
+            {{ editingId() ? 'Save changes' : 'Add room' }}
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <app-confirm-dialog
+    [open]="dialogOpen()"
+    title="Delete room"
+    [message]="
+      deleteTarget()
+        ? 'Delete ' + deleteTarget()!.name + '? Rooms with active bookings cannot be removed.'
+        : ''
+    "
+    confirmLabel="Delete"
+    cancelLabel="Keep"
+    [danger]="true"
+    (confirmed)="confirmDelete()"
+    (cancelled)="deleteTarget.set(null)"
+  />
+</section>

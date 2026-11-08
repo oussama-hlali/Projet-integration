@@ -9,7 +9,7 @@
       aria-hidden="true"
     ></span>
 
-    @for (item of items; track item.route) {
+    @for (item of items(); track item.route) {
       <a
         class="tab"
         [routerLink]="item.route"

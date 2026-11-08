@@ -23,7 +23,7 @@ export interface NavItem {
   readonly label: string;
   readonly route: string;
   readonly icon: NavIconName;
-  /** Hidden unless the demo role is `ADMINISTRATOR`. */
+  /** Hidden unless the signed-in user is an `ADMINISTRATOR`. */
   readonly adminOnly?: boolean;
 }
 
@@ -37,6 +37,20 @@ export const PRIMARY_NAV: readonly NavItem[] = [
   { label: 'Transport', route: '/transport', icon: 'transport' },
   { label: 'Cafeteria', route: '/cafeteria', icon: 'cafeteria' },
   { label: 'Lost & Found', route: '/lost-found', icon: 'search' },
+];
+
+/**
+ * Administrator rail. Students never see these destinations and the routes
+ * themselves are protected by `adminGuard`.
+ */
+export const ADMIN_NAV: readonly NavItem[] = [
+  { label: 'Overview', route: '/admin', icon: 'dashboard' },
+  { label: 'Rooms', route: '/admin/rooms', icon: 'rooms' },
+  { label: 'Events', route: '/admin/events', icon: 'events' },
+  { label: 'Announcements', route: '/admin/announcements', icon: 'megaphone' },
+  { label: 'Reservations', route: '/admin/reservations', icon: 'calendar' },
+  { label: 'Lost & Found', route: '/admin/lost-found', icon: 'search' },
+  { label: 'Users', route: '/admin/users', icon: 'user' },
 ];
 
 /** Account destinations shown in the floating dock. */

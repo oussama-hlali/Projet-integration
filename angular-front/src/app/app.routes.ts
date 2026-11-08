@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { adminGuard } from './core/guards/admin.guard';
 import { authGuard } from './core/guards/auth.guard';
+import { studentGuard } from './core/guards/student.guard';
 import { AppShell } from './layout/app-shell/app-shell';
 
 export const routes: Routes = [
@@ -39,49 +40,58 @@ export const routes: Routes = [
       {
         path: 'dashboard',
         title: 'Dashboard · Smart Campus',
+        canActivate: [studentGuard],
         loadComponent: () => import('./features/dashboard/dashboard').then((m) => m.Dashboard),
       },
       {
         path: 'rooms',
         title: 'Rooms · Smart Campus',
+        canActivate: [studentGuard],
         loadComponent: () => import('./features/rooms/rooms').then((m) => m.Rooms),
       },
       {
         path: 'reservations',
         title: 'Reservations · Smart Campus',
+        canActivate: [studentGuard],
         loadComponent: () =>
           import('./features/reservations/reservations').then((m) => m.Reservations),
       },
       {
         path: 'events',
         title: 'Events · Smart Campus',
+        canActivate: [studentGuard],
         loadComponent: () => import('./features/events/events').then((m) => m.Events),
       },
       {
         path: 'events/:id',
         title: 'Event · Smart Campus',
+        canActivate: [studentGuard],
         loadComponent: () =>
           import('./features/events/event-detail').then((m) => m.EventDetail),
       },
       {
         path: 'announcements',
         title: 'Announcements · Smart Campus',
+        canActivate: [studentGuard],
         loadComponent: () =>
           import('./features/announcements/announcements').then((m) => m.Announcements),
       },
       {
         path: 'transport',
         title: 'Transport · Smart Campus',
+        canActivate: [studentGuard],
         loadComponent: () => import('./features/transport/transport').then((m) => m.Transport),
       },
       {
         path: 'cafeteria',
         title: 'Cafeteria · Smart Campus',
+        canActivate: [studentGuard],
         loadComponent: () => import('./features/cafeteria/cafeteria').then((m) => m.Cafeteria),
       },
       {
         path: 'lost-found',
         title: 'Lost & Found · Smart Campus',
+        canActivate: [studentGuard],
         loadComponent: () => import('./features/lost-found/lost-found').then((m) => m.LostFound),
       },
       {
@@ -122,6 +132,24 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/admin/announcements/admin-announcements').then(
             (m) => m.AdminAnnouncements,
+          ),
+      },
+      {
+        path: 'admin/reservations',
+        title: 'Admin · Reservations',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./features/admin/reservations/admin-reservations').then(
+            (m) => m.AdminReservations,
+          ),
+      },
+      {
+        path: 'admin/lost-found',
+        title: 'Admin · Lost & Found',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./features/admin/lost-found/admin-lost-found').then(
+            (m) => m.AdminLostFound,
           ),
       },
       {

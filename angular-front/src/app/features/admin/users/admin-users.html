@@ -1,0 +1,259 @@
+<section class="page admin">
+  <app-page-header
+    title="User management"
+    subtitle="Create accounts, assign roles and reset credentials without a backend."
+  >
+    <span class="pill">{{ users().length }} accounts</span>
+  </app-page-header>
+
+  <div class="metrics">
+    @for (metric of metrics(); track metric.label) {
+      <app-stat-card [label]="metric.label" [value]="metric.value" [hint]="metric.hint" />
+    }
+  </div>
+
+  @if (feedback()) {
+    <div class="feedback" role="status">
+      <span>{{ feedback() }}</span>
+      <button
+        type="button"
+        class="feedback__close"
+        aria-label="Dismiss message"
+        (click)="dismissFeedback()"
+      >
+        &times;
+      </button>
+    </div>
+  }
+
+  @if (error()) {
+    <div class="feedback feedback--danger" role="alert">
+      <span>{{ error() }}</span>
+      <button
+        type="button"
+        class="feedback__close"
+        aria-label="Dismiss message"
+        (click)="dismissError()"
+      >
+        &times;
+      </button>
+    </div>
+  }
+
+  <div class="admin-layout">
+    <section class="admin-panel glass glass--thick" aria-labelledby="users-list-title">
+      <div class="admin-panel__head">
+        <div>
+          <h2 id="users-list-title">Directory</h2>
+          <p class="muted">Showing {{ filtered().length }} of {{ users().length }} accounts</p>
+        </div>
+      </div>
+
+      <div class="admin-toolbar glass">
+        <div class="admin-toolbar__group">
+          <label class="field">
+            <span class="field__label">Role</span>
+            <select class="control" [value]="roleFilter()" (change)="setRole($event)">
+              <option value="all">All roles</option>
+              @for (role of roles; track role) {
+                <option [value]="role">{{ roleLabels[role] }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="field search">
+            <span class="field__label">Search</span>
+            <input
+              class="control"
+              type="search"
+              placeholder="Name or email"
+              [value]="search()"
+              (input)="setSearch($event)"
+            />
+          </label>
+
+          @if (hasFilters()) {
+            <button type="button" class="button button--small" (click)="clearFilters()">
+              Clear
+            </button>
+          }
+        </div>
+      </div>
+
+      @if (filtered().length) {
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th scope="col">Account</th>
+                <th scope="col">Role</th>
+                <th scope="col">2FA</th>
+                <th scope="col"><span class="visually-hidden">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (user of filtered(); track user.id) {
+                <tr>
+                  <td>
+                    <div class="user-cell">
+                      <span class="avatar" aria-hidden="true">{{ initials(user) }}</span>
+                      <div>
+                        <span class="admin-table__title">
+                          {{ user.fullName }}
+                          @if (isSelf(user)) {
+                            <span class="self-pill">You</span>
+                          }
+                        </span>
+                        <span class="admin-table__meta">{{ user.email }}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <app-status-badge
+                      [label]="roleLabel(user.role)"
+                      [variant]="roleVariant(user.role)"
+                    />
+                  </td>
+                  <td>
+                    <app-status-badge
+                      [label]="user.totpEnabled ? 'Enabled' : 'Not set'"
+                      [variant]="user.totpEnabled ? 'success' : 'warning'"
+                    />
+                  </td>
+                  <td>
+                    <div class="admin-table__actions">
+                      <button
+                        type="button"
+                        class="button button--small"
+                        (click)="startEdit(user)"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        class="button button--small button--danger"
+                        [disabled]="cannotDelete(user)"
+                        [attr.title]="
+                          isSelf(user)
+                            ? 'You cannot delete your own account'
+                            : isLastAdmin(user)
+                              ? 'The last administrator cannot be deleted'
+                              : null
+                        "
+                        (click)="requestDelete(user)"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <app-empty-state
+          title="No accounts match"
+          message="Adjust the filters or create a new account with the form."
+        />
+      }
+    </section>
+
+    <section class="admin-panel glass glass--thick" aria-labelledby="user-form-title">
+      <div class="admin-panel__head">
+        <div>
+          <h2 id="user-form-title">{{ editingId() ? 'Edit account' : 'Create account' }}</h2>
+          <p class="muted">
+            {{
+              editingId()
+                ? 'Update details, role or reset the password.'
+                : 'New users confirm 2FA on their first sign-in.'
+            }}
+          </p>
+        </div>
+      </div>
+
+      <form class="admin-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        <label class="form-field">
+          <span class="field__label">Full name</span>
+          <input
+            class="control"
+            type="text"
+            formControlName="fullName"
+            [class.control--invalid]="isInvalid('fullName')"
+            placeholder="Yasmine Ben Salah"
+          />
+          @if (isInvalid('fullName')) {
+            <p class="field-error">A full name is required.</p>
+          }
+        </label>
+
+        <label class="form-field">
+          <span class="field__label">Email</span>
+          <input
+            class="control"
+            type="email"
+            formControlName="email"
+            [class.control--invalid]="isInvalid('email')"
+            placeholder="name@campus.tn"
+          />
+          @if (isInvalid('email')) {
+            <p class="field-error">Enter a valid email address.</p>
+          }
+        </label>
+
+        <label class="form-field">
+          <span class="field__label">Role</span>
+          <select class="control" formControlName="role">
+            @for (role of roles; track role) {
+              <option [value]="role">{{ roleLabels[role] }}</option>
+            }
+          </select>
+        </label>
+
+        <label class="form-field">
+          <span class="field__label">
+            {{ editingId() ? 'New password (optional)' : 'Temporary password' }}
+          </span>
+          <input
+            class="control"
+            type="password"
+            formControlName="password"
+            [class.control--invalid]="passwordError() !== null"
+            [placeholder]="editingId() ? 'Leave blank to keep current' : 'At least 8 characters'"
+            (input)="passwordError.set(null)"
+          />
+          @if (passwordError()) {
+            <p class="field-error">{{ passwordError() }}</p>
+          } @else if (!editingId()) {
+            <p class="field-error">Must be at least 8 characters.</p>
+          }
+        </label>
+
+        <div class="form-actions">
+          @if (editingId()) {
+            <button type="button" class="button" (click)="startCreate()">Cancel edit</button>
+          }
+          <button type="submit" class="button button--primary">
+            {{ editingId() ? 'Save changes' : 'Create account' }}
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <app-confirm-dialog
+    [open]="dialogOpen()"
+    title="Delete account"
+    [message]="
+      deleteTarget()
+        ? 'Delete ' + deleteTarget()!.fullName + '\'s account? This cannot be undone.'
+        : ''
+    "
+    confirmLabel="Delete"
+    cancelLabel="Keep"
+    [danger]="true"
+    (confirmed)="confirmDelete()"
+    (cancelled)="deleteTarget.set(null)"
+  />
+</section>

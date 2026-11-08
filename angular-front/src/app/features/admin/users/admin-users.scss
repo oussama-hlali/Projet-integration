@@ -1,0 +1,52 @@
+@use '../admin-ui' as *;
+
+.admin-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 380px);
+}
+
+.user-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.avatar {
+  display: grid;
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  color: var(--color-accent-text);
+  background: var(--color-accent-soft);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 26%, transparent);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.04em;
+}
+
+.self-pill {
+  display: inline-flex;
+  margin-left: var(--space-2);
+  padding: 0.05rem 0.45rem;
+  color: var(--color-info);
+  background: color-mix(in srgb, var(--color-info) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-info) 30%, transparent);
+  border-radius: var(--radius-full);
+  font-size: 0.62rem;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

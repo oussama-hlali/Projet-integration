@@ -1,10 +1,30 @@
-:host {
-  display: block;
+@use './admin-ui' as *;
+
+.admin-side {
+  display: grid;
+  gap: var(--space-4);
 }
 
-.admin .metrics {
+.chart-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: var(--space-4);
-  margin-bottom: var(--space-4);
+  margin-top: var(--space-4);
+}
+
+.list__title {
+  margin: var(--space-1) 0 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }

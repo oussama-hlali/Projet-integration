@@ -66,7 +66,7 @@ export class Setup2fa implements OnDestroy {
       return;
     }
 
-    await this.router.navigateByUrl(this.auth.isAdmin() ? '/admin' : '/dashboard');
+    await this.router.navigateByUrl(this.auth.homeRoute());
   }
 
   cancel(): void {

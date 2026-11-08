@@ -1,0 +1,226 @@
+<section class="page admin">
+  <app-page-header
+    title="Announcement management"
+    subtitle="Publish campus notices, pin important updates and retire old posts."
+  >
+    <span class="pill">{{ announcements().length }} announcements</span>
+  </app-page-header>
+
+  <div class="metrics">
+    @for (metric of metrics(); track metric.label) {
+      <app-stat-card [label]="metric.label" [value]="metric.value" [hint]="metric.hint" />
+    }
+  </div>
+
+  @if (feedback()) {
+    <div class="feedback" role="status">
+      <span>{{ feedback() }}</span>
+      <button
+        type="button"
+        class="feedback__close"
+        aria-label="Dismiss message"
+        (click)="dismissFeedback()"
+      >
+        &times;
+      </button>
+    </div>
+  }
+
+  @if (error()) {
+    <div class="feedback feedback--danger" role="alert">
+      <span>{{ error() }}</span>
+      <button
+        type="button"
+        class="feedback__close"
+        aria-label="Dismiss message"
+        (click)="dismissError()"
+      >
+        &times;
+      </button>
+    </div>
+  }
+
+  <div class="admin-layout">
+    <section class="admin-panel glass glass--thick" aria-labelledby="announcements-list-title">
+      <div class="admin-panel__head">
+        <div>
+          <h2 id="announcements-list-title">Board</h2>
+          <p class="muted">
+            Showing {{ filtered().length }} of {{ announcements().length }} announcements
+          </p>
+        </div>
+      </div>
+
+      <div class="admin-toolbar glass">
+        <div class="admin-toolbar__group">
+          <label class="field">
+            <span class="field__label">Category</span>
+            <select class="control" [value]="categoryFilter()" (change)="setCategory($event)">
+              <option value="all">All categories</option>
+              @for (category of categories; track category) {
+                <option [value]="category">{{ categoryLabels[category] }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="field search">
+            <span class="field__label">Search</span>
+            <input
+              class="control"
+              type="search"
+              placeholder="Title or content"
+              [value]="search()"
+              (input)="setSearch($event)"
+            />
+          </label>
+
+          @if (hasFilters()) {
+            <button type="button" class="button button--small" (click)="clearFilters()">
+              Clear
+            </button>
+          }
+        </div>
+      </div>
+
+      @if (filtered().length) {
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th scope="col">Announcement</th>
+                <th scope="col">Category</th>
+                <th scope="col">Published</th>
+                <th scope="col">Pinned</th>
+                <th scope="col"><span class="visually-hidden">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (announcement of filtered(); track announcement.id) {
+                <tr>
+                  <td>
+                    <span class="admin-table__title">{{ announcement.title }}</span>
+                    <span class="admin-table__meta">{{ announcement.content }}</span>
+                  </td>
+                  <td>{{ categoryLabel(announcement.category) }}</td>
+                  <td>{{ announcement.publishedAt | date: 'd MMM yyyy' }}</td>
+                  <td>{{ announcement.pinned ? 'Pinned' : '—' }}</td>
+                  <td>
+                    <div class="admin-table__actions">
+                      <button
+                        type="button"
+                        class="button button--small"
+                        (click)="startEdit(announcement)"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        class="button button--small"
+                        (click)="togglePinned(announcement)"
+                      >
+                        {{ announcement.pinned ? 'Unpin' : 'Pin' }}
+                      </button>
+                      <button
+                        type="button"
+                        class="button button--small button--danger"
+                        (click)="requestDelete(announcement)"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <app-empty-state
+          title="No announcements match"
+          message="Adjust the filters or publish a new announcement with the form."
+        />
+      }
+    </section>
+
+    <section class="admin-panel glass glass--thick" aria-labelledby="announcement-form-title">
+      <div class="admin-panel__head">
+        <div>
+          <h2 id="announcement-form-title">
+            {{ editingId() ? 'Edit announcement' : 'New announcement' }}
+          </h2>
+          <p class="muted">
+            {{ editingId() ? 'Update the wording and save.' : 'Write a notice for the campus feed.' }}
+          </p>
+        </div>
+      </div>
+
+      <form class="admin-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        <label class="form-field">
+          <span class="field__label">Title</span>
+          <input
+            class="control"
+            type="text"
+            formControlName="title"
+            [class.control--invalid]="isInvalid('title')"
+            placeholder="Exam schedule published"
+          />
+          @if (isInvalid('title')) {
+            <p class="field-error">An announcement title is required.</p>
+          }
+        </label>
+
+        <label class="form-field">
+          <span class="field__label">Content</span>
+          <textarea
+            class="control"
+            rows="4"
+            formControlName="content"
+            [class.control--invalid]="isInvalid('content')"
+            placeholder="What do students need to know?"
+          ></textarea>
+          @if (isInvalid('content')) {
+            <p class="field-error">A message body is required.</p>
+          }
+        </label>
+
+        <label class="form-field">
+          <span class="field__label">Category</span>
+          <select class="control" formControlName="category">
+            @for (category of categories; track category) {
+              <option [value]="category">{{ categoryLabels[category] }}</option>
+            }
+          </select>
+        </label>
+
+        <label class="checkbox">
+          <input type="checkbox" formControlName="pinned" />
+          Pin this announcement to the top of the feed
+        </label>
+
+        <div class="form-actions">
+          @if (editingId()) {
+            <button type="button" class="button" (click)="startCreate()">Cancel edit</button>
+          }
+          <button type="submit" class="button button--primary">
+            {{ editingId() ? 'Save changes' : 'Publish' }}
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <app-confirm-dialog
+    [open]="dialogOpen()"
+    title="Delete announcement"
+    [message]="
+      deleteTarget()
+        ? 'Delete ' + deleteTarget()!.title + '? It will disappear from the campus feed.'
+        : ''
+    "
+    confirmLabel="Delete"
+    cancelLabel="Keep"
+    [danger]="true"
+    (confirmed)="confirmDelete()"
+    (cancelled)="deleteTarget.set(null)"
+  />
+</section>

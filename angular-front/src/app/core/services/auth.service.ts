@@ -57,6 +57,9 @@ export class AuthService {
   /** Convenience flag for administrator-only surfaces. */
   readonly isAdmin = computed(() => this.currentUser()?.role === 'ADMINISTRATOR');
 
+  /** Landing page for the signed-in role: students and admins live apart. */
+  readonly homeRoute = computed(() => (this.isAdmin() ? '/admin' : '/dashboard'));
+
   /** User awaiting the OTP challenge, if any. */
   readonly pendingUserId = this.pendingUserIdState.asReadonly();
 
@@ -134,6 +137,51 @@ export class AuthService {
 
     this.pendingUserIdState.set(user.id);
     return { ok: false, reason: 'setup-required' };
+  }
+
+  /**
+   * Create an account from the admin console. The new user starts with 2FA
+   * disabled so their first sign-in walks them through the setup flow.
+   */
+  async createManagedUser(input: {
+    fullName: string;
+    email: string;
+    password: string;
+    role: User['role'];
+  }): Promise<{ ok: true; user: User } | { ok: false; reason: 'email-taken' | 'weak-password' }> {
+    if ((input.password ?? '').length < 8) {
+      return { ok: false, reason: 'weak-password' };
+    }
+
+    if (this.userService.findByEmail(input.email)) {
+      return { ok: false, reason: 'email-taken' };
+    }
+
+    const salt = this.generateSalt();
+    const user = this.userService.add({
+      fullName: input.fullName.trim(),
+      email: input.email.trim(),
+      role: input.role,
+      avatarUrl: 'assets/avatars/default.png',
+      preferences: { language: 'fr', notificationsEnabled: true, theme: 'light' },
+      passwordHash: await this.sha256Hex(salt + input.password),
+      salt,
+      totpSecret: this.generateTotpSecret(),
+      totpEnabled: false,
+    });
+
+    return { ok: true, user };
+  }
+
+  /** Reset a user's password from the admin console. */
+  async resetPassword(userId: string, password: string): Promise<boolean> {
+    if (password.length < 8 || !this.userService.findById(userId)) {
+      return false;
+    }
+
+    const salt = this.generateSalt();
+    const passwordHash = await this.sha256Hex(salt + password);
+    return this.userService.setCredentials(userId, passwordHash, salt) !== undefined;
   }
 
   /** Verify a TOTP code for an already enrolled user. */

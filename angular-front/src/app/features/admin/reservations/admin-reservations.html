@@ -1,0 +1,159 @@
+<section class="page admin">
+  <app-page-header
+    title="Reservation management"
+    subtitle="Approve requests, complete finished bookings and cancel conflicts."
+  >
+    <span class="pill">{{ reservations().length }} bookings</span>
+  </app-page-header>
+
+  <div class="metrics">
+    @for (metric of metrics(); track metric.label) {
+      <app-stat-card [label]="metric.label" [value]="metric.value" [hint]="metric.hint" />
+    }
+  </div>
+
+  @if (feedback()) {
+    <div class="feedback" role="status">
+      <span>{{ feedback() }}</span>
+      <button
+        type="button"
+        class="feedback__close"
+        aria-label="Dismiss message"
+        (click)="dismissFeedback()"
+      >
+        &times;
+      </button>
+    </div>
+  }
+
+  @if (error()) {
+    <div class="feedback feedback--danger" role="alert">
+      <span>{{ error() }}</span>
+      <button
+        type="button"
+        class="feedback__close"
+        aria-label="Dismiss message"
+        (click)="dismissError()"
+      >
+        &times;
+      </button>
+    </div>
+  }
+
+  <section class="admin-panel glass glass--thick admin-layout--wide" aria-labelledby="bookings-title">
+    <div class="admin-panel__head">
+      <div>
+        <h2 id="bookings-title">All bookings</h2>
+        <p class="muted">
+          Showing {{ filtered().length }} of {{ reservations().length }} reservations
+        </p>
+      </div>
+    </div>
+
+    <div class="admin-toolbar glass">
+      <div class="admin-toolbar__group">
+        <label class="field">
+          <span class="field__label">Status</span>
+          <select class="control" [value]="statusFilter()" (change)="setStatus($event)">
+            <option value="all">All statuses</option>
+            @for (status of statuses; track status) {
+              <option [value]="status">{{ statusLabels[status] }}</option>
+            }
+          </select>
+        </label>
+
+        <label class="field search">
+          <span class="field__label">Search</span>
+          <input
+            class="control"
+            type="search"
+            placeholder="Room, purpose or user"
+            [value]="search()"
+            (input)="setSearch($event)"
+          />
+        </label>
+
+        @if (hasFilters()) {
+          <button type="button" class="button button--small" (click)="clearFilters()">
+            Clear
+          </button>
+        }
+      </div>
+    </div>
+
+    @if (filtered().length) {
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th scope="col">Room</th>
+              <th scope="col">When</th>
+              <th scope="col">Purpose</th>
+              <th scope="col">User</th>
+              <th scope="col">Status</th>
+              <th scope="col"><span class="visually-hidden">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (reservation of filtered(); track reservation.id) {
+              <tr>
+                <td><span class="admin-table__title">{{ reservation.room }}</span></td>
+                <td>
+                  {{ reservation.startTime | date: 'd MMM yyyy' }}
+                  <span class="admin-table__meta">
+                    {{ reservation.startTime | date: 'HH:mm' }} &ndash;
+                    {{ reservation.endTime | date: 'HH:mm' }}
+                  </span>
+                </td>
+                <td>{{ reservation.purpose }}</td>
+                <td>{{ reservation.userId }}</td>
+                <td>
+                  <app-status-badge
+                    [label]="statusLabel(reservation.status)"
+                    [variant]="statusVariant(reservation.status)"
+                  />
+                </td>
+                <td>
+                  <div class="admin-table__actions">
+                    @if (canApprove(reservation)) {
+                      <button
+                        type="button"
+                        class="button button--small button--primary"
+                        (click)="approve(reservation)"
+                      >
+                        Approve
+                      </button>
+                    }
+                    @if (canComplete(reservation)) {
+                      <button
+                        type="button"
+                        class="button button--small"
+                        (click)="complete(reservation)"
+                      >
+                        Complete
+                      </button>
+                    }
+                    @if (canCancel(reservation)) {
+                      <button
+                        type="button"
+                        class="button button--small button--danger"
+                        (click)="cancel(reservation)"
+                      >
+                        Cancel
+                      </button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <app-empty-state
+        title="No bookings match"
+        message="Adjust the filters to see other reservations."
+      />
+    }
+  </section>
+</section>

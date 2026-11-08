@@ -1,6 +1,7 @@
 import {
   afterNextRender,
   Component,
+  computed,
   DestroyRef,
   ElementRef,
   inject,
@@ -10,7 +11,8 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { filter } from 'rxjs/operators';
-import { NavItem, PRIMARY_NAV } from '../../core/navigation';
+import { ADMIN_NAV, NavItem, PRIMARY_NAV } from '../../core/navigation';
+import { AuthService } from '../../core/services/auth.service';
 import { NavIconComponent } from '../../shared/components/nav-icon.component';
 
 interface LensBox {
@@ -39,9 +41,13 @@ const EMPTY_LENS: LensBox = { x: 0, y: 0, width: 0, height: 0, ready: false };
 export class TabNavComponent {
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly auth = inject(AuthService);
   private readonly track = viewChild<ElementRef<HTMLElement>>('track');
 
-  protected readonly items: readonly NavItem[] = PRIMARY_NAV;
+  /** Students browse the campus; administrators get the management rail. */
+  protected readonly items = computed<readonly NavItem[]>(() =>
+    this.auth.isAdmin() ? ADMIN_NAV : PRIMARY_NAV,
+  );
   protected readonly lens = signal<LensBox>(EMPTY_LENS);
 
   private observer: ResizeObserver | null = null;
