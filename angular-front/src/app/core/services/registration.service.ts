@@ -1,5 +1,7 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { EventRegistration } from '../models/event-registration.model';
+import { CampusEventService } from './campus-event.service';
+import { NotificationService } from './notification.service';
 
 const STORAGE_KEY = 'smart-campus.event-registrations';
 const DEMO_USER_ID = 'u1';
@@ -13,7 +15,22 @@ const DEMO_USER_ID = 'u1';
  */
 @Injectable({ providedIn: 'root' })
 export class RegistrationService {
+  private readonly events = inject(CampusEventService);
+  private readonly notifications = inject(NotificationService);
   private readonly state = signal<EventRegistration[]>(this.load());
+
+  canRegister(eventId: string, userId: string = 'u1'): boolean {
+    if (this.isRegistered(eventId, userId)) {
+      return false;
+    }
+
+    const event = this.events.findById(eventId);
+    if (!event) {
+      return false;
+    }
+
+    return this.countFor(eventId) < event.capacity;
+  }
 
   readonly registrations = this.state.asReadonly();
 
@@ -51,6 +68,12 @@ export class RegistrationService {
     };
 
     this.commit([...this.state(), registration]);
+    const event = this.events.findById(eventId);
+    this.notifications.add({
+      message: `Votre inscription à « ${event?.title ?? 'l\u2019événement'} » est enregistrée. Votre QR code est prêt.`,
+      type: 'EVENT',
+      eventId,
+    });
     return registration;
   }
 

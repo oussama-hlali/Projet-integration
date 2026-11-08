@@ -4,14 +4,14 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 
 import { AuthService } from '../../../core/services/auth.service';
 import { ThemeToggleComponent } from '../../../shared/components/theme-toggle.component';
 
 @Component({
   selector: 'app-verify-otp',
-  imports: [ReactiveFormsModule, RouterLink, ThemeToggleComponent],
+  imports: [ReactiveFormsModule, ThemeToggleComponent],
   templateUrl: './verify-otp.html',
   styleUrl: '../login/login.scss',
 })

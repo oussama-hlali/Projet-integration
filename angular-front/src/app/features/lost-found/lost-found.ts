@@ -1,174 +1,155 @@
-import { DatePipe } from '@angular/common';
-import { Component, computed, signal } from '@angular/core';
-import { PageHeaderComponent } from '../../shared/components';
+import { Component, computed, inject, signal } from '@angular/core';
+import {
+  LOST_FOUND_STATUSES,
+  LOST_FOUND_STATUS_LABELS,
+  LostFoundItem,
+  LostFoundReportInput,
+  LostFoundStatus,
+} from '../../core/models/lost-found.model';
+import { LostFoundService } from '../../core/services/lost-found.service';
+import {
+  BadgeVariant,
+  EmptyStateComponent,
+  PageHeaderComponent,
+  ReportItemComponent,
+  StatCardComponent,
+  StatusBadgeComponent,
+} from '../../shared/components';
 
-type ItemStatus = 'FOUND' | 'LOST';
-type ItemCategory = 'Electronics' | 'Cards & IDs' | 'Clothing' | 'Keys' | 'Other';
+type StatusFilter = 'all' | LostFoundStatus;
 
-interface LostFoundItem {
-  id: number;
-  title: string;
-  description: string;
-  status: ItemStatus;
-  category: ItemCategory;
-  location: string;
-  date: Date;
-  reporter: string;
-  contact: string;
-}
-
+/**
+ * PB-17 — Lost & Found.
+ *
+ * Students search reports and submit a new one. The list is backed by
+ * `LostFoundService`, so a report appears immediately and can move to CLAIMED
+ * when the owner is reunited with the item.
+ */
 @Component({
   selector: 'app-lost-found',
-  imports: [DatePipe, PageHeaderComponent],
+  imports: [
+    EmptyStateComponent,
+    PageHeaderComponent,
+    ReportItemComponent,
+    StatCardComponent,
+    StatusBadgeComponent,
+  ],
   templateUrl: './lost-found.html',
   styleUrl: './lost-found.scss',
 })
 export class LostFound {
-  readonly statuses: { value: ItemStatus; label: string }[] = [
-    { value: 'FOUND', label: 'Found items' },
-    { value: 'LOST', label: 'Lost items' },
-  ];
-  readonly categories: ItemCategory[] = ['Electronics', 'Cards & IDs', 'Clothing', 'Keys', 'Other'];
-  readonly selectedStatus = signal<ItemStatus>('FOUND');
+  private readonly lostFoundService = inject(LostFoundService);
+
+  readonly reports = this.lostFoundService.items;
+
+  readonly statuses = LOST_FOUND_STATUSES;
+  readonly statusLabels = LOST_FOUND_STATUS_LABELS;
+
+  readonly statusFilter = signal<StatusFilter>('all');
   readonly search = signal('');
-  readonly selectedCategory = signal<'all' | ItemCategory>('all');
-  readonly showReportForm = signal(false);
-  readonly reportVersion = signal(0);
+  readonly feedback = signal<string | null>(null);
 
-  readonly items: LostFoundItem[] = [
-    {
-      id: 1,
-      title: 'Black wireless headphones',
-      description: 'Black over-ear headphones in a soft grey case.',
-      status: 'FOUND',
-      category: 'Electronics',
-      location: 'Library, second floor',
-      date: new Date(2026, 10, 6),
-      reporter: 'Nour Ben Ali',
-      contact: 'nour.benali@smartcampus.test',
-    },
-    {
-      id: 2,
-      title: 'Student card',
-      description: 'Student card found near the cafeteria entrance.',
-      status: 'FOUND',
-      category: 'Cards & IDs',
-      location: 'Cafeteria entrance',
-      date: new Date(2026, 10, 5),
-      reporter: 'Campus reception',
-      contact: 'reception@smartcampus.test',
-    },
-    {
-      id: 3,
-      title: 'Blue water bottle',
-      description: 'Blue metal bottle with a small university sticker.',
-      status: 'FOUND',
-      category: 'Other',
-      location: 'Sports hall',
-      date: new Date(2026, 10, 3),
-      reporter: 'Youssef Khelifi',
-      contact: 'youssef.khelifi@smartcampus.test',
-    },
-    {
-      id: 4,
-      title: 'Silver laptop charger',
-      description: 'USB-C charger, left in a classroom after the afternoon lecture.',
-      status: 'LOST',
-      category: 'Electronics',
-      location: 'Building B, room 204',
-      date: new Date(2026, 10, 6),
-      reporter: 'You',
-      contact: 'helpdesk@smartcampus.test',
-    },
-    {
-      id: 5,
-      title: 'Set of two keys',
-      description: 'Two keys on a red key ring.',
-      status: 'LOST',
-      category: 'Keys',
-      location: 'Main campus',
-      date: new Date(2026, 10, 4),
-      reporter: 'You',
-      contact: 'helpdesk@smartcampus.test',
-    },
-  ];
+  readonly counts = computed<Record<StatusFilter, number>>(() => {
+    const counts: Record<StatusFilter, number> = {
+      all: 0,
+      LOST: 0,
+      FOUND: 0,
+      CLAIMED: 0,
+    };
 
-  readonly filteredItems = computed(() => {
-    this.reportVersion();
-    const query = this.search().trim().toLowerCase();
-    const category = this.selectedCategory();
+    for (const report of this.reports()) {
+      counts.all += 1;
+      counts[report.status] += 1;
+    }
 
-    return this.items.filter((item) => {
-      const matchesStatus = item.status === this.selectedStatus();
-      const matchesCategory = category === 'all' || item.category === category;
-      const searchable = `${item.title} ${item.description} ${item.location} ${item.reporter}`.toLowerCase();
-      return matchesStatus && matchesCategory && (!query || searchable.includes(query));
-    });
+    return counts;
   });
 
-  setStatus(status: ItemStatus): void {
-    this.selectedStatus.set(status);
-  }
+  readonly openCount = computed(
+    () => this.reports().filter((report) => report.status !== 'CLAIMED').length,
+  );
 
-  countByStatus(status: ItemStatus): number {
-    return this.items.filter((item) => item.status === status).length;
+  readonly metrics = computed(() => [
+    { label: 'Open reports', value: this.openCount(), hint: 'Still looking' },
+    { label: 'Lost', value: this.counts().LOST, hint: 'Reported missing' },
+    { label: 'Found', value: this.counts().FOUND, hint: 'Handed in' },
+    { label: 'Claimed', value: this.counts().CLAIMED, hint: 'Reunited with owner' },
+  ]);
+
+  readonly filtered = computed(() => {
+    const status = this.statusFilter();
+    const term = this.search().trim().toLowerCase();
+
+    return this.reports()
+      .filter(
+        (report) =>
+          (status === 'all' || report.status === status) &&
+          (!term ||
+            `${report.title} ${report.category} ${report.location} ${report.description}`
+              .toLowerCase()
+              .includes(term)),
+      )
+      .sort(
+        (a, b) =>
+          Number(a.status === 'CLAIMED') - Number(b.status === 'CLAIMED') ||
+          b.reportedAt.getTime() - a.reportedAt.getTime() ||
+          b.id.localeCompare(a.id),
+      );
+  });
+
+  readonly hasFilters = computed(
+    () => this.statusFilter() !== 'all' || !!this.search().trim(),
+  );
+
+  setStatus(status: StatusFilter): void {
+    this.statusFilter.set(status);
   }
 
   setSearch(event: Event): void {
     this.search.set((event.target as HTMLInputElement).value);
   }
 
-  setCategory(event: Event): void {
-    this.selectedCategory.set((event.target as HTMLSelectElement).value as 'all' | ItemCategory);
+  resetFilters(): void {
+    this.statusFilter.set('all');
+    this.search.set('');
   }
 
-  toggleReportForm(): void {
-    this.showReportForm.update((visible) => !visible);
+  addReport(input: LostFoundReportInput): void {
+    const item = this.lostFoundService.create(input);
+    this.resetFilters();
+    this.feedback.set(`"${item.title}" was added to the list.`);
   }
 
-  submitReport(event: Event): void {
-    event.preventDefault();
-    const form = event.target as HTMLFormElement;
-    const data = new FormData(form);
-    const title = String(data.get('title') ?? '').trim();
-    const description = String(data.get('description') ?? '').trim();
-    const location = String(data.get('location') ?? '').trim();
-    const reporter = String(data.get('reporter') ?? '').trim();
-    const contact = String(data.get('contact') ?? '').trim();
-    const status = data.get('status');
-    const category = data.get('category');
-
-    if (
-      !title ||
-      !description ||
-      !location ||
-      !reporter ||
-      !contact ||
-      (status !== 'FOUND' && status !== 'LOST') ||
-      !this.categories.includes(category as ItemCategory)
-    ) {
-      return;
+  claimReport(report: LostFoundItem): void {
+    const claimed = this.lostFoundService.claim(report.id);
+    if (claimed) {
+      this.feedback.set(`"${claimed.title}" is now marked as claimed.`);
     }
-
-    this.items.unshift({
-      id: Date.now(),
-      title,
-      description,
-      status,
-      category: category as ItemCategory,
-      location,
-      date: new Date(),
-      reporter,
-      contact,
-    });
-    this.selectedStatus.set(status);
-    this.selectedCategory.set('all');
-    this.reportVersion.update((version) => version + 1);
-    form.reset();
-    this.showReportForm.set(false);
   }
 
-  contactReporter(item: LostFoundItem): void {
-    window.location.href = `mailto:${item.contact}?subject=Smart Campus - ${item.title}`;
+  dismissFeedback(): void {
+    this.feedback.set(null);
+  }
+
+  statusLabel(status: LostFoundStatus): string {
+    return LOST_FOUND_STATUS_LABELS[status];
+  }
+
+  statusVariant(status: LostFoundStatus): BadgeVariant {
+    if (status === 'LOST') {
+      return 'warning';
+    }
+    if (status === 'FOUND') {
+      return 'success';
+    }
+    return 'neutral';
+  }
+
+  dateLabel(date: Date): string {
+    return date.toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
   }
 }

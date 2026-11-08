@@ -1,130 +1,163 @@
 <section class="page lost-found">
   <app-page-header
-    title="Lost &amp; Found"
-    subtitle="Search for a missing item or help return something to its owner."
+    title="Lost & Found"
+    subtitle="Browse reports from campus, or tell everyone about an item you lost or found."
   >
-    <button class="button button--primary" type="button" (click)="toggleReportForm()">
-      {{ showReportForm() ? 'Close form' : 'Report an item' }}
-    </button>
+    <a class="button button--primary" href="#report-item">Report an item</a>
   </app-page-header>
 
-  @if (showReportForm()) {
-    <section class="report-panel glass glass--thick" aria-label="Report a lost or found item">
-      <div class="report-intro">
-        <p class="eyebrow">Help your campus community</p>
-        <h2>Report an item</h2>
-        <p class="panel-copy">Share what you lost or found so other students can contact you.</p>
+  <div class="metrics">
+    @for (metric of metrics(); track metric.label) {
+      <app-stat-card [label]="metric.label" [value]="metric.value" [hint]="metric.hint" />
+    }
+  </div>
+
+  @if (feedback()) {
+    <div class="feedback" role="status">
+      <span>{{ feedback() }}</span>
+      <button
+        type="button"
+        class="feedback__close"
+        aria-label="Dismiss message"
+        (click)="dismissFeedback()"
+      >
+        &times;
+      </button>
+    </div>
+  }
+
+  <div class="layout">
+    <section class="panel glass glass--thick" aria-labelledby="reports-title">
+      <div class="panel__head">
+        <div>
+          <h2 id="reports-title">Campus reports</h2>
+          <p class="muted">
+            Showing {{ filtered().length }} of {{ reports().length }} reports
+          </p>
+        </div>
       </div>
-      <form class="report-form" (submit)="submitReport($event)">
-        <div class="form-row form-row--choice">
-          <label>
-            <span>What happened?</span>
-            <select name="status" required>
-              <option value="FOUND">I found something</option>
-              <option value="LOST">I lost something</option>
-            </select>
-          </label>
-          <label>
-            <span>Category</span>
-            <select name="category" required>
-              @for (category of categories; track category) {
-                <option [value]="category">{{ category }}</option>
-              }
-            </select>
-          </label>
-        </div>
-        <label>
-          <span>Item name</span>
-          <input name="title" type="text" placeholder="e.g. Blue backpack" required />
-        </label>
-        <label>
-          <span>Description</span>
-          <textarea name="description" rows="2" placeholder="Add identifying details" required></textarea>
-        </label>
-        <div class="form-row">
-          <label>
-            <span>Where?</span>
-            <input name="location" type="text" placeholder="e.g. Library" required />
-          </label>
-          <label>
-            <span>Your name</span>
-            <input name="reporter" type="text" placeholder="Your name" required />
-          </label>
-        </div>
-        <label>
-          <span>Contact email</span>
-          <input name="contact" type="email" placeholder="you@campus.edu" required />
-        </label>
-        <button class="button button--primary" type="submit">Share item</button>
-      </form>
-    </section>
-  }
 
-  <section class="search-panel glass glass--thick" aria-label="Search lost and found items">
-    <div class="status-tabs" role="tablist" aria-label="Item status">
-      @for (status of statuses; track status.value) {
-        <button
-          type="button"
-          class="status-tab"
-          [class.status-tab--active]="selectedStatus() === status.value"
-          [attr.aria-selected]="selectedStatus() === status.value"
-          (click)="setStatus(status.value)"
-        >
-          {{ status.label }}
-          <span>{{ countByStatus(status.value) }}</span>
-        </button>
-      }
-    </div>
-
-    <div class="filters">
-      <label class="search-field">
-        <span class="visually-hidden">Search items</span>
-        <span aria-hidden="true">⌕</span>
-        <input type="search" placeholder="Search by item, place or name" [value]="search()" (input)="setSearch($event)" />
-      </label>
-      <label class="category-field">
-        <span class="visually-hidden">Filter by category</span>
-        <select [value]="selectedCategory()" (change)="setCategory($event)">
-          <option value="all">All categories</option>
-          @for (category of categories; track category) {
-            <option [value]="category">{{ category }}</option>
-          }
-        </select>
-      </label>
-    </div>
-  </section>
-
-  <p class="results" role="status">
-    {{ filteredItems().length }} {{ selectedStatus() === 'FOUND' ? 'found' : 'lost' }} item{{ filteredItems().length === 1 ? '' : 's' }}
-  </p>
-
-  @if (filteredItems().length) {
-    <div class="item-grid">
-      @for (item of filteredItems(); track item.id) {
-        <article class="item-card glass glass--thick">
-          <div class="item-card__top">
-            <span class="item-icon" aria-hidden="true">{{ item.category === 'Electronics' ? '▣' : item.category === 'Keys' ? '⚿' : '◆' }}</span>
-            <span class="category">{{ item.category }}</span>
-          </div>
-          <h2>{{ item.title }}</h2>
-          <p class="description">{{ item.description }}</p>
-          <dl class="details">
-            <div><dt>Where</dt><dd>{{ item.location }}</dd></div>
-            <div><dt>When</dt><dd>{{ item.date | date: 'd MMM yyyy' }}</dd></div>
-            <div><dt>Reported by</dt><dd>{{ item.reporter }}</dd></div>
-          </dl>
-          <button class="button button--quiet contact-button" type="button" (click)="contactReporter(item)">
-            {{ item.status === 'FOUND' ? 'Contact finder' : 'I found this item' }}
-            <span aria-hidden="true">→</span>
+      <div class="toolbar">
+        <div class="chips" role="group" aria-label="Filter by status">
+          <button
+            type="button"
+            class="chip"
+            [class.chip--active]="statusFilter() === 'all'"
+            [attr.aria-pressed]="statusFilter() === 'all'"
+            (click)="setStatus('all')"
+          >
+            All
+            <span class="chip__count">{{ counts().all }}</span>
           </button>
-        </article>
+          @for (status of statuses; track status) {
+            <button
+              type="button"
+              class="chip"
+              [class.chip--active]="statusFilter() === status"
+              [attr.aria-pressed]="statusFilter() === status"
+              (click)="setStatus(status)"
+            >
+              {{ statusLabels[status] }}
+              <span class="chip__count">{{ counts()[status] }}</span>
+            </button>
+          }
+        </div>
+
+        <div class="filters">
+          <label class="field field--search">
+            <span class="field__label">Search</span>
+            <input
+              class="control"
+              type="search"
+              placeholder="Item, category or location"
+              [value]="search()"
+              (input)="setSearch($event)"
+            />
+          </label>
+
+          @if (hasFilters()) {
+            <button type="button" class="button button--quiet" (click)="resetFilters()">
+              Clear filters
+            </button>
+          }
+        </div>
+      </div>
+
+      @if (filtered().length) {
+        <ul class="reports">
+          @for (report of filtered(); track report.id) {
+            <li class="report" [class.report--resolved]="report.status === 'CLAIMED'">
+              <div class="report__head">
+                <div class="report__badges">
+                  <app-status-badge
+                    [label]="statusLabel(report.status)"
+                    [variant]="statusVariant(report.status)"
+                  />
+                </div>
+                <span class="report__date">{{ dateLabel(report.reportedAt) }}</span>
+              </div>
+
+              <h3>{{ report.title }}</h3>
+              <p class="report__description">{{ report.description }}</p>
+
+              <dl class="report__meta">
+                <div>
+                  <dt>Category</dt>
+                  <dd>{{ report.category }}</dd>
+                </div>
+                <div>
+                  <dt>Location</dt>
+                  <dd>{{ report.location }}</dd>
+                </div>
+                @if (report.contactPhone) {
+                  <div>
+                    <dt>Contact</dt>
+                    <dd>{{ report.contactPhone }}</dd>
+                  </div>
+                }
+              </dl>
+
+              <div class="report__actions">
+                @if (report.status !== 'CLAIMED') {
+                  <button
+                    type="button"
+                    class="button button--quiet"
+                    (click)="claimReport(report)"
+                  >
+                    Mark as claimed
+                  </button>
+                }
+              </div>
+            </li>
+          }
+        </ul>
+      } @else {
+        <app-empty-state
+          [title]="hasFilters() ? 'No reports match these filters' : 'No reports yet'"
+          [message]="
+            hasFilters()
+              ? 'Try another type or search term.'
+              : 'Submit the first report using the form.'
+          "
+        >
+          @if (hasFilters()) {
+            <button type="button" class="button button--quiet" (click)="resetFilters()">
+              Clear filters
+            </button>
+          }
+        </app-empty-state>
       }
-    </div>
-  } @else {
-    <div class="empty glass glass--thick">
-      <span class="empty__icon" aria-hidden="true">⌕</span>
-      <h2>No matching items</h2>
-      <p>Try another search or category. If you still cannot find it, report the item to reception.</p>
-    </div>
-  }
+    </section>
+
+    <section id="report-item" class="panel glass glass--thick form-panel" aria-labelledby="form-title">
+      <div class="panel__head">
+        <div>
+          <h2 id="form-title">Report an item</h2>
+          <p class="muted">Lost or found, add the details so the owner can reach you.</p>
+        </div>
+      </div>
+
+      <app-report-item (reported)="addReport($event)" />
+    </section>
+  </div>
 </section>
