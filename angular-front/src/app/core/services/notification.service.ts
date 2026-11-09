@@ -107,6 +107,7 @@ export class NotificationService {
                 eventId: value['eventId'] as string | undefined,
                 reservationId: value['reservationId'] as string | undefined,
                 lostFoundId: value['lostFoundId'] as string | undefined,
+                actionUrl: value['actionUrl'] as string | undefined,
               } satisfies Notification;
             });
           }
@@ -175,6 +176,7 @@ export class NotificationService {
         read: true,
         userId: DEMO_USER_ID,
         type: 'SYSTEM',
+        actionUrl: '/cafeteria',
       },
       {
         id: 'n5',

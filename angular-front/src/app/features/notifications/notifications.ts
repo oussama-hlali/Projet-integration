@@ -6,6 +6,7 @@ import {
   Notification,
   NotificationType,
 } from '../../core/models/notification.model';
+import { notificationRoute } from '../../core/notification-route';
 import { NotificationService } from '../../core/services/notification.service';
 import {
   BadgeVariant,
@@ -59,12 +60,17 @@ import {
                   {{ notification.createdAt | date: 'dd/MM/yyyy HH:mm' }}
                 </small>
               </div>
-              <p class="item__message">{{ notification.message }}</p>
+              <p class="item__message">
+                <a
+                  class="item__link"
+                  [routerLink]="target(notification)"
+                  (click)="markRead(notification)"
+                >
+                  {{ notification.message }}
+                </a>
+              </p>
             </div>
             <div class="item__actions">
-              @if (link(notification); as target) {
-                <a class="link" [routerLink]="target">View</a>
-              }
               <button type="button" class="btn" (click)="toggleRead(notification)">
                 {{ notification.read ? 'Mark as unread' : 'Mark as read' }}
               </button>
@@ -131,13 +137,13 @@ import {
       align-items: center;
       gap: var(--space-3);
     }
-    .link {
-      color: var(--color-accent);
-      font-weight: var(--font-weight-medium);
+    .item__link {
+      color: inherit;
       text-decoration: none;
     }
-    .link:hover {
-      color: var(--color-accent-hover);
+    .item__link:hover,
+    .item__link:focus-visible {
+      color: var(--color-accent);
       text-decoration: underline;
     }
     .btn {
@@ -191,11 +197,13 @@ export class Notifications {
     return 'neutral';
   }
 
-  link(notification: Notification): string | null {
-    if (notification.type === 'ANNOUNCEMENT') return '/announcements';
-    if (notification.type === 'EVENT') return '/events';
-    if (notification.type === 'RESERVATION') return '/reservations';
-    if (notification.type === 'LOST_FOUND') return '/lost-found';
-    return null;
+  target(notification: Notification): string {
+    return notificationRoute(notification, 'student');
+  }
+
+  markRead(notification: Notification): void {
+    if (!notification.read) {
+      this.service.markAsRead(notification.id);
+    }
   }
 }

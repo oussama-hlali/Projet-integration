@@ -136,7 +136,9 @@
               <li class="list__row">
                 <div>
                   <span class="pill">{{ notificationLabels[item.type] }}</span>
-                  <p class="list__title">{{ item.message }}</p>
+                  <p class="list__title">
+                    <a [routerLink]="activityRoute(item)">{{ item.message }}</a>
+                  </p>
                 </div>
                 <span class="list__meta">{{ item.createdAt | date: 'd MMM, HH:mm' }}</span>
               </li>

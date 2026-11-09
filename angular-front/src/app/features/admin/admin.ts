@@ -2,8 +2,9 @@ import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-import { NOTIFICATION_TYPE_LABELS } from '../../core/models/notification.model';
+import { NOTIFICATION_TYPE_LABELS, Notification } from '../../core/models/notification.model';
 import { RESERVATION_STATUS_LABELS, Reservation } from '../../core/models/reservation.model';
+import { notificationRoute } from '../../core/notification-route';
 import { AdminService } from '../../core/services/admin.service';
 import { AnalyticsService } from '../../core/services/analytics.service';
 import {
@@ -117,6 +118,10 @@ export class Admin {
     { label: 'Completed', value: this.analytics.completedReservations(), variant: 'neutral' },
     { label: 'Cancelled', value: this.analytics.cancelledReservations(), variant: 'danger' },
   ]);
+
+  protected activityRoute(item: Notification): string {
+    return notificationRoute(item, 'admin');
+  }
 
   protected percent(value: number): string {
     return `${Math.round(value * 100)}%`;
