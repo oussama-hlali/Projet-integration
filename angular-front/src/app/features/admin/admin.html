@@ -40,6 +40,19 @@
     </div>
   }
 
+  <section class="chart-grid" aria-label="Campus KPI charts">
+    <app-kpi-chart
+      title="Room status"
+      description="Where the room catalogue stands right now."
+      [items]="roomChart()"
+    />
+    <app-kpi-chart
+      title="Reservation pipeline"
+      description="Bookings grouped by their current status."
+      [items]="reservationChart()"
+    />
+  </section>
+
   <div class="admin-layout">
     <section class="admin-panel glass glass--thick" aria-labelledby="queue-title">
       <div class="admin-panel__head">
@@ -150,17 +163,4 @@
       </section>
     </aside>
   </div>
-
-  <section class="chart-grid" aria-label="Campus KPI charts">
-    <app-kpi-chart
-      title="Room status"
-      description="Where the room catalogue stands right now."
-      [items]="roomChart()"
-    />
-    <app-kpi-chart
-      title="Reservation pipeline"
-      description="Bookings grouped by their current status."
-      [items]="reservationChart()"
-    />
-  </section>
 </section>

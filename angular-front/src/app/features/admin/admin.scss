@@ -9,7 +9,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: var(--space-4);
-  margin-top: var(--space-4);
+  margin: 0 0 var(--space-4);
 }
 
 .list__title {
