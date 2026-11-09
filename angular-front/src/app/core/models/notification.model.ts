@@ -18,6 +18,8 @@ export interface Notification {
   eventId?: string;
   reservationId?: string;
   lostFoundId?: string;
+  /** Explicit destination for notifications that do not map to an entity. */
+  actionUrl?: string;
 }
 
 export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
