@@ -1,0 +1,16 @@
+@use '../admin-ui' as *;
+
+.admin-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

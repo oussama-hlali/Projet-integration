@@ -1,0 +1,33 @@
+<figure class="chart glass glass--thick">
+  <figcaption>
+    <h3>{{ title() }}</h3>
+    @if (description()) {
+      <p class="chart__desc">{{ description() }}</p>
+    }
+  </figcaption>
+
+  <ul class="chart__rows">
+    @for (item of items(); track item.label) {
+      <li class="chart__row">
+        <span class="chart__label">{{ item.label }}</span>
+        <span
+          class="chart__track"
+          role="progressbar"
+          aria-valuemin="0"
+          [attr.aria-valuemax]="max()"
+          [attr.aria-valuenow]="item.value"
+          [attr.aria-label]="item.label + ': ' + item.value"
+        >
+          <span
+            class="chart__bar"
+            [attr.data-variant]="variant(item)"
+            [style.width.%]="width(item.value)"
+          ></span>
+        </span>
+        <span class="chart__value">{{ item.value }}</span>
+      </li>
+    }
+  </ul>
+
+  <p class="chart__total">{{ total() }} in total</p>
+</figure>

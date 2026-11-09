@@ -8,6 +8,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { Router } from '@angular/router';
+import { AuthService } from '../../core/services/auth.service';
 
 /** Milliseconds before the splash hands over to the app on its own (0 disables). */
 const AUTO_ENTER_MS = 8000;
@@ -100,6 +101,7 @@ interface DrawnFace {
 })
 export class Splash implements AfterViewInit, OnDestroy {
   private readonly router = inject(Router);
+  private readonly auth = inject(AuthService);
 
   private readonly hostRef = viewChild.required<ElementRef<HTMLDivElement>>('host');
   private readonly cursorRef = viewChild.required<ElementRef<SVGSVGElement>>('cur');
@@ -178,8 +180,9 @@ export class Splash implements AfterViewInit, OnDestroy {
     }
     this.entered = true;
     this.leaving.set(true);
+    const destination = this.auth.isAuthenticated() ? this.auth.homeRoute() : '/login';
     this.timers.push(
-      window.setTimeout(() => void this.router.navigateByUrl('/dashboard'), FADE_MS),
+      window.setTimeout(() => void this.router.navigateByUrl(destination), FADE_MS),
     );
   }
 

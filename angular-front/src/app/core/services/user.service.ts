@@ -51,6 +51,11 @@ export class UserService {
     return updated;
   }
 
+  /** Replace the stored password digest after an administrator reset. */
+  setCredentials(id: string, passwordHash: string, salt: string): User | undefined {
+    return this.patch(id, { passwordHash, salt });
+  }
+
   updateProfile(id: string, input: UpdateProfileInput): User | undefined {
     return this.patch(id, input);
   }

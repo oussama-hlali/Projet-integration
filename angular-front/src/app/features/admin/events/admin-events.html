@@ -1,0 +1,305 @@
+<section class="page admin">
+  <app-page-header
+    title="Event management"
+    subtitle="Publish campus events, adjust capacity and retire past entries."
+  >
+    <span class="pill">{{ events().length }} events</span>
+  </app-page-header>
+
+  <div class="metrics">
+    @for (metric of metrics(); track metric.label) {
+      <app-stat-card [label]="metric.label" [value]="metric.value" [hint]="metric.hint" />
+    }
+  </div>
+
+  @if (feedback()) {
+    <div class="feedback" role="status">
+      <span>{{ feedback() }}</span>
+      <button
+        type="button"
+        class="feedback__close"
+        aria-label="Dismiss message"
+        (click)="dismissFeedback()"
+      >
+        &times;
+      </button>
+    </div>
+  }
+
+  @if (error()) {
+    <div class="feedback feedback--danger" role="alert">
+      <span>{{ error() }}</span>
+      <button
+        type="button"
+        class="feedback__close"
+        aria-label="Dismiss message"
+        (click)="dismissError()"
+      >
+        &times;
+      </button>
+    </div>
+  }
+
+  <div class="admin-layout">
+    <section class="admin-panel glass glass--thick" aria-labelledby="events-list-title">
+      <div class="admin-panel__head">
+        <div>
+          <h2 id="events-list-title">Calendar</h2>
+          <p class="muted">Showing {{ filtered().length }} of {{ events().length }} events</p>
+        </div>
+      </div>
+
+      <div class="admin-toolbar glass">
+        <div class="admin-toolbar__group">
+          <label class="field">
+            <span class="field__label">Category</span>
+            <select class="control" [value]="categoryFilter()" (change)="setCategory($event)">
+              <option value="all">All categories</option>
+              @for (category of categories; track category) {
+                <option [value]="category">{{ categoryLabels[category] }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="field search">
+            <span class="field__label">Search</span>
+            <input
+              class="control"
+              type="search"
+              placeholder="Title, location or description"
+              [value]="search()"
+              (input)="setSearch($event)"
+            />
+          </label>
+
+          @if (hasFilters()) {
+            <button type="button" class="button button--small" (click)="clearFilters()">
+              Clear
+            </button>
+          }
+        </div>
+      </div>
+
+      @if (filtered().length) {
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th scope="col">Event</th>
+                <th scope="col">Date</th>
+                <th scope="col">Location</th>
+                <th scope="col">Capacity</th>
+                <th scope="col"><span class="visually-hidden">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (event of filtered(); track event.id) {
+                <tr>
+                  <td>
+                    <span class="admin-table__title">{{ event.title }}</span>
+                    <span class="admin-table__meta">{{ categoryLabel(event.category) }}</span>
+                  </td>
+                  <td>
+                    {{ event.date | date: 'd MMM yyyy' }}
+                    <span class="admin-table__meta">
+                      {{ event.date | date: 'HH:mm' }}
+                      @if (event.endDate) {
+                        &ndash; {{ event.endDate | date: 'HH:mm' }}
+                      }
+                    </span>
+                  </td>
+                  <td>
+                    {{ event.location }}
+                    @if (event.roomId) {
+                      <span class="admin-table__meta">Room linked</span>
+                    }
+                  </td>
+                  <td>{{ event.capacity }} seats</td>
+                  <td>
+                    <div class="admin-table__actions">
+                      <button
+                        type="button"
+                        class="button button--small"
+                        (click)="startEdit(event)"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        class="button button--small button--danger"
+                        (click)="requestDelete(event)"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <app-empty-state
+          title="No events match"
+          message="Adjust the filters or publish a new event with the form."
+        />
+      }
+    </section>
+
+    <section class="admin-panel glass glass--thick" aria-labelledby="event-form-title">
+      <div class="admin-panel__head">
+        <div>
+          <h2 id="event-form-title">{{ editingId() ? 'Edit event' : 'Publish event' }}</h2>
+          <p class="muted">
+            {{ editingId() ? 'Update the schedule and save.' : 'Add a new entry to the campus calendar.' }}
+          </p>
+        </div>
+      </div>
+
+      <form class="admin-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        <div class="form-grid">
+          <label class="form-field form-field--full">
+            <span class="field__label">Title</span>
+            <input
+              class="control"
+              type="text"
+              formControlName="title"
+              [class.control--invalid]="isInvalid('title')"
+              placeholder="Forum des stages"
+            />
+            @if (isInvalid('title')) {
+              <p class="field-error">An event title is required.</p>
+            }
+          </label>
+
+          <label class="form-field form-field--full">
+            <span class="field__label">Description</span>
+            <textarea
+              class="control"
+              rows="3"
+              formControlName="description"
+              [class.control--invalid]="isInvalid('description')"
+              placeholder="What should students expect?"
+            ></textarea>
+            @if (isInvalid('description')) {
+              <p class="field-error">A short description is required.</p>
+            }
+          </label>
+
+          <label class="form-field">
+            <span class="field__label">Date</span>
+            <input
+              class="control"
+              type="date"
+              formControlName="date"
+              [class.control--invalid]="isInvalid('date')"
+            />
+            @if (isInvalid('date')) {
+              <p class="field-error">Pick a date.</p>
+            }
+          </label>
+
+          <label class="form-field">
+            <span class="field__label">Category</span>
+            <select class="control" formControlName="category">
+              @for (category of categories; track category) {
+                <option [value]="category">{{ categoryLabels[category] }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="form-field">
+            <span class="field__label">Start</span>
+            <input
+              class="control"
+              type="time"
+              formControlName="startTime"
+              [class.control--invalid]="isInvalid('startTime')"
+            />
+            @if (isInvalid('startTime')) {
+              <p class="field-error">A start time is required.</p>
+            }
+          </label>
+
+          <label class="form-field">
+            <span class="field__label">End</span>
+            <input
+              class="control"
+              type="time"
+              formControlName="endTime"
+              [class.control--invalid]="isInvalid('endTime') || !hasValidTimes()"
+            />
+            @if (isInvalid('endTime')) {
+              <p class="field-error">An end time is required.</p>
+            } @else if (!hasValidTimes()) {
+              <p class="field-error">The end time must be after the start time.</p>
+            }
+          </label>
+
+          <label class="form-field">
+            <span class="field__label">Location</span>
+            <input
+              class="control"
+              type="text"
+              formControlName="location"
+              [class.control--invalid]="isInvalid('location')"
+              placeholder="Amphi A"
+            />
+            @if (isInvalid('location')) {
+              <p class="field-error">A location is required.</p>
+            }
+          </label>
+
+          <label class="form-field">
+            <span class="field__label">Capacity</span>
+            <input
+              class="control"
+              type="number"
+              min="1"
+              max="5000"
+              formControlName="capacity"
+              [class.control--invalid]="isInvalid('capacity')"
+            />
+            @if (isInvalid('capacity')) {
+              <p class="field-error">Capacity must be between 1 and 5000.</p>
+            }
+          </label>
+
+          <label class="form-field form-field--full">
+            <span class="field__label">Room (optional)</span>
+            <select class="control" formControlName="roomId">
+              <option value="">No specific room</option>
+              @for (room of rooms(); track room.id) {
+                <option [value]="room.id">{{ room.name }} — {{ room.building }}</option>
+              }
+            </select>
+          </label>
+        </div>
+
+        <div class="form-actions">
+          @if (editingId()) {
+            <button type="button" class="button" (click)="startCreate()">Cancel edit</button>
+          }
+          <button type="submit" class="button button--primary">
+            {{ editingId() ? 'Save changes' : 'Publish event' }}
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <app-confirm-dialog
+    [open]="dialogOpen()"
+    title="Delete event"
+    [message]="
+      deleteTarget()
+        ? 'Remove ' + deleteTarget()!.title + ' from the campus calendar? This cannot be undone.'
+        : ''
+    "
+    confirmLabel="Delete"
+    cancelLabel="Keep"
+    [danger]="true"
+    (confirmed)="confirmDelete()"
+    (cancelled)="deleteTarget.set(null)"
+  />
+</section>

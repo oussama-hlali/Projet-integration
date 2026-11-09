@@ -1,3 +1,4 @@
+import { TestBed } from '@angular/core/testing';
 import { CampusEvent, EVENT_CATEGORIES } from '../models/campus-event.model';
 import { CampusEventService } from './campus-event.service';
 
@@ -6,7 +7,8 @@ describe('CampusEventService', () => {
   let events: CampusEvent[];
 
   beforeEach(() => {
-    service = new CampusEventService();
+    TestBed.configureTestingModule({});
+    service = TestBed.inject(CampusEventService);
     events = [];
     service.getEvents().subscribe((value) => (events = value));
   });

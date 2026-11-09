@@ -1,0 +1,88 @@
+:host {
+  display: block;
+}
+
+.chart {
+  margin: 0;
+  padding: var(--space-5);
+  border-radius: var(--radius-card);
+}
+
+figcaption h3 {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-size: 1.05rem;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: -0.01em;
+}
+
+.chart__desc {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.chart__rows {
+  display: grid;
+  gap: var(--space-3);
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chart__row {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr) 36px;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.chart__label {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.chart__track {
+  height: 10px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--color-text-strong) 10%, transparent);
+  border-radius: var(--radius-full);
+}
+
+.chart__bar {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-info);
+  transition: width 400ms ease;
+}
+
+.chart__bar[data-variant='success'] {
+  background: var(--color-success);
+}
+
+.chart__bar[data-variant='warning'] {
+  background: var(--color-warning);
+}
+
+.chart__bar[data-variant='danger'] {
+  background: var(--color-danger);
+}
+
+.chart__bar[data-variant='neutral'] {
+  background: var(--color-text-muted);
+}
+
+.chart__value {
+  color: var(--color-text-strong);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  text-align: right;
+}
+
+.chart__total {
+  margin: var(--space-4) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}

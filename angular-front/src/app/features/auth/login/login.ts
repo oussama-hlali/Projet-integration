@@ -32,9 +32,9 @@ export class Login {
   });
 
   constructor() {
-    // Already signed in: skip the login screen.
+    // Already signed in: skip the login screen and honour the role split.
     if (this.auth.isAuthenticated()) {
-      void this.router.navigateByUrl('/dashboard');
+      void this.router.navigateByUrl(this.auth.homeRoute());
     }
   }
 
@@ -69,13 +69,29 @@ export class Login {
       return;
     }
 
-    const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
-    const destination =
-      returnUrl && returnUrl !== '/login'
-        ? returnUrl
-        : this.auth.isAdmin()
-          ? '/admin'
-          : '/dashboard';
-    await this.router.navigateByUrl(destination);
+    await this.router.navigateByUrl(
+      this.destinationFor(this.route.snapshot.queryParamMap.get('returnUrl')),
+    );
+  }
+
+  /**
+   * A student must never be sent to `/admin`, and an administrator stays in
+   * the admin area even when a stale return URL points at a student page.
+   */
+  private destinationFor(returnUrl: string | null): string {
+    const home = this.auth.homeRoute();
+    if (
+      !returnUrl ||
+      returnUrl === '/login' ||
+      returnUrl.startsWith('/verify-otp') ||
+      returnUrl.startsWith('/setup-2fa')
+    ) {
+      return home;
+    }
+
+    const wantsAdmin = returnUrl.startsWith('/admin');
+    return wantsAdmin === this.auth.isAdmin()
+      ? returnUrl
+      : home;
   }
 }

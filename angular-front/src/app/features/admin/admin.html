@@ -1,45 +1,164 @@
 <section class="page admin">
   <app-page-header
-    title="Admin dashboard"
-    subtitle="Campus KPIs and operational overview."
-  />
+    title="Administrator overview"
+    subtitle="Campus operations, approvals and activity at a glance."
+  >
+    <span class="pill">{{ pending().length }} pending approval(s)</span>
+  </app-page-header>
 
   <div class="metrics">
-    <app-stat-card label="Rooms" [value]="analytics.roomsTotal()" hint="Total rooms" />
-    <app-stat-card label="Available" [value]="analytics.roomsAvailable()" hint="Ready to book" />
-    <app-stat-card label="Occupied" [value]="analytics.roomsOccupied()" hint="In use now" />
-    <app-stat-card label="Reserved" [value]="analytics.roomsReserved()" hint="Booked" />
-    <app-stat-card label="Maintenance" [value]="analytics.roomsMaintenance()" hint="Closed" />
-    <app-stat-card label="Occupancy" [value]="percent(analytics.occupancyRate())" hint="Occupied + reserved" />
+    @for (metric of metrics(); track metric.label) {
+      <app-stat-card [label]="metric.label" [value]="metric.value" [hint]="metric.hint" />
+    }
   </div>
 
-  <div class="metrics">
-    <app-stat-card label="Events" [value]="analytics.eventsTotal()" hint="Total events" />
-    <app-stat-card label="Upcoming" [value]="analytics.upcomingEvents()" hint="Future events" />
-    <app-stat-card label="Past" [value]="analytics.pastEvents()" hint="Archived" />
-    <app-stat-card label="Reservations" [value]="analytics.reservationsTotal()" hint="Total bookings" />
-    <app-stat-card label="Pending" [value]="analytics.pendingReservations()" hint="Awaiting" />
-    <app-stat-card label="Cancelled" [value]="analytics.cancelledReservations()" hint="Cancelled" />
+  @if (feedback()) {
+    <div class="feedback" role="status">
+      <span>{{ feedback() }}</span>
+      <button
+        type="button"
+        class="feedback__close"
+        aria-label="Dismiss message"
+        (click)="dismissFeedback()"
+      >
+        &times;
+      </button>
+    </div>
+  }
+
+  @if (error()) {
+    <div class="feedback feedback--danger" role="alert">
+      <span>{{ error() }}</span>
+      <button
+        type="button"
+        class="feedback__close"
+        aria-label="Dismiss message"
+        (click)="dismissError()"
+      >
+        &times;
+      </button>
+    </div>
+  }
+
+  <div class="admin-layout">
+    <section class="admin-panel glass glass--thick" aria-labelledby="queue-title">
+      <div class="admin-panel__head">
+        <div>
+          <h2 id="queue-title">Reservation approvals</h2>
+          <p class="muted">Approve or decline requests waiting in the queue.</p>
+        </div>
+        <a class="button button--small" routerLink="/admin/reservations">All reservations</a>
+      </div>
+
+      @if (pending().length) {
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th scope="col">Room</th>
+                <th scope="col">When</th>
+                <th scope="col">Purpose</th>
+                <th scope="col">Status</th>
+                <th scope="col"><span class="visually-hidden">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (reservation of pending(); track reservation.id) {
+                <tr>
+                  <td>
+                    <span class="admin-table__title">{{ reservation.room }}</span>
+                    <span class="admin-table__meta">Requested by {{ reservation.userId }}</span>
+                  </td>
+                  <td>
+                    {{ reservation.startTime | date: 'd MMM, HH:mm' }} &ndash;
+                    {{ reservation.endTime | date: 'HH:mm' }}
+                  </td>
+                  <td>{{ reservation.purpose }}</td>
+                  <td>
+                    <app-status-badge
+                      [label]="statusLabel(reservation)"
+                      [variant]="statusVariant(reservation)"
+                    />
+                  </td>
+                  <td>
+                    <div class="admin-table__actions">
+                      <button
+                        type="button"
+                        class="button button--small button--primary"
+                        (click)="approve(reservation)"
+                      >
+                        Approve
+                      </button>
+                      <button type="button" class="button button--small" (click)="decline(reservation)">
+                        Decline
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <app-empty-state
+          title="No pending requests"
+          message="New booking requests will appear here for approval."
+        />
+      }
+    </section>
+
+    <aside class="admin-side">
+      <section class="admin-panel glass glass--thick" aria-labelledby="quick-title">
+        <div class="admin-panel__head">
+          <h2 id="quick-title">Quick actions</h2>
+        </div>
+        <div class="quick-grid">
+          @for (link of quickLinks; track link.route) {
+            <a class="quick-card glass" [routerLink]="link.route">
+              <strong>{{ link.label }}</strong>
+              <span>{{ link.hint }}</span>
+            </a>
+          }
+        </div>
+      </section>
+
+      <section class="admin-panel glass glass--thick" aria-labelledby="activity-title">
+        <div class="admin-panel__head">
+          <div>
+            <h2 id="activity-title">Recent activity</h2>
+            <p class="muted">Latest campus notifications.</p>
+          </div>
+        </div>
+
+        @if (activity().length) {
+          <ul class="list">
+            @for (item of activity(); track item.id) {
+              <li class="list__row">
+                <div>
+                  <span class="pill">{{ notificationLabels[item.type] }}</span>
+                  <p class="list__title">{{ item.message }}</p>
+                </div>
+                <span class="list__meta">{{ item.createdAt | date: 'd MMM, HH:mm' }}</span>
+              </li>
+            }
+          </ul>
+        } @else {
+          <app-empty-state title="No activity yet" message="Campus events will be listed here." />
+        }
+      </section>
+    </aside>
   </div>
 
-  <div class="metrics">
-    <app-stat-card label="Announcements" [value]="analytics.announcementsTotal()" hint="Published" />
-    <app-stat-card label="Pinned" [value]="analytics.pinnedAnnouncements()" hint="Important" />
-    <app-stat-card label="Lost & Found" [value]="analytics.lostFoundTotal()" hint="Total reports" />
-    <app-stat-card label="Open reports" [value]="analytics.openLostFound()" hint="Unclaimed" />
-    <app-stat-card label="Users" [value]="analytics.usersTotal()" hint="Accounts" />
-    <app-stat-card label="Students" [value]="analytics.studentsCount()" hint="Student accounts" />
-    <app-stat-card label="Admins" [value]="analytics.adminsCount()" hint="Admin accounts" />
-    <app-stat-card label="Unread notif." [value]="analytics.unreadNotifications()" hint="Notifications" />
-  </div>
-
-  <div class="metrics">
-    <app-stat-card label="Transport routes" [value]="analytics.transportRoutes()" hint="Lines" />
-    <app-stat-card label="Transport stops" [value]="analytics.transportStops()" hint="Stops" />
-    <app-stat-card
-      label="Today's menu"
-      [value]="analytics.todayMenu()?.meal ?? '—'"
-      [hint]="analytics.todayMenu()?.openingHours ?? ''"
+  <section class="chart-grid" aria-label="Campus KPI charts">
+    <app-kpi-chart
+      title="Room status"
+      description="Where the room catalogue stands right now."
+      [items]="roomChart()"
     />
-  </div>
+    <app-kpi-chart
+      title="Reservation pipeline"
+      description="Bookings grouped by their current status."
+      [items]="reservationChart()"
+    />
+  </section>
 </section>
