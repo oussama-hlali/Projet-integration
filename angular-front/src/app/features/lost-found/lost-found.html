@@ -86,13 +86,19 @@
       @if (filtered().length) {
         <ul class="reports">
           @for (report of filtered(); track report.id) {
-            <li class="report" [class.report--resolved]="report.status === 'CLAIMED'">
+            <li
+              class="report"
+              [class.report--lost]="report.status === 'LOST'"
+              [class.report--found]="report.status === 'FOUND'"
+              [class.report--resolved]="report.status === 'CLAIMED'"
+            >
               <div class="report__head">
                 <div class="report__badges">
                   <app-status-badge
                     [label]="statusLabel(report.status)"
                     [variant]="statusVariant(report.status)"
                   />
+                  <span class="report__category">{{ report.category }}</span>
                 </div>
                 <span class="report__date">{{ dateLabel(report.reportedAt) }}</span>
               </div>
@@ -102,17 +108,15 @@
 
               <dl class="report__meta">
                 <div>
-                  <dt>Category</dt>
-                  <dd>{{ report.category }}</dd>
-                </div>
-                <div>
                   <dt>Location</dt>
                   <dd>{{ report.location }}</dd>
                 </div>
                 @if (report.contactPhone) {
                   <div>
                     <dt>Contact</dt>
-                    <dd>{{ report.contactPhone }}</dd>
+                    <dd>
+                      <a [href]="'tel:' + report.contactPhone">{{ report.contactPhone }}</a>
+                    </dd>
                   </div>
                 }
               </dl>
