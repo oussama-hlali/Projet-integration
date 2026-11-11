@@ -8,3 +8,5 @@ export * from './nav-icon.component';
 export * from './rooms-search.component';
 export * from './feed.component';
 export * from './report-item.component';
+export * from './brand-mark.component';
+export * from './service-logo.component';

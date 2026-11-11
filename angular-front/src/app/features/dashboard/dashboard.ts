@@ -3,11 +3,14 @@ import { Component, computed, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { AnnouncementService } from '../../core/services/announcement.service';
+import { AuthService } from '../../core/services/auth.service';
 import { CampusEventService } from '../../core/services/campus-event.service';
 import {
   BadgeVariant,
+  BrandMarkComponent,
   EmptyStateComponent,
-  PageHeaderComponent,
+  ServiceLogoComponent,
+  ServiceLogoName,
   StatCardComponent,
   StatusBadgeComponent,
 } from '../../shared/components';
@@ -27,25 +30,68 @@ interface RoomHighlight {
   status: RoomStatus;
 }
 
+interface ServiceLink {
+  label: string;
+  hint: string;
+  route: string;
+  logo: ServiceLogoName;
+}
+
 @Component({
   selector: 'app-dashboard',
   imports: [
     DatePipe,
     RouterLink,
+    BrandMarkComponent,
     EmptyStateComponent,
-    PageHeaderComponent,
+    ServiceLogoComponent,
     StatCardComponent,
     StatusBadgeComponent,
   ],
   template: `
     <section class="page">
-      <app-page-header title="Dashboard" subtitle="Your campus at a glance" />
+      <header class="hero glass glass--thick">
+        <app-brand-mark size="lg" />
+        <div class="hero__copy">
+          <p class="eyebrow">
+            <span class="eyebrow__dot" aria-hidden="true"></span>
+            Live · Campus online
+          </p>
+          <h1>{{ greeting() }}, {{ firstName() }}</h1>
+          <p class="hero__sub">Your campus at a glance · {{ today | date: 'EEEE d MMMM' }}</p>
+        </div>
+        <div class="hero__actions">
+          <a class="hero__cta" routerLink="/lost-found">Open Lost &amp; Found</a>
+        </div>
+      </header>
 
       <div class="metrics">
         @for (metric of metrics(); track metric.label) {
           <app-stat-card [label]="metric.label" [value]="metric.value" [hint]="metric.hint" />
         }
       </div>
+
+      <section class="services" aria-labelledby="services-title">
+        <div class="services__head">
+          <h2 id="services-title">Campus services</h2>
+          <span class="services__count">{{ services.length }} destinations</span>
+        </div>
+        <div class="services__grid">
+          @for (service of services; track service.route; let i = $index) {
+            <a
+              class="service glass"
+              [routerLink]="service.route"
+              [style.animation-delay]="i * 55 + 'ms'"
+            >
+              <app-service-logo [name]="service.logo" />
+              <span class="service__text">
+                <span class="service__label">{{ service.label }}</span>
+                <span class="service__hint">{{ service.hint }}</span>
+              </span>
+            </a>
+          }
+        </div>
+      </section>
 
       <div class="grid">
         <article class="panel glass glass--thick">
@@ -107,6 +153,226 @@ interface RoomHighlight {
     </section>
   `,
   styles: `
+    .hero {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      margin-bottom: var(--space-4);
+      padding: var(--space-5) var(--space-6);
+      overflow: hidden;
+      border-radius: var(--radius-card);
+      animation: hero-in 520ms var(--ease-out) both;
+    }
+    .hero::after {
+      position: absolute;
+      inset: 0;
+      content: '';
+      pointer-events: none;
+      background:
+        radial-gradient(62% 130% at 10% 0%, rgba(45, 212, 191, 0.24), transparent 62%),
+        radial-gradient(55% 130% at 92% 110%, rgba(56, 189, 248, 0.2), transparent 66%);
+    }
+    .hero > * {
+      position: relative;
+      z-index: 1;
+    }
+    .hero__copy {
+      min-width: 0;
+    }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0;
+      color: var(--color-text-muted);
+      font-size: 0.68rem;
+      font-weight: var(--font-weight-semibold);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+    .eyebrow__dot {
+      width: 8px;
+      height: 8px;
+      background: #14b8a6;
+      border-radius: var(--radius-full);
+      box-shadow: 0 0 0 0 rgba(20, 184, 166, 0.5);
+      animation: live-pulse 2.4s ease-out infinite;
+    }
+    .hero h1 {
+      margin: 6px 0 4px;
+      color: var(--color-text-strong);
+      font-size: clamp(1.55rem, 2.6vw, 2.1rem);
+      font-weight: var(--font-weight-semibold);
+      line-height: var(--line-height-tight);
+      letter-spacing: -0.02em;
+    }
+    .hero__sub {
+      margin: 0;
+      color: var(--color-text-muted);
+    }
+    .hero__actions {
+      margin-left: auto;
+    }
+    .hero__cta {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 22px;
+      color: #ffffff;
+      font-weight: var(--font-weight-semibold);
+      white-space: nowrap;
+      text-decoration: none;
+      background: linear-gradient(145deg, #14b8a6, #0e6ba8);
+      border-radius: var(--radius-full);
+      box-shadow: 0 14px 26px -16px rgba(13, 148, 136, 0.95);
+      transition:
+        transform var(--transition-base),
+        box-shadow var(--transition-base);
+    }
+    .hero__cta:hover {
+      color: #ffffff;
+      text-decoration: none;
+      transform: translateY(-2px);
+      box-shadow: 0 18px 30px -16px rgba(13, 148, 136, 1);
+    }
+    .hero__cta:active {
+      transform: translateY(0) scale(0.98);
+    }
+    .services {
+      margin-bottom: var(--space-5);
+    }
+    .services__head {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2) var(--space-3);
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: var(--space-3);
+    }
+    .services__count {
+      color: var(--color-text-muted);
+      font-size: var(--font-size-xs);
+    }
+    .services__grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--space-3);
+    }
+    @media (min-width: 560px) {
+      .services__grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+    @media (min-width: 900px) {
+      .services__grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+    @media (min-width: 1240px) {
+      .services__grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+    }
+    .service {
+      display: flex;
+      gap: var(--space-3);
+      align-items: center;
+      padding: 12px 14px;
+      text-decoration: none;
+      border-radius: var(--radius-tile);
+      animation: service-in 520ms var(--ease-out) backwards;
+      transition:
+        transform var(--transition-base),
+        box-shadow var(--transition-base);
+    }
+    .service:hover {
+      text-decoration: none;
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-md);
+    }
+    .service:active {
+      transform: translateY(-1px) scale(0.99);
+    }
+    .service:focus-visible {
+      outline: 2px solid var(--color-accent);
+      outline-offset: 2px;
+    }
+    .service__text {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    .service__label {
+      color: var(--color-text-strong);
+      font-weight: var(--font-weight-semibold);
+    }
+    .service__hint {
+      color: var(--color-text-muted);
+      font-size: var(--font-size-xs);
+    }
+    @keyframes hero-in {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+    @keyframes service-in {
+      from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.97);
+      }
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+    @keyframes live-pulse {
+      0% {
+        box-shadow: 0 0 0 0 rgba(20, 184, 166, 0.5);
+      }
+      70%,
+      100% {
+        box-shadow: 0 0 0 9px rgba(20, 184, 166, 0);
+      }
+    }
+    @media (max-width: 720px) {
+      .hero {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        align-items: center;
+        padding: var(--space-4);
+      }
+      .hero h1 {
+        font-size: 1.5rem;
+      }
+      .hero__sub {
+        font-size: var(--font-size-sm);
+      }
+      .hero__actions {
+        grid-column: 1 / -1;
+        width: 100%;
+        margin-left: 0;
+      }
+      .hero__cta {
+        width: 100%;
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .hero,
+      .service,
+      .eyebrow__dot {
+        animation: none;
+      }
+      .hero__cta,
+      .service {
+        transition: none;
+      }
+    }
     .metrics {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
@@ -175,6 +441,45 @@ interface RoomHighlight {
 export class Dashboard {
   private readonly eventService = inject(CampusEventService);
   private readonly announcementService = inject(AnnouncementService);
+  private readonly auth = inject(AuthService);
+
+  readonly today = new Date();
+
+  readonly firstName = computed(
+    () => this.auth.currentUser()?.fullName.trim().split(/\s+/)[0] ?? 'there',
+  );
+
+  readonly greeting = computed(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 18) return 'Good afternoon';
+    return 'Good evening';
+  });
+
+  readonly services: readonly ServiceLink[] = [
+    { label: 'Rooms', hint: 'Find a free seat', route: '/rooms', logo: 'rooms' },
+    {
+      label: 'Reservations',
+      hint: 'Book a space',
+      route: '/reservations',
+      logo: 'reservations',
+    },
+    { label: 'Events', hint: 'What is on', route: '/events', logo: 'events' },
+    {
+      label: 'Announcements',
+      hint: 'Campus news',
+      route: '/announcements',
+      logo: 'announcements',
+    },
+    { label: 'Transport', hint: 'Shuttle times', route: '/transport', logo: 'transport' },
+    { label: 'Cafeteria', hint: "Today's menu", route: '/cafeteria', logo: 'cafeteria' },
+    {
+      label: 'Lost & Found',
+      hint: 'Reunite with your things',
+      route: '/lost-found',
+      logo: 'lost-found',
+    },
+  ];
 
   readonly events = toSignal(this.eventService.getEvents(), { requireSync: true });
   readonly announcements = toSignal(this.announcementService.getAnnouncements(), {

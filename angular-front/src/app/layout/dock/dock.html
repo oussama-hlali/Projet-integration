@@ -1,4 +1,15 @@
 <nav class="dock glass glass--thick" aria-label="Shortcuts">
+  <a
+    class="dock__btn dock__brand"
+    [routerLink]="homeRoute()"
+    aria-label="Smart Campus home"
+    data-label="Home"
+  >
+    <app-brand-mark size="sm" />
+  </a>
+
+  <span class="dock__divider" aria-hidden="true"></span>
+
   @for (item of visibleAccount(); track item.route) {
     <a
       class="dock__btn"

@@ -2,7 +2,7 @@ import { Component, computed, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { ACCOUNT_NAV, NavItem } from '../../core/navigation';
 import { AuthService } from '../../core/services/auth.service';
-import { NavIconComponent, ThemeToggleComponent } from '../../shared/components';
+import { BrandMarkComponent, NavIconComponent, ThemeToggleComponent } from '../../shared/components';
 
 /**
  * Floating shortcut rail: account destinations, theme switch and sign-out.
@@ -11,13 +11,21 @@ import { NavIconComponent, ThemeToggleComponent } from '../../shared/components'
  */
 @Component({
   selector: 'app-dock',
-  imports: [RouterLink, RouterLinkActive, NavIconComponent, ThemeToggleComponent],
+  imports: [
+    RouterLink,
+    RouterLinkActive,
+    BrandMarkComponent,
+    NavIconComponent,
+    ThemeToggleComponent,
+  ],
   templateUrl: './dock.html',
   styleUrl: './dock.scss',
 })
 export class Dock {
   private readonly router = inject(Router);
   private readonly auth = inject(AuthService);
+
+  protected readonly homeRoute = this.auth.homeRoute;
 
   protected readonly visibleAccount = computed<readonly NavItem[]>(() =>
     ACCOUNT_NAV.filter((item) => !item.adminOnly || this.auth.isAdmin()),
