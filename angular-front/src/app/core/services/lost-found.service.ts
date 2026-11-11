@@ -1,5 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import {
+  LostFoundComment,
+  LostFoundCommentInput,
   LostFoundItem,
   LostFoundReportInput,
   LostFoundStatus,
@@ -10,9 +12,11 @@ const STORAGE_KEY = 'smart-campus.lost-found';
 const DEMO_USER_ID = 'u1';
 
 /**
- * Lost & Found store. Reports are created from the report form and move to
- * CLAIMED when the owner is reunited with the item, matching the diagram's
- * `LostFoundStatus` enum.
+ * Lost & Found community store.
+ *
+ * Posts are created from the composer, can be commented on and reacted to, and
+ * move to CLAIMED when the owner is reunited with the item. Tagged people are
+ * stored as user ids so the page can render mentions.
  */
 @Injectable({ providedIn: 'root' })
 export class LostFoundService {
@@ -36,6 +40,9 @@ export class LostFoundService {
       category: input.category,
       contactPhone: input.contactPhone,
       reporterId,
+      taggedUserIds: this.uniqueIds(input.taggedUserIds ?? []),
+      comments: [],
+      reactionUserIds: [],
     };
 
     this.commit([item, ...this.state()]);
@@ -45,6 +52,56 @@ export class LostFoundService {
       lostFoundId: item.id,
     });
     return item;
+  }
+
+  addComment(
+    postId: string,
+    authorId: string,
+    input: LostFoundCommentInput,
+  ): LostFoundComment | undefined {
+    const target = this.findById(postId);
+    const message = input.message.trim();
+    if (!target || !message) {
+      return undefined;
+    }
+
+    const comment: LostFoundComment = {
+      id: `lfc_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+      authorId,
+      message,
+      createdAt: new Date(),
+      taggedUserIds: this.uniqueIds(input.taggedUserIds ?? []),
+    };
+
+    this.commit(
+      this.state().map((item) =>
+        item.id === postId ? { ...item, comments: [...item.comments, comment] } : item,
+      ),
+    );
+    this.notifications.add({
+      message: `Nouveau commentaire sur « ${target.title} ».`,
+      type: 'LOST_FOUND',
+      lostFoundId: postId,
+    });
+    return comment;
+  }
+
+  toggleReaction(postId: string, userId: string): LostFoundItem | undefined {
+    const target = this.findById(postId);
+    if (!target) {
+      return undefined;
+    }
+
+    const reacted = target.reactionUserIds.includes(userId);
+    const updated: LostFoundItem = {
+      ...target,
+      reactionUserIds: reacted
+        ? target.reactionUserIds.filter((id) => id !== userId)
+        : [...target.reactionUserIds, userId],
+    };
+
+    this.commit(this.state().map((item) => (item.id === postId ? updated : item)));
+    return updated;
   }
 
   setStatus(id: string, status: LostFoundStatus): LostFoundItem | undefined {
@@ -79,6 +136,10 @@ export class LostFoundService {
     return true;
   }
 
+  private uniqueIds(ids: readonly string[]): string[] {
+    return [...new Set(ids.filter((id) => !!id))];
+  }
+
   private commit(items: LostFoundItem[]): void {
     this.state.set(items);
     this.persist(items);
@@ -103,6 +164,9 @@ export class LostFoundService {
                 category: String(value['category'] ?? 'Autre'),
                 contactPhone: value['contactPhone'] as string | undefined,
                 reporterId: String(value['reporterId'] ?? DEMO_USER_ID),
+                taggedUserIds: this.toStringArray(value['taggedUserIds']),
+                comments: this.parseComments(value['comments']),
+                reactionUserIds: this.toStringArray(value['reactionUserIds']),
               } satisfies LostFoundItem;
             });
           }
@@ -113,6 +177,27 @@ export class LostFoundService {
     }
 
     return this.seed();
+  }
+
+  private parseComments(value: unknown): LostFoundComment[] {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+
+    return value.map((entry) => {
+      const comment = entry as Record<string, unknown>;
+      return {
+        id: String(comment['id']),
+        authorId: String(comment['authorId'] ?? DEMO_USER_ID),
+        message: String(comment['message'] ?? ''),
+        createdAt: new Date(String(comment['createdAt'])),
+        taggedUserIds: this.toStringArray(comment['taggedUserIds']),
+      } satisfies LostFoundComment;
+    });
+  }
+
+  private toStringArray(value: unknown): string[] {
+    return Array.isArray(value) ? value.map((entry) => String(entry)) : [];
   }
 
   private normalizeStatus(value: unknown): LostFoundStatus {
@@ -131,6 +216,10 @@ export class LostFoundService {
           items.map((item) => ({
             ...item,
             reportedAt: item.reportedAt.toISOString(),
+            comments: item.comments.map((comment) => ({
+              ...comment,
+              createdAt: comment.createdAt.toISOString(),
+            })),
           })),
         ),
       );
@@ -151,6 +240,24 @@ export class LostFoundService {
         status: 'FOUND',
         contactPhone: '12345678',
         reporterId: 'u2',
+        taggedUserIds: ['u1'],
+        comments: [
+          {
+            id: 'lfc-1',
+            authorId: 'u2',
+            message: 'Ahmed, je crois que ce sont les tiennes. Tu peux passer les récupérer au Bloc B ?',
+            createdAt: new Date('2026-11-06T09:05:00'),
+            taggedUserIds: ['u1'],
+          },
+          {
+            id: 'lfc-2',
+            authorId: 'u1',
+            message: 'Oui ce sont les miennes, merci beaucoup ! Je passe cet après-midi.',
+            createdAt: new Date('2026-11-06T09:20:00'),
+            taggedUserIds: [],
+          },
+        ],
+        reactionUserIds: ['u1', 'u3'],
       },
       {
         id: 'lf-2',
@@ -162,6 +269,17 @@ export class LostFoundService {
         status: 'LOST',
         contactPhone: '23456789',
         reporterId: DEMO_USER_ID,
+        taggedUserIds: [],
+        comments: [
+          {
+            id: 'lfc-3',
+            authorId: 'u3',
+            message: 'La carte a été déposée à l’accueil de la bibliothèque.',
+            createdAt: new Date('2026-11-05T16:10:00'),
+            taggedUserIds: ['u1'],
+          },
+        ],
+        reactionUserIds: ['u2'],
       },
       {
         id: 'lf-3',
@@ -172,6 +290,9 @@ export class LostFoundService {
         reportedAt: new Date('2026-11-04T12:20:00'),
         status: 'FOUND',
         reporterId: 'u2',
+        taggedUserIds: ['u3'],
+        comments: [],
+        reactionUserIds: ['u1'],
       },
       {
         id: 'lf-4',
@@ -183,6 +304,9 @@ export class LostFoundService {
         status: 'LOST',
         contactPhone: '34567890',
         reporterId: 'u2',
+        taggedUserIds: [],
+        comments: [],
+        reactionUserIds: [],
       },
       {
         id: 'lf-5',
@@ -193,6 +317,17 @@ export class LostFoundService {
         reportedAt: new Date('2026-11-02T10:05:00'),
         status: 'CLAIMED',
         reporterId: 'u3',
+        taggedUserIds: [],
+        comments: [
+          {
+            id: 'lfc-4',
+            authorId: 'u2',
+            message: 'Contente que tu l’aies retrouvée !',
+            createdAt: new Date('2026-11-02T18:00:00'),
+            taggedUserIds: [],
+          },
+        ],
+        reactionUserIds: ['u1', 'u2'],
       },
       {
         id: 'lf-6',
@@ -204,6 +339,9 @@ export class LostFoundService {
         status: 'CLAIMED',
         contactPhone: '45678901',
         reporterId: 'u2',
+        taggedUserIds: ['u1'],
+        comments: [],
+        reactionUserIds: ['u3'],
       },
     ];
   }
