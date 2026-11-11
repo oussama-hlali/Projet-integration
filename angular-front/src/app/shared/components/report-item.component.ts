@@ -1,4 +1,4 @@
-import { Component, inject, output, signal } from '@angular/core';
+import { Component, computed, inject, input, output, signal } from '@angular/core';
 import {
   AbstractControl,
   FormBuilder,
@@ -8,11 +8,18 @@ import {
 } from '@angular/forms';
 import type { LostFoundReportInput } from '../../core/models/lost-found.model';
 
+/** A campus member that can be mentioned in a post. */
+export interface TagPerson {
+  id: string;
+  name: string;
+}
+
 /**
- * Report form for Lost & Found.
+ * Community composer for Lost & Found.
  *
- * The component validates and emits the report; the page owns the store so a
- * submitted report appears in the list immediately.
+ * The component validates the post, lets the author tag the people involved
+ * (for example the student who lost their keys) and emits the result; the page
+ * owns the store so a submitted post appears in the feed immediately.
  */
 @Component({
   selector: 'app-report-item',
@@ -73,7 +80,7 @@ import type { LostFoundReportInput } from '../../core/models/lost-found.model';
       </div>
 
       <div class="form-field">
-        <label for="report-description">Description <span aria-hidden="true">*</span></label>
+        <label for="report-description">What happened? <span aria-hidden="true">*</span></label>
         <textarea
           id="report-description"
           class="control"
@@ -149,13 +156,65 @@ import type { LostFoundReportInput } from '../../core/models/lost-found.model';
         }
       </div>
 
+      <div class="tag-field">
+        <div class="tag-field__head">
+          <span class="tag-field__label">Tag people (optional)</span>
+          <button
+            type="button"
+            class="tag-toggle"
+            [attr.aria-expanded]="tagging()"
+            (click)="toggleTagging()"
+          >
+            {{ tagging() ? 'Done' : 'Tag people' }}
+          </button>
+        </div>
+
+        @if (taggedPeople().length) {
+          <ul class="tag-chips" aria-label="Tagged people">
+            @for (person of taggedPeople(); track person.id) {
+              <li class="tag-chip">
+                <span>&#64;{{ person.name }}</span>
+                <button
+                  type="button"
+                  class="tag-chip__remove"
+                  [attr.aria-label]="'Remove ' + person.name"
+                  (click)="removeTag(person.id)"
+                >
+                  &times;
+                </button>
+              </li>
+            }
+          </ul>
+        }
+
+        @if (tagging()) {
+          <ul class="tag-people">
+            @for (person of people(); track person.id) {
+              <li>
+                <label class="tag-person">
+                  <input
+                    type="checkbox"
+                    [checked]="tagged().includes(person.id)"
+                    (change)="toggleTag(person.id)"
+                  />
+                  <span class="tag-person__avatar" aria-hidden="true">{{ person.name.charAt(0) }}</span>
+                  <span class="tag-person__name">{{ person.name }}</span>
+                </label>
+              </li>
+            } @empty {
+              <li class="tag-people__empty">No other campus members to tag yet.</li>
+            }
+          </ul>
+        }
+      </div>
+
       <div class="actions">
         <button type="button" class="button button--quiet" (click)="clear()">Clear</button>
-        <button type="submit" class="button button--primary">Submit report</button>
+        <button type="submit" class="button button--primary">Post to community</button>
       </div>
 
       @if (success()) {
-        <p class="success" role="status">Report submitted. It now appears in the list.</p>
+        <p class="success" role="status">Posted. Your item is now in the community feed.</p>
       }
     </form>
   `,
@@ -230,6 +289,136 @@ import type { LostFoundReportInput } from '../../core/models/lost-found.model';
         margin: var(--space-1) 0 0;
         color: var(--color-danger);
         font-size: var(--font-size-xs);
+      }
+
+      .tag-field {
+        margin-bottom: var(--space-3);
+        padding: var(--space-3);
+        background: var(--well);
+        border: 1px dashed var(--color-border-strong);
+        border-radius: var(--radius-md);
+      }
+
+      .tag-field__head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-2);
+      }
+
+      .tag-field__label {
+        color: var(--color-text-muted);
+        font-size: var(--font-size-xs);
+        font-weight: var(--font-weight-semibold);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .tag-toggle {
+        padding: 0.3rem 0.7rem;
+        color: var(--color-accent-text);
+        background: var(--color-accent-soft);
+        border: 1px solid color-mix(in srgb, var(--color-accent) 24%, transparent);
+        border-radius: var(--radius-full);
+        cursor: pointer;
+        font: inherit;
+        font-size: var(--font-size-xs);
+        font-weight: var(--font-weight-semibold);
+      }
+
+      .tag-toggle:hover {
+        background: color-mix(in srgb, var(--color-accent-soft) 70%, var(--color-accent));
+      }
+
+      .tag-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-2);
+        margin: var(--space-3) 0 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .tag-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.22rem 0.55rem;
+        color: var(--color-accent-text);
+        background: var(--color-accent-soft);
+        border-radius: var(--radius-full);
+        font-size: var(--font-size-xs);
+        font-weight: var(--font-weight-medium);
+      }
+
+      .tag-chip__remove {
+        display: inline-grid;
+        place-items: center;
+        width: 16px;
+        height: 16px;
+        color: inherit;
+        background: transparent;
+        border: 0;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 0.85rem;
+        line-height: 1;
+      }
+
+      .tag-chip__remove:hover {
+        background: color-mix(in srgb, var(--color-accent) 20%, transparent);
+      }
+
+      .tag-people {
+        display: grid;
+        gap: 2px;
+        max-height: 190px;
+        margin: var(--space-3) 0 0;
+        padding: 0;
+        overflow-y: auto;
+        list-style: none;
+      }
+
+      .tag-person {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        margin: 0;
+        padding: 0.4rem 0.5rem;
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        font-weight: var(--font-weight-medium);
+      }
+
+      .tag-person:hover {
+        background: color-mix(in srgb, var(--color-surface) 40%, transparent);
+      }
+
+      .tag-person input {
+        accent-color: var(--color-accent);
+      }
+
+      .tag-person__avatar {
+        display: inline-grid;
+        place-items: center;
+        width: 24px;
+        height: 24px;
+        color: var(--color-accent-contrast);
+        background: var(--color-accent);
+        border-radius: 50%;
+        font-size: var(--font-size-xs);
+        font-weight: var(--font-weight-bold);
+      }
+
+      .tag-person__name {
+        color: var(--color-text);
+        font-size: var(--font-size-sm);
+      }
+
+      .tag-people__empty {
+        padding: var(--space-2);
+        color: var(--color-text-muted);
+        font-size: var(--font-size-sm);
       }
 
       .actions {
@@ -313,8 +502,18 @@ import type { LostFoundReportInput } from '../../core/models/lost-found.model';
 export class ReportItemComponent {
   private readonly formBuilder = inject(FormBuilder).nonNullable;
 
+  /** Campus members the author can mention. */
+  readonly people = input<readonly TagPerson[]>([]);
+
   readonly reported = output<LostFoundReportInput>();
   readonly success = signal(false);
+
+  readonly tagged = signal<string[]>([]);
+  readonly tagging = signal(false);
+  readonly taggedPeople = computed(() => {
+    const selected = this.tagged();
+    return this.people().filter((person) => selected.includes(person.id));
+  });
 
   readonly categories = ['Électronique', 'Documents', 'Vêtements', 'Clés', 'Autre'];
   readonly today = new Date().toISOString().split('T')[0];
@@ -334,8 +533,25 @@ export class ReportItemComponent {
     return control.invalid && (control.touched || control.dirty);
   }
 
+  toggleTagging(): void {
+    this.tagging.update((open) => !open);
+  }
+
+  toggleTag(id: string): void {
+    const selected = this.tagged();
+    this.tagged.set(
+      selected.includes(id) ? selected.filter((value) => value !== id) : [...selected, id],
+    );
+  }
+
+  removeTag(id: string): void {
+    this.tagged.set(this.tagged().filter((value) => value !== id));
+  }
+
   clear(): void {
     this.success.set(false);
+    this.tagged.set([]);
+    this.tagging.set(false);
     this.form.reset({ status: 'LOST' });
   }
 
@@ -356,8 +572,11 @@ export class ReportItemComponent {
       location: value.location,
       contactPhone: value.contactPhone || undefined,
       reportedAt: new Date(`${value.reportedAt}T12:00:00`),
+      taggedUserIds: this.tagged(),
     });
     this.success.set(true);
+    this.tagged.set([]);
+    this.tagging.set(false);
     this.form.reset({ status: 'LOST' });
   }
 

@@ -1,9 +1,9 @@
 <section class="page lost-found">
   <app-page-header
     title="Lost & Found"
-    subtitle="Browse reports from campus, or tell everyone about an item you lost or found."
+    subtitle="Post lost or found items, tag the people involved and help each other on campus."
   >
-    <a class="button button--primary" href="#report-item">Report an item</a>
+    <a class="button button--primary" href="#composer">Create a post</a>
   </app-page-header>
 
   <div class="metrics">
@@ -26,14 +26,28 @@
     </div>
   }
 
-  <div class="layout">
-    <section class="panel glass glass--thick" aria-labelledby="reports-title">
-      <div class="panel__head">
+  <div class="community">
+    <section id="composer" class="composer glass glass--thick" aria-labelledby="composer-title">
+      <header class="composer__head">
+        <span [class]="'avatar avatar--tone-' + currentTone()" aria-hidden="true">
+          {{ currentInitials() }}
+        </span>
         <div>
-          <h2 id="reports-title">Campus reports</h2>
+          <h2 id="composer-title">Share with campus</h2>
           <p class="muted">
-            Showing {{ filtered().length }} of {{ reports().length }} reports
+            Lost something or found an item? Post it and tag the people involved.
           </p>
+        </div>
+      </header>
+
+      <app-report-item [people]="tagPeople()" (reported)="addReport($event)" />
+    </section>
+
+    <section class="feed glass glass--thick" aria-labelledby="feed-title">
+      <div class="feed__head">
+        <div>
+          <h2 id="feed-title">Community feed</h2>
+          <p class="muted">Showing {{ filtered().length }} of {{ posts().length }} posts</p>
         </div>
       </div>
 
@@ -69,7 +83,7 @@
             <input
               class="control"
               type="search"
-              placeholder="Item, category or location"
+              placeholder="Item, person, category or location"
               [value]="search()"
               (input)="setSearch($event)"
             />
@@ -84,64 +98,154 @@
       </div>
 
       @if (filtered().length) {
-        <ul class="reports">
-          @for (report of filtered(); track report.id) {
-            <li
-              class="report"
-              [class.report--lost]="report.status === 'LOST'"
-              [class.report--found]="report.status === 'FOUND'"
-              [class.report--resolved]="report.status === 'CLAIMED'"
+        <div class="posts">
+          @for (post of filtered(); track post.id) {
+            <article
+              class="post"
+              [class.post--lost]="post.status === 'LOST'"
+              [class.post--found]="post.status === 'FOUND'"
+              [class.post--claimed]="post.status === 'CLAIMED'"
             >
-              <div class="report__head">
-                <div class="report__badges">
-                  <app-status-badge
-                    [label]="statusLabel(report.status)"
-                    [variant]="statusVariant(report.status)"
-                  />
-                  <span class="report__category">{{ report.category }}</span>
+              <header class="post__head">
+                <span [class]="'avatar avatar--tone-' + avatarTone(post.reporterId)" aria-hidden="true">
+                  {{ initials(authorName(post.reporterId)) }}
+                </span>
+                <div class="post__who">
+                  <span class="post__author">{{ authorName(post.reporterId) }}</span>
+                  <span class="post__time" [attr.title]="fullDate(post.reportedAt)">
+                    {{ relativeTime(post.reportedAt) }}
+                  </span>
                 </div>
-                <span class="report__date">{{ dateLabel(report.reportedAt) }}</span>
+                <div class="post__badges">
+                  <app-status-badge
+                    [label]="statusLabel(post.status)"
+                    [variant]="statusVariant(post.status)"
+                  />
+                  <span class="post__category">{{ post.category }}</span>
+                </div>
+              </header>
+
+              <h3 class="post__title">{{ post.title }}</h3>
+              <p class="post__body">{{ post.description }}</p>
+
+              <div class="post__meta">
+                <span class="meta-chip">
+                  <span class="meta-chip__label">Location</span>{{ post.location }}
+                </span>
+                @if (post.contactPhone) {
+                  <a class="meta-chip meta-chip--link" [href]="'tel:' + post.contactPhone">
+                    <span class="meta-chip__label">Contact</span>{{ post.contactPhone }}
+                  </a>
+                }
               </div>
 
-              <h3>{{ report.title }}</h3>
-              <p class="report__description">{{ report.description }}</p>
+              @if (post.taggedUserIds.length) {
+                <p class="post__tagged">
+                  <span class="post__tagged-label">Tagged</span>
+                  @for (id of post.taggedUserIds; track id) {
+                    <span class="mention">{{ '@' + authorName(id) }}</span>
+                  }
+                </p>
+              }
 
-              <dl class="report__meta">
-                <div>
-                  <dt>Location</dt>
-                  <dd>{{ report.location }}</dd>
-                </div>
-                @if (report.contactPhone) {
-                  <div>
-                    <dt>Contact</dt>
-                    <dd>
-                      <a [href]="'tel:' + report.contactPhone">{{ report.contactPhone }}</a>
-                    </dd>
-                  </div>
-                }
-              </dl>
+              <div class="post__actions">
+                <button
+                  type="button"
+                  class="post__action"
+                  [class.post__action--active]="hasReacted(post)"
+                  (click)="toggleReaction(post)"
+                >
+                  <span class="post__action-icon" aria-hidden="true">&#9829;</span>
+                  Like
+                  <span class="post__action-count">{{ post.reactionUserIds.length }}</span>
+                </button>
 
-              <div class="report__actions">
-                @if (report.status !== 'CLAIMED') {
-                  <button
-                    type="button"
-                    class="button button--quiet"
-                    (click)="claimReport(report)"
-                  >
-                    Mark as claimed
+                <span class="post__stat">
+                  {{ post.comments.length }} {{ post.comments.length === 1 ? 'comment' : 'comments' }}
+                </span>
+
+                @if (post.status !== 'CLAIMED') {
+                  <button type="button" class="post__action" (click)="claimReport(post)">
+                    Mark claimed
                   </button>
                 }
               </div>
-            </li>
+
+              <section class="comments" [attr.aria-label]="'Comments on ' + post.title">
+                @for (comment of post.comments; track comment.id) {
+                  <div class="comment">
+                    <span
+                      [class]="'avatar avatar--sm avatar--tone-' + avatarTone(comment.authorId)"
+                      aria-hidden="true"
+                    >
+                      {{ initials(authorName(comment.authorId)) }}
+                    </span>
+                    <div class="comment__bubble">
+                      <div class="comment__top">
+                        <span class="comment__name">{{ authorName(comment.authorId) }}</span>
+                        <span class="comment__time" [attr.title]="fullDate(comment.createdAt)">
+                          {{ relativeTime(comment.createdAt) }}
+                        </span>
+                      </div>
+                      <p class="comment__body">{{ comment.message }}</p>
+                      @if (comment.taggedUserIds.length) {
+                        <p class="comment__tagged">
+                          Tagged
+                          @for (id of comment.taggedUserIds; track id) {
+                            <span class="mention">{{ '@' + authorName(id) }}</span>
+                          }
+                        </p>
+                      }
+                    </div>
+                  </div>
+                }
+
+                <form
+                  class="comment-form"
+                  (submit)="
+                    $event.preventDefault();
+                    submitComment(post, commentText.value, commentTag.value);
+                    commentText.value = '';
+                    commentTag.value = ''
+                  "
+                >
+                  <span
+                    [class]="'avatar avatar--sm avatar--tone-' + currentTone()"
+                    aria-hidden="true"
+                  >
+                    {{ currentInitials() }}
+                  </span>
+                  <input
+                    #commentText
+                    class="comment-form__input"
+                    type="text"
+                    autocomplete="off"
+                    [attr.aria-label]="'Write a comment on ' + post.title"
+                    placeholder="Write a comment…"
+                  />
+                  <select
+                    #commentTag
+                    class="comment-form__tag"
+                    [attr.aria-label]="'Tag someone in your comment'"
+                  >
+                    <option value="">Tag someone</option>
+                    @for (person of tagPeople(); track person.id) {
+                      <option [value]="person.id">{{ person.name }}</option>
+                    }
+                  </select>
+                  <button type="submit" class="button button--primary">Send</button>
+                </form>
+              </section>
+            </article>
           }
-        </ul>
+        </div>
       } @else {
         <app-empty-state
-          [title]="hasFilters() ? 'No reports match these filters' : 'No reports yet'"
+          [title]="hasFilters() ? 'No posts match these filters' : 'No posts yet'"
           [message]="
             hasFilters()
-              ? 'Try another type or search term.'
-              : 'Submit the first report using the form.'
+              ? 'Try another status or search term.'
+              : 'Share the first lost or found item with the community.'
           "
         >
           @if (hasFilters()) {
@@ -151,17 +255,6 @@
           }
         </app-empty-state>
       }
-    </section>
-
-    <section id="report-item" class="panel glass glass--thick form-panel" aria-labelledby="form-title">
-      <div class="panel__head">
-        <div>
-          <h2 id="form-title">Report an item</h2>
-          <p class="muted">Lost or found, add the details so the owner can reach you.</p>
-        </div>
-      </div>
-
-      <app-report-item (reported)="addReport($event)" />
     </section>
   </div>
 </section>

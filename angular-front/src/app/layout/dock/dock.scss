@@ -102,6 +102,16 @@
   --theme-toggle-size: 46px;
 }
 
+/* Brand home link: the mark supplies its own visual weight, so the button
+   stays transparent and only reveals the glass well on hover. */
+.dock__brand {
+  overflow: visible;
+}
+
+.dock__brand:hover {
+  background: var(--well);
+}
+
 @media (max-height: 720px) {
   .dock {
     overflow-y: auto;
@@ -145,6 +155,13 @@
   }
 
   .dock__btn::after {
+    display: none;
+  }
+
+  /* The topbar already carries the logo on phones, and the bottom bar has no
+     room for both the mark and every account shortcut. */
+  .dock__brand,
+  .dock__brand + .dock__divider {
     display: none;
   }
 
