@@ -38,6 +38,19 @@
           <span aria-hidden="true">·</span>
           <span>{{ item.location }}</span>
         </p>
+
+        <button
+          type="button"
+          class="interest"
+          [class.interest--on]="interested()"
+          [attr.aria-pressed]="interested()"
+          (click)="toggleInterest()"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m12 3.6 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.8l5.9-.9L12 3.6Z" />
+          </svg>
+          {{ interested() ? 'In your interests' : 'Add to interests' }}
+        </button>
       </div>
     </header>
 

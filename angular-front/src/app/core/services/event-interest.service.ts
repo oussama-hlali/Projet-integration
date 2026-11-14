@@ -1,0 +1,107 @@
+import { Injectable, signal } from '@angular/core';
+import { EventInterest } from '../models/event-interest.model';
+
+const STORAGE_KEY = 'smart-campus.event-interests';
+const DEMO_USER_ID = 'u1';
+
+/**
+ * Stores which events a student follows.
+ *
+ * The Events page uses these marks both to render the "For you" rail and to
+ * recommend upcoming events in the categories the student cares about.
+ */
+@Injectable({ providedIn: 'root' })
+export class EventInterestService {
+  private readonly state = signal<EventInterest[]>(this.load());
+
+  readonly interests = this.state.asReadonly();
+
+  isInterested(eventId: string, userId: string = DEMO_USER_ID): boolean {
+    return this.state().some(
+      (interest) => interest.eventId === eventId && interest.userId === userId,
+    );
+  }
+
+  interestsFor(userId: string = DEMO_USER_ID): EventInterest[] {
+    return this.state()
+      .filter((interest) => interest.userId === userId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+
+  /** Event ids the diner follows, newest mark first. */
+  interestedEventIds(userId: string = DEMO_USER_ID): string[] {
+    return this.interestsFor(userId).map((interest) => interest.eventId);
+  }
+
+  /** Toggle a mark and return the new state (`true` = now interested). */
+  toggle(eventId: string, userId: string = DEMO_USER_ID): boolean {
+    if (this.isInterested(eventId, userId)) {
+      this.commit(
+        this.state().filter(
+          (interest) => !(interest.eventId === eventId && interest.userId === userId),
+        ),
+      );
+      return false;
+    }
+
+    this.commit([{ eventId, userId, createdAt: new Date() }, ...this.state()]);
+    return true;
+  }
+
+  private commit(interests: EventInterest[]): void {
+    this.state.set(interests);
+    if (typeof localStorage === 'undefined') {
+      return;
+    }
+
+    try {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(
+          interests.map((interest) => ({
+            ...interest,
+            createdAt: interest.createdAt.toISOString(),
+          })),
+        ),
+      );
+    } catch {
+      // Storage can be full or blocked; the in-memory store still works.
+    }
+  }
+
+  private load(): EventInterest[] {
+    if (typeof localStorage !== 'undefined') {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed: unknown = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            return parsed
+              .filter((entry): entry is Record<string, unknown> => {
+                if (!entry || typeof entry !== 'object') {
+                  return false;
+                }
+                const interest = entry as Partial<EventInterest>;
+                return (
+                  typeof interest.eventId === 'string' && typeof interest.userId === 'string'
+                );
+              })
+              .map((entry) => ({
+                eventId: String(entry['eventId']),
+                userId: String(entry['userId']),
+                createdAt: new Date(String(entry['createdAt'])),
+              }));
+          }
+        }
+      } catch {
+        // Fall through to the seeded marks.
+      }
+    }
+
+    return [
+      { eventId: 'e2', userId: DEMO_USER_ID, createdAt: new Date('2026-11-02T10:00:00') },
+      { eventId: 'e6', userId: DEMO_USER_ID, createdAt: new Date('2026-11-04T14:30:00') },
+      { eventId: 'e8', userId: DEMO_USER_ID, createdAt: new Date('2026-11-06T09:15:00') },
+    ];
+  }
+}

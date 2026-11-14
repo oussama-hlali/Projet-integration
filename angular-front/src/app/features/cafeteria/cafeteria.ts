@@ -1,160 +1,165 @@
-import { DatePipe } from '@angular/common';
-import { Component, computed, signal } from '@angular/core';
-import { PageHeaderComponent } from '../../shared/components';
+import { DatePipe, DecimalPipe } from '@angular/common';
+import { Component, computed, inject, signal } from '@angular/core';
+import { CafeteriaMenu, CafeteriaOrder, MenuItem } from '../../core/models/cafeteria.model';
+import { AuthService } from '../../core/services/auth.service';
+import { CafeteriaService } from '../../core/services/cafeteria.service';
+import { buildQrMatrix } from '../../core/utils/qr-code';
+import {
+  ConfirmDialogComponent,
+  EmptyStateComponent,
+  ServiceLogoComponent,
+  StatusBadgeComponent,
+} from '../../shared/components';
 
-type Meal = 'Lunch' | 'Snack' | 'Dinner';
-type DietaryFilter = 'all' | 'vegetarian' | 'vegan';
+type DietaryFilter = 'all' | 'Vegan' | 'Végétarien' | 'Sans gluten';
 
-interface MenuItem {
-  name: string;
-  description: string;
-  allergens: string[];
-  dietary: ('vegetarian' | 'vegan')[];
+interface DietaryOption {
+  value: DietaryFilter;
+  label: string;
 }
 
-interface MenuDay {
-  date: Date;
-  closed: boolean;
-  items: Record<Meal, MenuItem[]>;
-}
-
+/**
+ * PB-09 — Cafeteria.
+ *
+ * Students browse the week's menus, filter dishes by dietary label and reserve
+ * a plate. Every reservation produces a receipt with a QR code that can be
+ * shown at the counter.
+ */
 @Component({
   selector: 'app-cafeteria',
-  imports: [DatePipe, PageHeaderComponent],
+  imports: [
+    DatePipe,
+    DecimalPipe,
+    ConfirmDialogComponent,
+    EmptyStateComponent,
+    ServiceLogoComponent,
+    StatusBadgeComponent,
+  ],
   templateUrl: './cafeteria.html',
   styleUrl: './cafeteria.scss',
 })
 export class Cafeteria {
-  readonly meals: Meal[] = ['Lunch', 'Snack', 'Dinner'];
-  readonly selectedDay = signal(new Date().getDay() === 0 ? 6 : new Date().getDay() - 1);
-  readonly selectedMeal = signal<Meal>('Lunch');
+  private readonly cafeteria = inject(CafeteriaService);
+  private readonly auth = inject(AuthService);
+
+  readonly userId = computed(() => this.auth.currentUser()?.id ?? 'u1');
+
+  readonly menus = this.cafeteria.menus;
+  readonly selectedDay = signal(this.todayIndex());
   readonly dietaryFilter = signal<DietaryFilter>('all');
 
-  readonly days: MenuDay[] = this.createMenu();
-  readonly selectedItems = computed(() => {
-    const day = this.days[this.selectedDay()];
-    if (day.closed) {
-      return [];
-    }
+  readonly dietaryOptions: readonly DietaryOption[] = [
+    { value: 'all', label: 'All dishes' },
+    { value: 'Vegan', label: 'Vegan' },
+    { value: 'Végétarien', label: 'Vegetarian' },
+    { value: 'Sans gluten', label: 'Gluten-free' },
+  ];
 
-    const items = day.items[this.selectedMeal()];
+  readonly feedback = signal<string | null>(null);
+  readonly selectedOrderId = signal<string | null>(null);
+  readonly dialogOpen = signal(false);
+
+  readonly selectedMenu = computed<CafeteriaMenu>(
+    () => this.menus()[this.selectedDay()] ?? this.menus()[0],
+  );
+
+  readonly items = computed<MenuItem[]>(() => {
+    const menu = this.selectedMenu();
     const filter = this.dietaryFilter();
-
-    return filter === 'all' ? items : items.filter((item) => item.dietary.includes(filter));
+    return filter === 'all'
+      ? menu.items
+      : menu.items.filter((item) => item.dietaryLabels.includes(filter));
   });
+
+  readonly reservations = computed(() => this.cafeteria.ordersFor(this.userId()));
+
+  readonly latestOrder = computed<CafeteriaOrder | undefined>(() => {
+    const id = this.selectedOrderId();
+    return (id ? this.cafeteria.findOrder(id) : undefined) ?? this.reservations()[0];
+  });
+
+  readonly receiptQr = computed(() => buildQrMatrix(this.latestOrder()?.qrPayload ?? ''));
+
+  readonly cancelMessage = computed(() => {
+    const order = this.latestOrder();
+    return order
+      ? `Cancel your reservation for ${order.itemName}? The receipt and QR code will be removed.`
+      : 'Cancel this reservation?';
+  });
+
+  readonly upcomingCount = computed(() => this.reservations().length);
 
   setDay(index: number): void {
     this.selectedDay.set(index);
-  }
-
-  setMeal(meal: Meal): void {
-    this.selectedMeal.set(meal);
   }
 
   setDietaryFilter(filter: DietaryFilter): void {
     this.dietaryFilter.set(filter);
   }
 
-  isToday(date: Date): boolean {
+  isToday(menu: CafeteriaMenu): boolean {
     const today = new Date();
     return (
-      date.getFullYear() === today.getFullYear() &&
-      date.getMonth() === today.getMonth() &&
-      date.getDate() === today.getDate()
+      menu.date.getFullYear() === today.getFullYear() &&
+      menu.date.getMonth() === today.getMonth() &&
+      menu.date.getDate() === today.getDate()
     );
   }
 
-  private createMenu(): MenuDay[] {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const monday = new Date(today);
-    monday.setDate(today.getDate() - (today.getDay() === 0 ? 6 : today.getDay() - 1));
+  countFor(filter: DietaryFilter): number {
+    const items = this.selectedMenu().items;
+    return filter === 'all'
+      ? items.length
+      : items.filter((item) => item.dietaryLabels.includes(filter)).length;
+  }
 
-    const meals: Record<Meal, MenuItem[]> = {
-      Lunch: [
-        {
-          name: 'Grilled chicken bowl',
-          description: 'Herb chicken, rice, roasted vegetables and yogurt sauce',
-          allergens: ['Milk'],
-          dietary: [],
-        },
-        {
-          name: 'Mediterranean lentil bowl',
-          description: 'Lentils, couscous, cucumber, tomato and tahini dressing',
-          allergens: ['Gluten', 'Sesame'],
-          dietary: ['vegetarian', 'vegan'],
-        },
-        {
-          name: 'Tomato basil pasta',
-          description: 'Penne, tomato sauce, basil and parmesan',
-          allergens: ['Gluten', 'Milk'],
-          dietary: ['vegetarian'],
-        },
-        {
-          name: 'Beef kefta plate',
-          description: 'Seasoned beef kefta, bulgur, salad and roasted vegetables',
-          allergens: ['Gluten'],
-          dietary: [],
-        },
-        {
-          name: 'Tuna niçoise salad',
-          description: 'Tuna, potatoes, green beans, tomato and olives',
-          allergens: ['Fish', 'Eggs'],
-          dietary: [],
-        },
-      ],
-      Snack: [
-        {
-          name: 'Fresh fruit cup',
-          description: 'A mix of seasonal fruit',
-          allergens: [],
-          dietary: ['vegetarian', 'vegan'],
-        },
-        {
-          name: 'Chocolate cookie',
-          description: 'Soft-baked cookie with dark chocolate chips',
-          allergens: ['Gluten', 'Milk', 'Eggs'],
-          dietary: ['vegetarian'],
-        },
-        {
-          name: 'Hummus and vegetable sticks',
-          description: 'Creamy chickpea hummus with carrot and cucumber',
-          allergens: ['Sesame'],
-          dietary: ['vegetarian', 'vegan'],
-        },
-      ],
-      Dinner: [
-        {
-          name: 'Vegetable curry',
-          description: 'Coconut curry, chickpeas, seasonal vegetables and rice',
-          allergens: [],
-          dietary: ['vegetarian', 'vegan'],
-        },
-        {
-          name: 'Baked fish & potatoes',
-          description: 'Oven-baked fish, potatoes and green beans',
-          allergens: ['Fish'],
-          dietary: [],
-        },
-        {
-          name: 'Chicken shawarma plate',
-          description: 'Marinated chicken, rice, salad and garlic sauce',
-          allergens: ['Milk'],
-          dietary: [],
-        },
-        {
-          name: 'Spinach and ricotta lasagna',
-          description: 'Pasta, spinach, ricotta and tomato sauce',
-          allergens: ['Gluten', 'Milk', 'Eggs'],
-          dietary: ['vegetarian'],
-        },
-      ],
-    };
+  isReserved(item: MenuItem): boolean {
+    return this.cafeteria.hasReserved(this.selectedMenu().id, item.id, this.userId());
+  }
 
-    return Array.from({ length: 7 }, (_, index) => {
-      const date = new Date(monday);
-      date.setDate(monday.getDate() + index);
-      return { date, closed: index === 6, items: meals };
+  reserve(item: MenuItem): void {
+    const menu = this.selectedMenu();
+    const order = this.cafeteria.reserve({
+      menuId: menu.id,
+      itemId: item.id,
+      userId: this.userId(),
     });
+
+    if (!order) {
+      this.feedback.set('This dish is no longer available. Please pick another one.');
+      return;
+    }
+
+    this.selectedOrderId.set(order.id);
+    this.feedback.set(`Receipt ${order.reference} is ready. Your QR code is on the right.`);
+  }
+
+  requestCancel(): void {
+    if (this.latestOrder()) {
+      this.dialogOpen.set(true);
+    }
+  }
+
+  confirmCancel(): void {
+    const order = this.latestOrder();
+    if (order && this.cafeteria.cancel(order.id, this.userId())) {
+      this.selectedOrderId.set(null);
+      this.feedback.set('Reservation cancelled. You can reserve another dish.');
+    }
+  }
+
+  dismissFeedback(): void {
+    this.feedback.set(null);
+  }
+
+  private todayIndex(): number {
+    const today = new Date();
+    const index = this.menus().findIndex(
+      (menu) =>
+        menu.date.getFullYear() === today.getFullYear() &&
+        menu.date.getMonth() === today.getMonth() &&
+        menu.date.getDate() === today.getDate(),
+    );
+    return index >= 0 ? index : 0;
   }
 }

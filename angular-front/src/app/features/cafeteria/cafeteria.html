@@ -1,82 +1,115 @@
 <section class="page cafeteria">
-  <app-page-header
-    title="Cafeteria"
-    subtitle="Explore the menu and find meals that fit your preferences."
-  />
+  <header class="hero glass glass--thick">
+    <app-service-logo name="cafeteria" />
 
-  <div class="notice glass glass--thick" role="note">
-    <span class="notice__icon" aria-hidden="true">i</span>
-    <p>
-      <strong>Menu information</strong>
-      <span>This is demo data. Recipes and allergen information may change. Please ask cafeteria staff if you have an allergy.</span>
-    </p>
-  </div>
-
-  <section class="menu-panel glass glass--thick" aria-label="Cafeteria menu">
-    <div class="day-tabs" role="tablist" aria-label="Choose a day">
-      @for (day of days; track day.date; let index = $index) {
-        <button
-          type="button"
-          class="day-tab"
-          [class.day-tab--active]="selectedDay() === index"
-          [attr.aria-selected]="selectedDay() === index"
-          (click)="setDay(index)"
-        >
-          <span>{{ day.closed ? 'Closed' : (isToday(day.date) ? 'Today' : (day.date | date: 'EEE')) }}</span>
-          <strong>{{ day.date | date: 'd MMM' }}</strong>
-        </button>
-      }
+    <div class="hero__copy">
+      <p class="eyebrow">
+        <span class="eyebrow__dot" aria-hidden="true"></span>
+        Cafétéria · Service open 11:30 – 14:30
+      </p>
+      <h1>Cafeteria</h1>
+      <p class="hero__sub">
+        Browse the week's menu, reserve your plate and keep the receipt with its QR code.
+      </p>
     </div>
 
-    <div class="menu-toolbar">
-      <div class="meal-tabs" role="tablist" aria-label="Choose a meal">
-        @for (meal of meals; track meal) {
+    <dl class="hero__stats">
+      <div>
+        <dt>This week</dt>
+        <dd>{{ menus().length }} menus</dd>
+      </div>
+      <div>
+        <dt>Your receipts</dt>
+        <dd>{{ upcomingCount() }}</dd>
+      </div>
+    </dl>
+  </header>
+
+  @if (feedback()) {
+    <div class="feedback" role="status">
+      <span>{{ feedback() }}</span>
+      <button type="button" class="feedback__close" aria-label="Dismiss message" (click)="dismissFeedback()">
+        &times;
+      </button>
+    </div>
+  }
+
+  <div class="layout">
+    <section class="menu glass glass--thick" aria-label="Cafeteria menu">
+      <div class="day-rail" role="tablist" aria-label="Choose a day">
+        @for (menu of menus(); track menu.id; let index = $index) {
           <button
             type="button"
-            class="meal-tab"
-            [class.meal-tab--active]="selectedMeal() === meal"
-            [attr.aria-selected]="selectedMeal() === meal"
-            (click)="setMeal(meal)"
+            role="tab"
+            class="day"
+            [class.day--active]="selectedDay() === index"
+            [attr.aria-selected]="selectedDay() === index"
+            [style.animation-delay]="index * 45 + 'ms'"
+            (click)="setDay(index)"
           >
-            {{ meal }}
+            <span class="day__name">{{ isToday(menu) ? 'Today' : (menu.date | date: 'EEE') }}</span>
+            <strong class="day__number">{{ menu.date | date: 'd' }}</strong>
+            <span class="day__month">{{ menu.date | date: 'MMM' }}</span>
           </button>
         }
       </div>
 
-      <div class="dietary-tabs" role="group" aria-label="Filter by dietary preference">
-        <button type="button" [class.active]="dietaryFilter() === 'all'" (click)="setDietaryFilter('all')">All</button>
-        <button type="button" [class.active]="dietaryFilter() === 'vegetarian'" (click)="setDietaryFilter('vegetarian')">Vegetarian</button>
-        <button type="button" [class.active]="dietaryFilter() === 'vegan'" (click)="setDietaryFilter('vegan')">Vegan</button>
-      </div>
-    </div>
+      <header class="menu__head">
+        <div>
+          <p class="eyebrow">
+            {{ selectedMenu().date | date: 'EEEE d MMMM' }} · {{ selectedMenu().openingHours }}
+          </p>
+          <h2>{{ selectedMenu().meal }}</h2>
+          <p class="menu__sub">
+            {{ selectedMenu().building }} · {{ items().length }} dishes available
+          </p>
+        </div>
 
-    @if (days[selectedDay()].closed) {
-      <div class="closed-state">
-        <span class="closed-state__icon" aria-hidden="true">🔒</span>
-        <h2>Cafeteria closed on Sunday</h2>
-        <p>We are open every other day. Check back tomorrow for the next menu.</p>
-      </div>
-    } @else {
-    <header class="menu-heading">
-      <div>
-        <p class="eyebrow">{{ days[selectedDay()].date | date: 'EEEE, d MMMM' }}</p>
-        <h2>{{ selectedMeal() }} menu</h2>
-      </div>
-      <span class="item-count">{{ selectedItems().length }} options</span>
-    </header>
+        <app-status-badge
+          [label]="isToday(selectedMenu()) ? 'Served today' : 'Weekly menu'"
+          [variant]="isToday(selectedMenu()) ? 'success' : 'neutral'"
+        />
+      </header>
 
-    @if (selectedItems().length) {
-      <div class="items">
-        @for (item of selectedItems(); track item.name) {
-          <article class="menu-item">
-            <div class="menu-item__icon" aria-hidden="true">🍽</div>
-            <div class="menu-item__body">
-              <div class="menu-item__title">
-                <h3>{{ item.name }}</h3>
+      <div class="dietary" role="group" aria-label="Filter by dietary preference">
+        @for (option of dietaryOptions; track option.value) {
+          <button
+            type="button"
+            class="dietary__chip"
+            [class.dietary__chip--active]="dietaryFilter() === option.value"
+            [attr.aria-pressed]="dietaryFilter() === option.value"
+            (click)="setDietaryFilter(option.value)"
+          >
+            {{ option.label }}
+            <span class="dietary__count">{{ countFor(option.value) }}</span>
+          </button>
+        }
+      </div>
+
+      @if (items().length) {
+        <div class="dishes">
+          @for (item of items(); track item.id; let index = $index) {
+            <article class="dish" [style.animation-delay]="index * 60 + 'ms'">
+              <div class="dish__top">
+                <span class="dish__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M5 3v7a2 2 0 0 0 4 0V3M7 3v18M16 3c-1.7 1.6-2.5 3.8-2.5 6.5 0 2 .8 3 2.5 3.5V21" />
+                  </svg>
+                </span>
+
+                <div class="dish__title">
+                  <h3>{{ item.name }}</h3>
+                  <p>{{ item.description }}</p>
+                </div>
+
+                <span class="dish__price">
+                  {{ item.price | number: '1.3-3' }}
+                  <small>TND</small>
+                </span>
               </div>
-              <p>{{ item.description }}</p>
+
               <div class="labels">
-                @for (diet of item.dietary; track diet) {
+                @for (diet of item.dietaryLabels; track diet) {
                   <span class="label label--diet">{{ diet }}</span>
                 }
                 @for (allergen of item.allergens; track allergen) {
@@ -86,13 +119,132 @@
                   <span class="label label--safe">No listed allergens</span>
                 }
               </div>
+
+              <div class="dish__actions">
+                @if (isReserved(item)) {
+                  <span class="reserved">
+                    <span aria-hidden="true">✓</span>
+                    Reserved
+                  </span>
+                  <button type="button" class="ghost" (click)="reserve(item)">
+                    View receipt
+                  </button>
+                } @else {
+                  <button type="button" class="reserve" (click)="reserve(item)">
+                    Reserve this plate
+                    <span aria-hidden="true">→</span>
+                  </button>
+                }
+              </div>
+            </article>
+          }
+        </div>
+      } @else {
+        <app-empty-state
+          title="No dishes match this filter"
+          message="Try another dietary preference or pick another day."
+        >
+          <button type="button" class="ghost" (click)="setDietaryFilter('all')">
+            Show all dishes
+          </button>
+        </app-empty-state>
+      }
+    </section>
+
+    <aside class="side">
+      @if (latestOrder(); as order) {
+        <section class="receipt glass glass--thick" aria-labelledby="receipt-title">
+          <header class="receipt__head">
+            <div>
+              <p class="eyebrow">Reservation confirmed</p>
+              <h2 id="receipt-title">Your receipt</h2>
             </div>
-          </article>
-        }
-      </div>
-    } @else {
-      <p class="empty">No {{ dietaryFilter() }} options are available for this meal.</p>
-    }
-    }
-  </section>
+            <app-status-badge label="Ready" variant="success" />
+          </header>
+
+          <dl class="receipt__meta">
+            <div>
+              <dt>Reference</dt>
+              <dd><code>{{ order.reference }}</code></dd>
+            </div>
+            <div>
+              <dt>Dish</dt>
+              <dd>{{ order.itemName }}</dd>
+            </div>
+            <div>
+              <dt>Date</dt>
+              <dd>{{ order.date | date: 'EEEE d MMMM' }}</dd>
+            </div>
+            <div>
+              <dt>Pickup</dt>
+              <dd>{{ order.pickupTime }}</dd>
+            </div>
+            <div class="receipt__total">
+              <dt>Total paid</dt>
+              <dd>{{ order.price | number: '1.3-3' }} TND</dd>
+            </div>
+          </dl>
+
+          <div class="receipt__qr">
+            <div class="qr" role="img" [attr.aria-label]="'QR code for reservation ' + order.reference">
+              @for (cell of receiptQr(); track $index) {
+                <span [class.qr__on]="cell"></span>
+              }
+            </div>
+            <div class="receipt__qr-copy">
+              <p class="receipt__label">Show at the counter</p>
+              <p class="receipt__hint">
+                Scan the QR code or read the reference. The receipt stays available on this device.
+              </p>
+            </div>
+          </div>
+
+          <button type="button" class="ghost ghost--danger" (click)="requestCancel()">
+            Cancel reservation
+          </button>
+        </section>
+      } @else {
+        <section class="receipt receipt--empty glass glass--thick" aria-labelledby="receipt-empty-title">
+          <p class="eyebrow">No reservation yet</p>
+          <h2 id="receipt-empty-title">Your receipt lives here</h2>
+          <ol class="steps">
+            <li>Pick a day and a dish from the menu.</li>
+            <li>Reserve the plate in one tap.</li>
+            <li>Show the QR code at the counter.</li>
+          </ol>
+        </section>
+      }
+
+      @if (reservations().length) {
+        <section class="history glass" aria-labelledby="history-title">
+          <h2 id="history-title">Recent reservations</h2>
+          <div class="history__list">
+            @for (order of reservations(); track order.id) {
+              <button
+                type="button"
+                class="history__row"
+                [class.history__row--active]="latestOrder()?.id === order.id"
+                (click)="selectedOrderId.set(order.id)"
+              >
+                <span class="history__dish">{{ order.itemName }}</span>
+                <span class="history__ref">{{ order.reference }}</span>
+                <span class="history__date">{{ order.date | date: 'd MMM' }}</span>
+              </button>
+            }
+          </div>
+        </section>
+      }
+    </aside>
+  </div>
+
+  <app-confirm-dialog
+    [open]="dialogOpen()"
+    (openChange)="dialogOpen.set($event)"
+    title="Cancel reservation"
+    [message]="cancelMessage()"
+    confirmLabel="Cancel reservation"
+    cancelLabel="Keep it"
+    [danger]="true"
+    (confirmed)="confirmCancel()"
+  />
 </section>

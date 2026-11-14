@@ -3,16 +3,17 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { CampusEventService } from '../../core/services/campus-event.service';
+import { AuthService } from '../../core/services/auth.service';
+import { EventInterestService } from '../../core/services/event-interest.service';
 import { RegistrationService } from '../../core/services/registration.service';
 import { UserService } from '../../core/services/user.service';
+import { buildQrMatrix } from '../../core/utils/qr-code';
 import {
   ConfirmDialogComponent,
   EmptyStateComponent,
   StatusBadgeComponent,
 } from '../../shared/components';
 import { categoryLabel, categoryVariant, isPastEvent } from './event-meta';
-
-const QR_SIZE = 21;
 
 /**
  * PB-10 — Event details.
@@ -31,6 +32,8 @@ export class EventDetail {
   private readonly eventService = inject(CampusEventService);
   private readonly userService = inject(UserService);
   private readonly registrationService = inject(RegistrationService);
+  private readonly interestService = inject(EventInterestService);
+  private readonly auth = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
 
   readonly event = this.eventService.findById(this.route.snapshot.paramMap.get('id') ?? '');
@@ -54,10 +57,29 @@ export class EventDetail {
   readonly feedback = signal<string | null>(null);
   readonly dialogOpen = signal(false);
 
-  readonly qrCells = computed(() => this.buildQr(this.registration()?.qrCode ?? ''));
+  readonly interested = computed(() =>
+    this.event
+      ? this.interestService.isInterested(this.event.id, this.currentUserId())
+      : false,
+  );
+
+  readonly qrCells = computed(() => buildQrMatrix(this.registration()?.qrCode ?? ''));
 
   organizerInitial(): string {
     return this.organizer()?.fullName.trim().charAt(0).toUpperCase() ?? '?';
+  }
+
+  toggleInterest(): void {
+    if (!this.event) {
+      return;
+    }
+
+    const interested = this.interestService.toggle(this.event.id, this.currentUserId());
+    this.feedback.set(
+      interested
+        ? `${this.event.title} was added to your interests.`
+        : `${this.event.title} was removed from your interests.`,
+    );
   }
 
   register(): void {
@@ -94,44 +116,7 @@ export class EventDetail {
     this.feedback.set(null);
   }
 
-  /**
-   * Deterministic QR-looking grid generated from the registration code, with
-   * the three finder squares a scanner expects. No external library needed.
-   */
-  private buildQr(code: string): boolean[] {
-    const cells = new Array<boolean>(QR_SIZE * QR_SIZE).fill(false);
-    if (!code) {
-      return cells;
-    }
-
-    let hash = 2166136261;
-    for (let i = 0; i < code.length; i += 1) {
-      hash ^= code.charCodeAt(i);
-      hash = Math.imul(hash, 16777619);
-    }
-
-    for (let i = 0; i < cells.length; i += 1) {
-      hash ^= hash << 13;
-      hash ^= hash >>> 17;
-      hash ^= hash << 5;
-      cells[i] = (hash & 1) === 1;
-    }
-
-    const finder = (row: number, col: number): void => {
-      for (let r = 0; r < 7; r += 1) {
-        for (let c = 0; c < 7; c += 1) {
-          const border = r === 0 || r === 6 || c === 0 || c === 6;
-          const core = r >= 2 && r <= 4 && c >= 2 && c <= 4;
-          const index = (row + r) * QR_SIZE + (col + c);
-          cells[index] = border || core;
-        }
-      }
-    };
-
-    finder(0, 0);
-    finder(0, QR_SIZE - 7);
-    finder(QR_SIZE - 7, 0);
-
-    return cells;
+  private currentUserId(): string {
+    return this.auth.currentUser()?.id ?? 'u1';
   }
 }
