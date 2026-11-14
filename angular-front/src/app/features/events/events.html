@@ -1,13 +1,97 @@
 <section class="page events">
-  <app-page-header
-    title="Events"
-    subtitle="Browse what is happening on campus and open an event for the full details."
-  >
-    <span class="total-pill">{{ counts().all }} events</span>
-  </app-page-header>
+  <header class="hero glass glass--thick">
+    <app-service-logo name="events" />
+
+    <div class="hero__copy">
+      <p class="eyebrow">
+        <span class="eyebrow__dot" aria-hidden="true"></span>
+        Campus calendar · {{ counts().all }} events
+      </p>
+      <h1>Events</h1>
+      <p class="hero__sub">
+        Follow what interests you and get a personal shortlist of what is coming next.
+      </p>
+    </div>
+
+    <dl class="hero__stats">
+      <div>
+        <dt>Following</dt>
+        <dd>{{ counts().interested }}</dd>
+      </div>
+      <div>
+        <dt>Upcoming</dt>
+        <dd>{{ upcomingCount() }}</dd>
+      </div>
+    </dl>
+  </header>
+
+  <section class="for-you glass glass--thick" aria-labelledby="for-you-title">
+    <header class="for-you__head">
+      <div>
+        <p class="eyebrow">Curated for you</p>
+        <h2 id="for-you-title">Events you may like</h2>
+        <p class="for-you__hint">
+          Built from the events you follow and the categories you star.
+        </p>
+      </div>
+      <span class="total-pill">{{ forYou().length }} picks</span>
+    </header>
+
+    @if (forYou().length) {
+      <div class="for-you__rail">
+        @for (event of forYou(); track event.id; let index = $index) {
+          <article
+            class="pick"
+            [class.pick--followed]="isInterested(event)"
+            [style.animation-delay]="index * 55 + 'ms'"
+          >
+            <div class="pick__top">
+              <span class="date-tile date-tile--sm" aria-hidden="true">
+                <span>{{ event.date | date: 'MMM' }}</span>
+                <strong>{{ event.date | date: 'd' }}</strong>
+              </span>
+
+              <button
+                type="button"
+                class="interest-btn"
+                [class.interest-btn--on]="isInterested(event)"
+                [attr.aria-pressed]="isInterested(event)"
+                [attr.aria-label]="
+                  (isInterested(event) ? 'Remove ' : 'Add ') + event.title + ' from your interests'
+                "
+                (click)="toggleInterest(event)"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m12 3.6 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.8l5.9-.9L12 3.6Z" />
+                </svg>
+              </button>
+            </div>
+
+            <app-status-badge
+              [label]="categoryLabel(event.category)"
+              [variant]="categoryVariant(event.category)"
+            />
+
+            <h3>
+              <a [routerLink]="['/events', event.id]">{{ event.title }}</a>
+            </h3>
+
+            <p class="pick__meta">
+              {{ event.date | date: 'EEE d MMM · HH:mm' }} · {{ event.location }}
+            </p>
+            <span class="pick__reason">{{ forYouReason(event) }}</span>
+          </article>
+        }
+      </div>
+    } @else {
+      <p class="for-you__empty">
+        Tap the star on any event to start shaping your recommendations.
+      </p>
+    }
+  </section>
 
   @if (nextEvent(); as next) {
-    <a class="next-up glass glass--thick" [routerLink]="['/events', next.id]">
+    <a class="next-up glass" [routerLink]="['/events', next.id]">
       <span class="next-up__tile" aria-hidden="true">
         <span>{{ next.date | date: 'MMM' }}</span>
         <strong>{{ next.date | date: 'd' }}</strong>
@@ -32,6 +116,20 @@
       >
         All
         <span class="chip__count">{{ counts().all }}</span>
+      </button>
+
+      <button
+        type="button"
+        class="chip chip--interest"
+        [class.chip--active]="categoryFilter() === 'interested'"
+        [attr.aria-pressed]="categoryFilter() === 'interested'"
+        (click)="setCategory('interested')"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="m12 3.6 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.8l5.9-.9L12 3.6Z" />
+        </svg>
+        Interested
+        <span class="chip__count">{{ counts().interested }}</span>
       </button>
 
       @for (category of categories; track category) {
@@ -73,26 +171,48 @@
   @if (filtered().length) {
     <div class="grid">
       @for (event of filtered(); track event.id) {
-        <a class="event-card glass glass--thick" [routerLink]="['/events', event.id]">
-          <span class="event-card__top">
+        <article
+          class="event-card glass glass--thick"
+          [class.event-card--followed]="isInterested(event)"
+        >
+          <div class="event-card__top">
             <span class="date-tile" aria-hidden="true">
               <span>{{ event.date | date: 'MMM' }}</span>
               <strong>{{ event.date | date: 'd' }}</strong>
               <small>{{ event.date | date: 'EEE' }}</small>
             </span>
 
-            <span class="badges">
-              <app-status-badge
-                [label]="categoryLabel(event.category)"
-                [variant]="categoryVariant(event.category)"
-              />
-              @if (isPast(event)) {
-                <app-status-badge label="Past" variant="neutral" />
-              }
-            </span>
-          </span>
+            <div class="event-card__top-right">
+              <div class="badges">
+                <app-status-badge
+                  [label]="categoryLabel(event.category)"
+                  [variant]="categoryVariant(event.category)"
+                />
+                @if (isPast(event)) {
+                  <app-status-badge label="Past" variant="neutral" />
+                }
+              </div>
 
-          <h2>{{ event.title }}</h2>
+              <button
+                type="button"
+                class="interest-btn"
+                [class.interest-btn--on]="isInterested(event)"
+                [attr.aria-pressed]="isInterested(event)"
+                [attr.aria-label]="
+                  (isInterested(event) ? 'Remove ' : 'Add ') + event.title + ' from your interests'
+                "
+                (click)="toggleInterest(event)"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m12 3.6 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.8l5.9-.9L12 3.6Z" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <h2>
+            <a [routerLink]="['/events', event.id]">{{ event.title }}</a>
+          </h2>
           <span class="event-card__description">{{ event.description }}</span>
 
           <span class="event-card__meta">
@@ -111,14 +231,20 @@
             </span>
           </span>
 
-          <span class="event-card__cta">View details <span aria-hidden="true">→</span></span>
-        </a>
+          <a class="event-card__cta" [routerLink]="['/events', event.id]">
+            View details <span aria-hidden="true">→</span>
+          </a>
+        </article>
       }
     </div>
   } @else {
     <app-empty-state
       title="No events match these filters"
-      message="Try another category or date range."
+      [message]="
+        categoryFilter() === 'interested'
+          ? 'Star an event to build your interest list.'
+          : 'Try another category or date range.'
+      "
     >
       @if (hasFilters()) {
         <button type="button" class="button button--quiet" (click)="resetFilters()">

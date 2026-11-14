@@ -7,15 +7,17 @@ import {
   EVENT_CATEGORIES,
   EventCategory,
 } from '../../core/models/campus-event.model';
+import { AuthService } from '../../core/services/auth.service';
 import { CampusEventService } from '../../core/services/campus-event.service';
+import { EventInterestService } from '../../core/services/event-interest.service';
 import {
   EmptyStateComponent,
-  PageHeaderComponent,
+  ServiceLogoComponent,
   StatusBadgeComponent,
 } from '../../shared/components';
 import { categoryLabel, categoryVariant, isPastEvent } from './event-meta';
 
-type CategoryFilter = 'all' | EventCategory;
+type CategoryFilter = 'all' | 'interested' | EventCategory;
 
 type DateFilter = 'any' | 'next-7' | 'next-30' | 'past';
 
@@ -25,22 +27,26 @@ interface DateOption {
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const FOR_YOU_LIMIT = 6;
 
 /**
  * PB-10 — Events.
  *
- * Students browse the campus calendar, narrow it by category or date window
- * and open an event for the full details. Past events stay in the list so the
- * archive is browsable, but upcoming events always come first.
+ * Students follow the events they care about and get a short "For you" rail
+ * built from their interests and the categories they mark. The full calendar
+ * still supports category and date filters, with past events archived at the
+ * bottom of the list.
  */
 @Component({
   selector: 'app-events',
-  imports: [DatePipe, RouterLink, EmptyStateComponent, PageHeaderComponent, StatusBadgeComponent],
+  imports: [DatePipe, RouterLink, EmptyStateComponent, ServiceLogoComponent, StatusBadgeComponent],
   templateUrl: './events.html',
   styleUrl: './events.scss',
 })
 export class Events {
   private readonly eventService = inject(CampusEventService);
+  private readonly interestService = inject(EventInterestService);
+  private readonly auth = inject(AuthService);
   private readonly now = new Date();
 
   readonly events = toSignal(this.eventService.getEvents(), { requireSync: true });
@@ -62,6 +68,7 @@ export class Events {
   readonly counts = computed<Record<CategoryFilter, number>>(() => {
     const counts: Record<CategoryFilter, number> = {
       all: 0,
+      interested: 0,
       ACADEMIC: 0,
       SOCIAL: 0,
       SPORT: 0,
@@ -72,9 +79,41 @@ export class Events {
     for (const event of this.events()) {
       counts.all += 1;
       counts[event.category] += 1;
+      if (this.isInterested(event)) {
+        counts.interested += 1;
+      }
     }
 
     return counts;
+  });
+
+  readonly interestedEvents = computed(() =>
+    this.events()
+      .filter((event) => this.isInterested(event))
+      .sort((a, b) => this.compare(a, b)),
+  );
+
+  readonly upcomingCount = computed(
+    () => this.events().filter((event) => !isPastEvent(event, this.now)).length,
+  );
+
+  /**
+   * Upcoming events the student follows, plus upcoming events from the
+   * categories those marks belong to.
+   */
+  readonly forYou = computed(() => {
+    const markedIds = new Set(this.interestedEvents().map((event) => event.id));
+    const followedCategories = new Set(
+      this.interestedEvents().map((event) => event.category),
+    );
+
+    return this.events()
+      .filter((event) => !isPastEvent(event, this.now))
+      .filter(
+        (event) => markedIds.has(event.id) || followedCategories.has(event.category),
+      )
+      .sort((a, b) => a.date.getTime() - b.date.getTime())
+      .slice(0, FOR_YOU_LIMIT);
   });
 
   /** Soonest upcoming event across the whole calendar, ignoring the filters. */
@@ -92,14 +131,18 @@ export class Events {
     return this.events()
       .filter(
         (event) =>
-          (category === 'all' || event.category === category) &&
+          (category === 'all' ||
+            (category === 'interested' && this.isInterested(event)) ||
+            event.category === category) &&
           this.matchesWindow(event, window),
       )
       .sort((a, b) => this.compare(a, b));
   });
 
   readonly hasFilters = computed(
-    () => this.categoryFilter() !== 'all' || this.dateFilter() !== 'any',
+    () =>
+      this.categoryFilter() !== 'all' ||
+      this.dateFilter() !== 'any',
   );
 
   setCategory(category: CategoryFilter): void {
@@ -117,6 +160,25 @@ export class Events {
 
   isPast(event: CampusEvent): boolean {
     return isPastEvent(event, this.now);
+  }
+
+  isInterested(event: CampusEvent): boolean {
+    return this.interestService.isInterested(event.id, this.currentUserId());
+  }
+
+  toggleInterest(event: CampusEvent): void {
+    this.interestService.toggle(event.id, this.currentUserId());
+  }
+
+  /** Human-readable reason a card was picked for the "For you" rail. */
+  forYouReason(event: CampusEvent): string {
+    return this.isInterested(event)
+      ? 'You follow this event'
+      : `Because you follow ${categoryLabel(event.category)}`;
+  }
+
+  private currentUserId(): string {
+    return this.auth.currentUser()?.id ?? 'u1';
   }
 
   private matchesWindow(event: CampusEvent, window: DateFilter): boolean {
