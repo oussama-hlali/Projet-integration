@@ -31,10 +31,14 @@ jobs:
           distribution: temurin
           java-version: '17'
           cache: maven
-      - name: Start identity (dev profile)
+      - name: Install dependencies
         working-directory: spring-backend
+        run: mvn -q install -DskipTests
+
+      - name: Start identity (dev profile)
+        working-directory: spring-backend/identity
         run: |
-          mvn -q -pl identity -am spring-boot:run -Dspring-boot.run.profiles=dev &
+          mvn spring-boot:run -Dspring-boot.run.profiles=dev &
           for i in $(seq 1 60); do
             curl -sf http://localhost:8081/actuator/health && exit 0
             sleep 2

@@ -23,7 +23,9 @@ Multi-module Spring Boot backend (Java 17, Maven).
 ## Run one service locally
 ```bash
 cd spring-backend
-mvn -pl identity -am spring-boot:run -Dspring-boot.run.profiles=dev
+mvn -q install -DskipTests          # builds parent + common once
+cd identity
+mvn spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 The dev profile uses H2, so no database is required.
 
