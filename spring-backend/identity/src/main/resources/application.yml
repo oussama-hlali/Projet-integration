@@ -1,0 +1,35 @@
+spring:
+  application:
+    name: identity
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/smartcampus}
+    username: ${DB_USER:identity_user}
+    password: ${DB_PASSWORD:identity_pass}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        default_schema: identity
+
+  flyway:
+    enabled: true
+    schemas: identity
+    default-schema: identity
+    locations: classpath:db/migration
+
+server:
+  port: ${PORT:8081}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
