@@ -8,10 +8,13 @@ import {
 } from '../../core/models/notification.model';
 import { notificationRoute } from '../../core/notification-route';
 import { NotificationService } from '../../core/services/notification.service';
+import { ToastService } from '../../core/services/toast.service';
+import { createPager } from '../../core/utils/pagination';
 import {
   BadgeVariant,
   ConfirmDialogComponent,
   EmptyStateComponent,
+  LoadMoreComponent,
   PageHeaderComponent,
   StatusBadgeComponent,
 } from '../../shared/components';
@@ -23,6 +26,7 @@ import {
     RouterLink,
     ConfirmDialogComponent,
     EmptyStateComponent,
+    LoadMoreComponent,
     PageHeaderComponent,
     StatusBadgeComponent,
   ],
@@ -48,7 +52,7 @@ import {
       </app-page-header>
 
       <div class="list">
-        @for (notification of notifications(); track notification.id) {
+        @for (notification of pagedNotifications(); track notification.id) {
           <article class="item" [class.item--unread]="!notification.read">
             <div class="item__body">
               <div class="item__top">
@@ -80,6 +84,15 @@ import {
           <app-empty-state title="No notifications" message="You're all caught up." />
         }
       </div>
+
+      @if (notifications().length) {
+        <app-load-more
+          [total]="notifications().length"
+          [visible]="pagedVisible()"
+          label="Load older notifications"
+          (loadMore)="loadMore()"
+        />
+      }
 
       <app-confirm-dialog
         [(open)]="confirmOpen"
@@ -169,24 +182,47 @@ import {
 })
 export class Notifications {
   private readonly service = inject(NotificationService);
+  private readonly toast = inject(ToastService);
 
   readonly notifications = this.service.notifications;
   readonly unreadCount = this.service.unreadCount;
   readonly confirmOpen = signal(false);
   readonly typeLabels = NOTIFICATION_TYPE_LABELS;
 
+  /** PB-28 — long notification histories load one page at a time. */
+  private readonly pager = createPager(this.notifications, 8);
+  readonly pagedNotifications = this.pager.items;
+  readonly pagedVisible = this.pager.visible;
+
+  loadMore(): void {
+    this.pager.loadMore();
+  }
+
   toggleRead(notification: Notification): void {
     this.service.toggleRead(notification.id);
+    this.toast.info(
+      notification.read ? 'Marked as unread' : 'Marked as read',
+      undefined,
+      2_500,
+    );
   }
 
   markAllRead(): void {
+    const unread = this.unreadCount();
     this.service.markAllRead();
+    this.toast.success(
+      'All caught up',
+      unread ? `${unread} notification${unread === 1 ? '' : 's'} marked as read.` : undefined,
+    );
   }
 
   clearAll(): void {
+    const count = this.notifications().length;
     for (const notification of this.notifications()) {
       this.service.remove(notification.id);
     }
+    this.pager.reset();
+    this.toast.info('Notifications cleared', `${count} item${count === 1 ? '' : 's'} removed.`);
   }
 
   variant(type: NotificationType): BadgeVariant {

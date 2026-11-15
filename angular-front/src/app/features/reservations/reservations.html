@@ -12,20 +12,6 @@
     }
   </div>
 
-  @if (feedback()) {
-    <div class="feedback" role="status">
-      <span>{{ feedback() }}</span>
-      <button
-        type="button"
-        class="feedback__close"
-        aria-label="Dismiss message"
-        (click)="dismissFeedback()"
-      >
-        &times;
-      </button>
-    </div>
-  }
-
   <div class="layout">
     <section class="panel glass glass--thick" aria-labelledby="list-title">
       <div class="panel__head">

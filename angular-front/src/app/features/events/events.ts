@@ -10,6 +10,7 @@ import {
 import { AuthService } from '../../core/services/auth.service';
 import { CampusEventService } from '../../core/services/campus-event.service';
 import { EventInterestService } from '../../core/services/event-interest.service';
+import { ToastService } from '../../core/services/toast.service';
 import {
   EmptyStateComponent,
   ServiceLogoComponent,
@@ -47,6 +48,7 @@ export class Events {
   private readonly eventService = inject(CampusEventService);
   private readonly interestService = inject(EventInterestService);
   private readonly auth = inject(AuthService);
+  private readonly toast = inject(ToastService);
   private readonly now = new Date();
 
   readonly events = toSignal(this.eventService.getEvents(), { requireSync: true });
@@ -167,7 +169,11 @@ export class Events {
   }
 
   toggleInterest(event: CampusEvent): void {
-    this.interestService.toggle(event.id, this.currentUserId());
+    const interested = this.interestService.toggle(event.id, this.currentUserId());
+    this.toast.info(
+      interested ? 'Following event' : 'Stopped following event',
+      event.title,
+    );
   }
 
   /** Human-readable reason a card was picked for the "For you" rail. */

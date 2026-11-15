@@ -1,17 +1,59 @@
-import { Component, input, model, output } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  afterNextRender,
+  effect,
+  inject,
+  Injector,
+  input,
+  model,
+  output,
+  viewChild,
+} from '@angular/core';
 
+let nextDialogId = 0;
+
+/** Elements inside the dialog that can hold keyboard focus. */
+const FOCUSABLE =
+  'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
+/**
+ * PB-25 — modal confirmation.
+ *
+ * Keyboard behaviour (SCRUM-33):
+ * - focus moves into the dialog when it opens and returns to the trigger on close;
+ * - Escape cancels;
+ * - Tab / Shift+Tab cycle inside the dialog instead of escaping to the page.
+ */
 @Component({
   selector: 'app-confirm-dialog',
   standalone: true,
   template: `
     @if (open()) {
       <div class="backdrop" (click)="cancel()">
-        <div class="dialog" role="alertdialog" aria-modal="true" (click)="$event.stopPropagation()">
-          <h3>{{ title() }}</h3>
-          <p>{{ message() }}</p>
+        <div
+          #dialog
+          class="dialog"
+          role="alertdialog"
+          aria-modal="true"
+          tabindex="-1"
+          [attr.aria-labelledby]="titleId"
+          [attr.aria-describedby]="messageId"
+          (keydown.escape)="cancel()"
+          (keydown.tab)="trapFocus($event)"
+          (click)="$event.stopPropagation()"
+        >
+          <h3 [id]="titleId">{{ title() }}</h3>
+          <p [id]="messageId">{{ message() }}</p>
           <div class="actions">
-            <button type="button" (click)="cancel()">{{ cancelLabel() }}</button>
-            <button type="button" [class.danger]="danger()" (click)="confirm()">{{ confirmLabel() }}</button>
+            <button #cancelButton type="button" (click)="cancel()">{{ cancelLabel() }}</button>
+            <button
+              type="button"
+              [class.danger]="danger()"
+              (click)="confirm()"
+            >
+              {{ confirmLabel() }}
+            </button>
           </div>
         </div>
       </div>
@@ -43,6 +85,10 @@ import { Component, input, model, output } from '@angular/core';
         -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(140%);
       }
 
+      .dialog:focus {
+        outline: none;
+      }
+
       h3 {
         margin: 0 0 var(--space-2);
         color: var(--color-text-strong);
@@ -61,6 +107,7 @@ import { Component, input, model, output } from '@angular/core';
       }
 
       button {
+        min-height: 44px;
         padding: var(--space-2) var(--space-4);
         color: var(--color-text);
         background: transparent;
@@ -85,6 +132,16 @@ import { Component, input, model, output } from '@angular/core';
       button.danger:hover {
         background: color-mix(in srgb, var(--color-danger) 84%, black);
       }
+
+      @media (max-width: 420px) {
+        .actions {
+          flex-direction: column-reverse;
+        }
+
+        .actions button {
+          width: 100%;
+        }
+      }
     `,
   ],
 })
@@ -99,6 +156,78 @@ export class ConfirmDialogComponent {
   confirmed = output<void>();
   cancelled = output<void>();
 
-  confirm() { this.open.set(false); this.confirmed.emit(); }
-  cancel() { this.open.set(false); this.cancelled.emit(); }
+  private readonly dialogId = ++nextDialogId;
+  readonly titleId = `confirm-title-${this.dialogId}`;
+  readonly messageId = `confirm-message-${this.dialogId}`;
+
+  private readonly dialog = viewChild<ElementRef<HTMLElement>>('dialog');
+  private readonly cancelButton = viewChild<ElementRef<HTMLElement>>('cancelButton');
+  private readonly injector = inject(Injector);
+  private previouslyFocused: HTMLElement | null = null;
+
+  constructor() {
+    effect(() => {
+      const isOpen = this.open();
+
+      if (isOpen) {
+        this.previouslyFocused = document.activeElement as HTMLElement | null;
+        afterNextRender(() => this.focusFirstControl(), { injector: this.injector });
+      } else {
+        this.restoreFocus();
+      }
+    });
+  }
+
+  confirm(): void {
+    this.open.set(false);
+    this.confirmed.emit();
+  }
+
+  cancel(): void {
+    this.open.set(false);
+    this.cancelled.emit();
+  }
+
+  /** Keeps Tab and Shift+Tab inside the dialog while it is open. */
+  trapFocus(event: Event): void {
+    const keyEvent = event as KeyboardEvent;
+    const dialog = this.dialog()?.nativeElement;
+    if (!dialog) {
+      return;
+    }
+
+    const focusable = Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE));
+    if (!focusable.length) {
+      keyEvent.preventDefault();
+      dialog.focus();
+      return;
+    }
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const active = document.activeElement;
+
+    if (keyEvent.shiftKey && (active === first || active === dialog)) {
+      keyEvent.preventDefault();
+      last.focus();
+    } else if (!keyEvent.shiftKey && active === last) {
+      keyEvent.preventDefault();
+      first.focus();
+    }
+  }
+
+  private focusFirstControl(): void {
+    // Cancel is the safe default for destructive dialogs.
+    const target = this.cancelButton()?.nativeElement ?? this.dialog()?.nativeElement;
+    target?.focus();
+  }
+
+  private restoreFocus(): void {
+    const previous = this.previouslyFocused;
+    this.previouslyFocused = null;
+
+    if (previous && document.contains(previous)) {
+      previous.focus();
+    }
+  }
 }

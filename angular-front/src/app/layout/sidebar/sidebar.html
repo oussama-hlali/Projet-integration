@@ -15,6 +15,8 @@
         [routerLink]="item.route"
         routerLinkActive="sidebar__link--active"
         [routerLinkActiveOptions]="{ exact: true }"
+        #sidebarLink="routerLinkActive"
+        [attr.aria-current]="sidebarLink.isActive ? 'page' : null"
         [attr.aria-label]="collapsed() ? item.label : null"
         [attr.title]="collapsed() ? item.label : null"
         (click)="requestClose()"
@@ -41,6 +43,8 @@
       routerLink="/notifications"
       routerLinkActive="sidebar__link--active"
       [routerLinkActiveOptions]="{ exact: true }"
+      #notificationsLink="routerLinkActive"
+      [attr.aria-current]="notificationsLink.isActive ? 'page' : null"
       [attr.aria-label]="collapsed() ? 'Notifications' : null"
       (click)="requestClose()"
     >
@@ -52,6 +56,8 @@
       routerLink="/profile"
       routerLinkActive="sidebar__link--active"
       [routerLinkActiveOptions]="{ exact: true }"
+      #profileLink="routerLinkActive"
+      [attr.aria-current]="profileLink.isActive ? 'page' : null"
       [attr.aria-label]="collapsed() ? 'Profile' : null"
       (click)="requestClose()"
     >
