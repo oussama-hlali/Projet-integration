@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: notifications
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/smartcampus}
+    username: ${DB_USER:notifications_user}
+    password: ${DB_PASSWORD:notifications_pass}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: notifications
+  flyway:
+    enabled: true
+    schemas: notifications
+    default-schema: notifications
+    locations: classpath:db/migration
+
+server:
+  port: ${PORT:8085}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

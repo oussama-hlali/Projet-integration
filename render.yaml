@@ -1,0 +1,104 @@
+# Render blueprint for the Smart Campus backend (SCRUM-55).
+# Deploy with: Render dashboard -> New -> Blueprint -> select this repo.
+
+services:
+  - type: web
+    name: smart-campus-gateway
+    runtime: java
+    rootDir: spring-backend
+    buildCommand: mvn -q -pl gateway -am package -DskipTests
+    startCommand: java -jar gateway/target/gateway-0.1.0-SNAPSHOT.jar
+    envVars:
+      - key: PORT
+        value: 10000
+      - fromGroup: smart-campus
+
+  - type: web
+    name: smart-campus-identity
+    runtime: java
+    rootDir: spring-backend
+    buildCommand: mvn -q -pl identity -am package -DskipTests
+    startCommand: java -jar identity/target/identity-0.1.0-SNAPSHOT.jar
+    envVars:
+      - key: PORT
+        value: 10000
+      - fromGroup: smart-campus
+
+  - type: web
+    name: smart-campus-campus
+    runtime: java
+    rootDir: spring-backend
+    buildCommand: mvn -q -pl campus -am package -DskipTests
+    startCommand: java -jar campus/target/campus-0.1.0-SNAPSHOT.jar
+    envVars:
+      - key: PORT
+        value: 10000
+      - fromGroup: smart-campus
+
+  - type: web
+    name: smart-campus-engagement
+    runtime: java
+    rootDir: spring-backend
+    buildCommand: mvn -q -pl engagement -am package -DskipTests
+    startCommand: java -jar engagement/target/engagement-0.1.0-SNAPSHOT.jar
+    envVars:
+      - key: PORT
+        value: 10000
+      - fromGroup: smart-campus
+
+  - type: web
+    name: smart-campus-cafeteria
+    runtime: java
+    rootDir: spring-backend
+    buildCommand: mvn -q -pl cafeteria -am package -DskipTests
+    startCommand: java -jar cafeteria/target/cafeteria-0.1.0-SNAPSHOT.jar
+    envVars:
+      - key: PORT
+        value: 10000
+      - fromGroup: smart-campus
+
+  - type: web
+    name: smart-campus-notifications
+    runtime: java
+    rootDir: spring-backend
+    buildCommand: mvn -q -pl notifications -am package -DskipTests
+    startCommand: java -jar notifications/target/notifications-0.1.0-SNAPSHOT.jar
+    envVars:
+      - key: PORT
+        value: 10000
+      - fromGroup: smart-campus
+
+  - type: web
+    name: smart-campus-ai
+    runtime: java
+    rootDir: spring-backend
+    buildCommand: mvn -q -pl ai -am package -DskipTests
+    startCommand: java -jar ai/target/ai-0.1.0-SNAPSHOT.jar
+    envVars:
+      - key: PORT
+        value: 10000
+      - fromGroup: smart-campus
+
+envVarGroups:
+  - name: smart-campus
+    envVars:
+      - key: DB_URL
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: IDENTITY_URL
+        sync: false
+      - key: CAMPUS_URL
+        sync: false
+      - key: ENGAGEMENT_URL
+        sync: false
+      - key: CAFETERIA_URL
+        sync: false
+      - key: NOTIFICATIONS_URL
+        sync: false
+      - key: AI_URL
+        sync: false
+      - key: IDENTITY_JWKS_URL
+        sync: false

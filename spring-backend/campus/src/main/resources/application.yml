@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: campus
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/smartcampus}
+    username: ${DB_USER:campus_user}
+    password: ${DB_PASSWORD:campus_pass}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: campus
+  flyway:
+    enabled: true
+    schemas: campus
+    default-schema: campus
+    locations: classpath:db/migration
+
+server:
+  port: ${PORT:8082}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
