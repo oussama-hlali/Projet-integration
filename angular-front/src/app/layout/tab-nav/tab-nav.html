@@ -15,6 +15,8 @@
         [routerLink]="item.route"
         routerLinkActive="tab--active"
         [routerLinkActiveOptions]="{ exact: true }"
+        #tab="routerLinkActive"
+        [attr.aria-current]="tab.isActive ? 'page' : null"
       >
         <app-nav-icon class="tab__icon" [name]="item.icon" />
         <span class="tab__label">{{ item.label }}</span>

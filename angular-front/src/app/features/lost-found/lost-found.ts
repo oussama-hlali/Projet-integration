@@ -8,10 +8,13 @@ import {
 } from '../../core/models/lost-found.model';
 import { AuthService } from '../../core/services/auth.service';
 import { LostFoundService } from '../../core/services/lost-found.service';
+import { ToastService } from '../../core/services/toast.service';
 import { UserService } from '../../core/services/user.service';
+import { createPager } from '../../core/utils/pagination';
 import {
   BadgeVariant,
   EmptyStateComponent,
+  LoadMoreComponent,
   PageHeaderComponent,
   ReportItemComponent,
   StatCardComponent,
@@ -32,6 +35,7 @@ type StatusFilter = 'all' | LostFoundStatus;
   selector: 'app-lost-found',
   imports: [
     EmptyStateComponent,
+    LoadMoreComponent,
     PageHeaderComponent,
     ReportItemComponent,
     StatCardComponent,
@@ -44,6 +48,7 @@ export class LostFound {
   private readonly lostFoundService = inject(LostFoundService);
   private readonly users = inject(UserService);
   private readonly auth = inject(AuthService);
+  private readonly toast = inject(ToastService);
 
   readonly posts = this.lostFoundService.items;
   readonly statuses = LOST_FOUND_STATUSES;
@@ -51,7 +56,6 @@ export class LostFound {
 
   readonly statusFilter = signal<StatusFilter>('all');
   readonly search = signal('');
-  readonly feedback = signal<string | null>(null);
 
   readonly currentUser = this.auth.currentUser;
   readonly currentUserId = computed(() => this.currentUser()?.id ?? 'u1');
@@ -133,23 +137,35 @@ export class LostFound {
 
   readonly hasFilters = computed(() => this.statusFilter() !== 'all' || !!this.search().trim());
 
+  /** PB-28 — the feed renders one page at a time so the composer stays close. */
+  private readonly pager = createPager(this.filtered, 6);
+  readonly pagedPosts = this.pager.items;
+  readonly pagedVisible = this.pager.visible;
+
   setStatus(status: StatusFilter): void {
     this.statusFilter.set(status);
+    this.pager.reset();
   }
 
   setSearch(event: Event): void {
     this.search.set((event.target as HTMLInputElement).value);
+    this.pager.reset();
   }
 
   resetFilters(): void {
     this.statusFilter.set('all');
     this.search.set('');
+    this.pager.reset();
+  }
+
+  loadMorePosts(): void {
+    this.pager.loadMore();
   }
 
   addReport(input: LostFoundReportInput): void {
     const post = this.lostFoundService.create(input, this.currentUserId());
     this.resetFilters();
-    this.feedback.set(`"${post.title}" is now live in the community feed.`);
+    this.toast.success('Post published', `"${post.title}" is now live in the community feed.`);
   }
 
   submitComment(post: LostFoundItem, message: string, taggedUserId: string): void {
@@ -163,7 +179,7 @@ export class LostFound {
       taggedUserIds: taggedUserId ? [taggedUserId] : [],
     });
     if (comment) {
-      this.feedback.set(`Comment added to "${post.title}".`);
+      this.toast.success('Comment added', `Your reply to "${post.title}" is visible.`);
     }
   }
 
@@ -178,12 +194,8 @@ export class LostFound {
   claimReport(post: LostFoundItem): void {
     const claimed = this.lostFoundService.claim(post.id);
     if (claimed) {
-      this.feedback.set(`"${claimed.title}" is now marked as claimed.`);
+      this.toast.success('Marked as claimed', `"${claimed.title}" is now closed.`);
     }
-  }
-
-  dismissFeedback(): void {
-    this.feedback.set(null);
   }
 
   authorName(id: string): string {

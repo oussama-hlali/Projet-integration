@@ -15,6 +15,7 @@ import {
 } from '../../core/models/reservation.model';
 import { ReservationService } from '../../core/services/reservation.service';
 import { RoomService } from '../../core/services/room.service';
+import { ToastService } from '../../core/services/toast.service';
 import {
   BadgeVariant,
   ConfirmDialogComponent,
@@ -85,6 +86,7 @@ export class Reservations {
   private readonly reservationService = inject(ReservationService);
   private readonly roomService = inject(RoomService);
   private readonly formBuilder = inject(FormBuilder);
+  private readonly toast = inject(ToastService);
 
   readonly statusOptions: readonly StatusOption[] = [
     { value: 'all', label: 'All' },
@@ -111,7 +113,6 @@ export class Reservations {
   readonly today = this.toDateInputValue(new Date());
   readonly submitted = signal(false);
   readonly formError = signal<string | null>(null);
-  readonly feedback = signal<string | null>(null);
 
   readonly cancelTarget = signal<Reservation | null>(null);
   readonly dialogOpen = signal(false);
@@ -222,7 +223,6 @@ export class Reservations {
 
   submitReservation(): void {
     this.submitted.set(true);
-    this.feedback.set(null);
     this.formError.set(null);
 
     if (!this.hasValidTimeRange()) {
@@ -264,8 +264,9 @@ export class Reservations {
     this.form.reset();
     this.submitted.set(false);
     this.clearFilters();
-    this.feedback.set(
-      `Reservation confirmed for ${result.reservation.room} on ${this.formatDateMoment(
+    this.toast.success(
+      'Reservation confirmed',
+      `Booked ${result.reservation.room} on ${this.formatDateMoment(
         result.reservation.startTime,
       )}.`,
     );
@@ -319,16 +320,11 @@ export class Reservations {
 
     const cancelled = this.reservationService.cancel(target.id);
     if (cancelled) {
-      this.feedback.set(
-        `Reservation for ${cancelled.room} on ${this.formatDateMoment(
-          cancelled.startTime,
-        )} was cancelled.`,
+      this.toast.info(
+        'Reservation cancelled',
+        `${cancelled.room} on ${this.formatDateMoment(cancelled.startTime)} was released.`,
       );
     }
-  }
-
-  dismissFeedback(): void {
-    this.feedback.set(null);
   }
 
   // ── View helpers ────────────────────────────────────────────────────────────

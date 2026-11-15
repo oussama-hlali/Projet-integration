@@ -2,7 +2,11 @@
   <a
     class="dock__btn dock__brand"
     [routerLink]="homeRoute()"
+    routerLinkActive="dock__btn--active"
+    [routerLinkActiveOptions]="{ exact: true }"
+    #home="routerLinkActive"
     aria-label="Smart Campus home"
+    [attr.aria-current]="home.isActive ? 'page' : null"
     data-label="Home"
   >
     <app-brand-mark size="sm" />
@@ -16,6 +20,8 @@
       [routerLink]="item.route"
       routerLinkActive="dock__btn--active"
       [routerLinkActiveOptions]="{ exact: true }"
+      #dockLink="routerLinkActive"
+      [attr.aria-current]="dockLink.isActive ? 'page' : null"
       [attr.aria-label]="item.label"
       [attr.data-label]="item.label"
     >

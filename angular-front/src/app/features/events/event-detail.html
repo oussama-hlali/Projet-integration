@@ -129,15 +129,6 @@
         />
       </div>
 
-      @if (feedback()) {
-        <div class="registration__feedback" role="status">
-          <span>{{ feedback() }}</span>
-          <button type="button" aria-label="Dismiss message" (click)="dismissFeedback()">
-            &times;
-          </button>
-        </div>
-      }
-
       @if (registration(); as reg) {
         <div class="registration__body">
           <div class="qr" role="img" [attr.aria-label]="'QR code ' + reg.qrCode">

@@ -3,6 +3,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { CafeteriaMenu, CafeteriaOrder, MenuItem } from '../../core/models/cafeteria.model';
 import { AuthService } from '../../core/services/auth.service';
 import { CafeteriaService } from '../../core/services/cafeteria.service';
+import { ToastService } from '../../core/services/toast.service';
 import { buildQrMatrix } from '../../core/utils/qr-code';
 import {
   ConfirmDialogComponent,
@@ -41,6 +42,7 @@ interface DietaryOption {
 export class Cafeteria {
   private readonly cafeteria = inject(CafeteriaService);
   private readonly auth = inject(AuthService);
+  private readonly toast = inject(ToastService);
 
   readonly userId = computed(() => this.auth.currentUser()?.id ?? 'u1');
 
@@ -55,7 +57,6 @@ export class Cafeteria {
     { value: 'Sans gluten', label: 'Gluten-free' },
   ];
 
-  readonly feedback = signal<string | null>(null);
   readonly selectedOrderId = signal<string | null>(null);
   readonly dialogOpen = signal(false);
 
@@ -126,12 +127,15 @@ export class Cafeteria {
     });
 
     if (!order) {
-      this.feedback.set('This dish is no longer available. Please pick another one.');
+      this.toast.warning('Dish unavailable', 'This dish is no longer available. Please pick another one.');
       return;
     }
 
     this.selectedOrderId.set(order.id);
-    this.feedback.set(`Receipt ${order.reference} is ready. Your QR code is on the right.`);
+    this.toast.success(
+      'Reservation confirmed',
+      `Receipt ${order.reference} is ready. Your QR code is on the right.`,
+    );
   }
 
   requestCancel(): void {
@@ -144,12 +148,8 @@ export class Cafeteria {
     const order = this.latestOrder();
     if (order && this.cafeteria.cancel(order.id, this.userId())) {
       this.selectedOrderId.set(null);
-      this.feedback.set('Reservation cancelled. You can reserve another dish.');
+      this.toast.info('Reservation cancelled', 'You can reserve another dish.');
     }
-  }
-
-  dismissFeedback(): void {
-    this.feedback.set(null);
   }
 
   private todayIndex(): number {

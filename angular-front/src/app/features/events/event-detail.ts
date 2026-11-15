@@ -6,6 +6,7 @@ import { CampusEventService } from '../../core/services/campus-event.service';
 import { AuthService } from '../../core/services/auth.service';
 import { EventInterestService } from '../../core/services/event-interest.service';
 import { RegistrationService } from '../../core/services/registration.service';
+import { ToastService } from '../../core/services/toast.service';
 import { UserService } from '../../core/services/user.service';
 import { buildQrMatrix } from '../../core/utils/qr-code';
 import {
@@ -34,6 +35,7 @@ export class EventDetail {
   private readonly registrationService = inject(RegistrationService);
   private readonly interestService = inject(EventInterestService);
   private readonly auth = inject(AuthService);
+  private readonly toast = inject(ToastService);
   private readonly route = inject(ActivatedRoute);
 
   readonly event = this.eventService.findById(this.route.snapshot.paramMap.get('id') ?? '');
@@ -54,7 +56,6 @@ export class EventDetail {
     this.event ? this.registrationService.countFor(this.event.id) : 0,
   );
 
-  readonly feedback = signal<string | null>(null);
   readonly dialogOpen = signal(false);
 
   readonly interested = computed(() =>
@@ -75,10 +76,9 @@ export class EventDetail {
     }
 
     const interested = this.interestService.toggle(this.event.id, this.currentUserId());
-    this.feedback.set(
-      interested
-        ? `${this.event.title} was added to your interests.`
-        : `${this.event.title} was removed from your interests.`,
+    this.toast.info(
+      interested ? 'Added to your interests' : 'Removed from your interests',
+      this.event.title,
     );
   }
 
@@ -89,13 +89,17 @@ export class EventDetail {
     }
 
     if (this.registeredCount() >= event.capacity) {
-      this.feedback.set('This event is full. Unregister another attendee first.');
+      this.toast.warning(
+        'Event is full',
+        'Unregister another attendee before reserving a seat.',
+      );
       return;
     }
 
     const registration = this.registrationService.register(event.id);
-    this.feedback.set(
-      `You are registered. Show QR ${registration.qrCode} at the entrance.`,
+    this.toast.success(
+      'You are registered',
+      `Show QR ${registration.qrCode} at the entrance.`,
     );
   }
 
@@ -109,11 +113,10 @@ export class EventDetail {
     }
 
     this.registrationService.unregister(this.event.id);
-    this.feedback.set(`Your registration for ${this.event.title} was cancelled.`);
-  }
-
-  dismissFeedback(): void {
-    this.feedback.set(null);
+    this.toast.info(
+      'Registration cancelled',
+      `Your seat for ${this.event.title} was released.`,
+    );
   }
 
   private currentUserId(): string {

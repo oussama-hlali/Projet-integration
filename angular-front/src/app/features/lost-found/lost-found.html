@@ -12,20 +12,6 @@
     }
   </div>
 
-  @if (feedback()) {
-    <div class="feedback" role="status">
-      <span>{{ feedback() }}</span>
-      <button
-        type="button"
-        class="feedback__close"
-        aria-label="Dismiss message"
-        (click)="dismissFeedback()"
-      >
-        &times;
-      </button>
-    </div>
-  }
-
   <div class="community">
     <section id="composer" class="composer glass glass--thick" aria-labelledby="composer-title">
       <header class="composer__head">
@@ -47,7 +33,9 @@
       <div class="feed__head">
         <div>
           <h2 id="feed-title">Community feed</h2>
-          <p class="muted">Showing {{ filtered().length }} of {{ posts().length }} posts</p>
+          <p class="muted">
+            Showing {{ pagedPosts().length }} of {{ filtered().length }} matching posts
+          </p>
         </div>
       </div>
 
@@ -99,7 +87,7 @@
 
       @if (filtered().length) {
         <div class="posts">
-          @for (post of filtered(); track post.id) {
+          @for (post of pagedPosts(); track post.id) {
             <article
               class="post"
               [class.post--lost]="post.status === 'LOST'"
@@ -239,6 +227,13 @@
             </article>
           }
         </div>
+
+        <app-load-more
+          [total]="filtered().length"
+          [visible]="pagedVisible()"
+          label="Load more posts"
+          (loadMore)="loadMorePosts()"
+        />
       } @else {
         <app-empty-state
           [title]="hasFilters() ? 'No posts match these filters' : 'No posts yet'"
