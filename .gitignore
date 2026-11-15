@@ -1,0 +1,34 @@
+# Java / Maven
+target/
+*.class
+*.jar
+*.war
+*.ear
+dependency-reduced-pom.xml
+.mvn/wrapper/maven-wrapper.jar
+
+# Node / Angular
+node_modules/
+angular-front/dist/
+.angular/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets / local config
+*.env
+.env.*
+application-local.yml
+application-local.properties
+
+# Large/binary clutter that must never be committed
+angular-front/assets/
+Smart Campus 2026 V3.docx
+">
