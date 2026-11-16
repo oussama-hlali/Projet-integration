@@ -39,6 +39,18 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(problem);
     }
 
+    @ExceptionHandler(org.springframework.web.server.ResponseStatusException.class)
+    public ResponseEntity<ProblemDetails> handleResponseStatus(org.springframework.web.server.ResponseStatusException ex) {
+        int status = ex.getStatusCode().value();
+        String reason = ex.getReason() != null ? ex.getReason() : "Request failed";
+        String code = status == 409 ? "CONFLICT"
+                : status == 401 ? "UNAUTHORIZED"
+                : status == 404 ? "NOT_FOUND"
+                : "ERROR";
+        ProblemDetails problem = ProblemDetails.of(status, reason, reason, code);
+        return ResponseEntity.status(status).body(problem);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ProblemDetails> handleGeneric(Exception ex) {
         ProblemDetails problem = ProblemDetails.of(
