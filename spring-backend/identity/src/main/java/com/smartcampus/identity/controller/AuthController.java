@@ -1,11 +1,16 @@
 package com.smartcampus.identity.controller;
 
+import com.smartcampus.identity.domain.User;
 import com.smartcampus.identity.dto.LoginRequest;
 import com.smartcampus.identity.dto.LoginResponse;
 import com.smartcampus.identity.dto.MfaChallenge;
 import com.smartcampus.identity.dto.MfaVerifyRequest;
 import com.smartcampus.identity.dto.RefreshRequest;
+import com.smartcampus.identity.dto.RegisterRequest;
 import com.smartcampus.identity.dto.UserDto;
+import com.smartcampus.identity.service.RefreshTokenService;
+import com.smartcampus.identity.service.UserService;
+import com.smartcampus.identity.util.Totp;
 import io.jsonwebtoken.Jwts;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,77 +24,95 @@ import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Stub authentication. Demo users are hard-coded; replace with a real
- * user store + password hashing in the next sprint.
- */
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController {
 
-    private record DemoUser(String id, String fullName, String email, String role, String password, boolean totpEnabled) {}
-
-    private static final Map<String, DemoUser> USERS = Map.of(
-            "ahmed.wardi@campus.tn", new DemoUser("u1", "Ahmed Wardi", "ahmed.wardi@campus.tn", "STUDENT", "student123", false),
-            "sami.benali@campus.tn", new DemoUser("u3", "Sami Ben Ali", "sami.benali@campus.tn", "ADMINISTRATOR", "admin123", false)
-    );
-
+    private final UserService userService;
+    private final RefreshTokenService refreshTokens;
     private final RSAPrivateKey privateKey;
 
-    public AuthController(RSAPrivateKey privateKey) {
+    // pending TOTP challenges: challengeId -> userId
+    private final Map<String, String> pendingMfa = new ConcurrentHashMap<>();
+
+    public AuthController(UserService userService, RefreshTokenService refreshTokens, RSAPrivateKey privateKey) {
+        this.userService = userService;
+        this.refreshTokens = refreshTokens;
         this.privateKey = privateKey;
     }
 
+    @PostMapping("/register")
+    public ResponseEntity<UserDto> register(@RequestBody RegisterRequest req) {
+        User u = userService.register(req.fullName(), req.email(), req.password());
+        userService.record("REGISTER", u.getId(), null);
+        return ResponseEntity.status(201).body(toDto(u));
+    }
+
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
-        DemoUser user = USERS.get(request.email());
-        if (user == null || !user.password().equals(request.password())) {
-            return ResponseEntity.status(401).body(
-                    com.smartcampus.common.ProblemDetails.of(401, "Invalid credentials",
-                            "Email or password is wrong.", "INVALID_CREDENTIALS"));
+    public ResponseEntity<?> login(@RequestBody LoginRequest req) {
+        User u = userService.authenticate(req.email(), req.password());
+        if (u.isTotpEnabled()) {
+            String challengeId = "chl_" + UUID.randomUUID();
+            pendingMfa.put(challengeId, u.getId());
+            userService.record("LOGIN_MFA_PENDING", u.getId(), null);
+            return ResponseEntity.ok(new MfaChallenge(true, challengeId));
         }
-
-        if (user.email().contains("totp")) {
-            return ResponseEntity.ok(new MfaChallenge(true, "chl_" + UUID.randomUUID()));
-        }
-
-        return ResponseEntity.ok(issueTokens(user));
+        userService.record("LOGIN", u.getId(), null);
+        return ResponseEntity.ok(issueTokens(u));
     }
 
     @PostMapping("/mfa/verify")
-    public ResponseEntity<LoginResponse> verifyMfa(@RequestBody MfaVerifyRequest request) {
-        if (request.code() == null || request.code().length() != 6) {
+    public ResponseEntity<LoginResponse> verifyMfa(@RequestBody MfaVerifyRequest req) {
+        String userId = pendingMfa.remove(req.challengeId());
+        if (userId == null) {
             return ResponseEntity.status(401).build();
         }
-        DemoUser user = USERS.get("ahmed.wardi@campus.tn");
-        return ResponseEntity.ok(issueTokens(user));
+        User u = userService.findById(userId);
+        if (!Totp.verify(u.getTotpSecret(), req.code(), u.getTotpLastUsed())) {
+            return ResponseEntity.status(401).build();
+        }
+        // update replay guard
+        userService.verifyTotp(userId, req.code());
+        userService.record("LOGIN_MFA_SUCCESS", userId, null);
+        return ResponseEntity.ok(issueTokens(u));
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<LoginResponse> refresh(@RequestBody RefreshRequest request) {
-        if (request.refreshToken() == null || request.refreshToken().isBlank()) {
-            return ResponseEntity.status(401).build();
-        }
-        DemoUser user = USERS.values().iterator().next();
-        return ResponseEntity.ok(issueTokens(user));
+    public ResponseEntity<LoginResponse> refresh(@RequestBody RefreshRequest req) {
+        var next = refreshTokens.rotate(req.refreshToken());
+        User u = userService.findById(next.getUserId());
+        return ResponseEntity.ok(new LoginResponse(
+                issueAccessToken(u), next.getId(), 900, toDto(u)));
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout() {
+    public ResponseEntity<Void> logout(@RequestBody(required = false) RefreshRequest req) {
+        if (req != null && req.refreshToken() != null) {
+            refreshTokens.revoke(req.refreshToken());
+        }
         return ResponseEntity.noContent().build();
     }
 
-    private LoginResponse issueTokens(DemoUser user) {
+    private LoginResponse issueTokens(User u) {
+        String access = issueAccessToken(u);
+        var refresh = refreshTokens.issue(u.getId());
+        return new LoginResponse(access, refresh.getId(), 900, toDto(u));
+    }
+
+    private String issueAccessToken(User u) {
         Instant now = Instant.now();
-        String accessToken = Jwts.builder()
-                .subject(user.id())
-                .claim("role", user.role())
+        return Jwts.builder()
+                .subject(u.getId())
+                .claim("role", u.getRole().name())
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plus(15, ChronoUnit.MINUTES)))
                 .signWith(privateKey)
                 .compact();
-        UserDto dto = new UserDto(user.id(), user.fullName(), user.email(), user.role(), user.totpEnabled());
-        return new LoginResponse(accessToken, UUID.randomUUID().toString(), 900, dto);
+    }
+
+    private UserDto toDto(User u) {
+        return new UserDto(u.getId(), u.getFullName(), u.getEmail(), u.getRole().name(), u.isTotpEnabled());
     }
 }
