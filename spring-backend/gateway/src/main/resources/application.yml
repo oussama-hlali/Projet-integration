@@ -37,6 +37,11 @@ spring:
           uri: ${AI_URL:http://localhost:8086}
           predicates:
             - Path=/api/v1/ai/**
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${IDENTITY_JWKS_URL:http://localhost:8081/.well-known/jwks.json}
 
 server:
   port: ${PORT:8080}
@@ -49,11 +54,3 @@ management:
   endpoint:
     health:
       show-details: always
-
-# JWT validation against identity's JWKS (override in prod via env)
-spring:
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          jwk-set-uri: ${IDENTITY_JWKS_URL:http://localhost:8081/.well-known/jwks.json}
