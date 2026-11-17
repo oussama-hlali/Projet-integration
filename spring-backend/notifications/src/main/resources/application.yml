@@ -16,6 +16,11 @@ spring:
     schemas: notifications
     default-schema: notifications
     locations: classpath:db/migration
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${IDENTITY_JWKS_URL:http://localhost:8081/.well-known/jwks.json}
 
 server:
   port: ${PORT:8085}
@@ -25,10 +30,3 @@ management:
     web:
       exposure:
         include: health,info
-
-spring:
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          jwk-set-uri: ${IDENTITY_JWKS_URL:http://localhost:8081/.well-known/jwks.json}
