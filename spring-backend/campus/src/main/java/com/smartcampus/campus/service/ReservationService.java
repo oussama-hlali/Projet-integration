@@ -20,10 +20,10 @@ import java.util.UUID;
 public class ReservationService {
     private final ReservationRepository repo;
     private final RoomRepository rooms;
+    private final com.smartcampus.campus.config.NotificationClient notifications;
 
-    public ReservationService(ReservationRepository repo, RoomRepository rooms) {
-        this.repo = repo;
-        this.rooms = rooms;
+    public ReservationService(ReservationRepository repo, RoomRepository rooms, com.smartcampus.campus.config.NotificationClient notifications) {
+        this.repo = repo; this.rooms = rooms; this.notifications = notifications;
     }
 
     @Transactional
@@ -45,7 +45,9 @@ public class ReservationService {
         r.setPurpose(purpose);
         r.setStatus(ReservationStatus.PENDING);
         try {
-            return repo.save(r);
+            Reservation saved = repo.save(r);
+            notifications.notify(userId, "RESERVATION", "Reservation confirmed for " + room.getName(), saved.getId());
+            return saved;
         } catch (DataIntegrityViolationException e) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "RESERVATION_CONFLICT");
         }
