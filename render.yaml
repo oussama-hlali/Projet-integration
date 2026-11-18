@@ -1,13 +1,10 @@
-# Render blueprint for the Smart Campus backend (SCRUM-55).
-# Deploy with: Render dashboard -> New -> Blueprint -> select this repo.
-
 services:
   - type: web
     name: smart-campus-gateway
-    runtime: java
+    runtime: docker
     rootDir: spring-backend
-    buildCommand: mvn -q -pl gateway -am package -DskipTests
-    startCommand: java -jar gateway/target/gateway-0.1.0-SNAPSHOT.jar
+    dockerfilePath: gateway/Dockerfile
+    dockerContext: .
     envVars:
       - key: PORT
         value: 10000
@@ -15,10 +12,10 @@ services:
 
   - type: web
     name: smart-campus-identity
-    runtime: java
+    runtime: docker
     rootDir: spring-backend
-    buildCommand: mvn -q -pl identity -am package -DskipTests
-    startCommand: java -jar identity/target/identity-0.1.0-SNAPSHOT.jar
+    dockerfilePath: identity/Dockerfile
+    dockerContext: .
     envVars:
       - key: PORT
         value: 10000
@@ -26,10 +23,10 @@ services:
 
   - type: web
     name: smart-campus-campus
-    runtime: java
+    runtime: docker
     rootDir: spring-backend
-    buildCommand: mvn -q -pl campus -am package -DskipTests
-    startCommand: java -jar campus/target/campus-0.1.0-SNAPSHOT.jar
+    dockerfilePath: campus/Dockerfile
+    dockerContext: .
     envVars:
       - key: PORT
         value: 10000
@@ -37,10 +34,10 @@ services:
 
   - type: web
     name: smart-campus-engagement
-    runtime: java
+    runtime: docker
     rootDir: spring-backend
-    buildCommand: mvn -q -pl engagement -am package -DskipTests
-    startCommand: java -jar engagement/target/engagement-0.1.0-SNAPSHOT.jar
+    dockerfilePath: engagement/Dockerfile
+    dockerContext: .
     envVars:
       - key: PORT
         value: 10000
@@ -48,10 +45,10 @@ services:
 
   - type: web
     name: smart-campus-cafeteria
-    runtime: java
+    runtime: docker
     rootDir: spring-backend
-    buildCommand: mvn -q -pl cafeteria -am package -DskipTests
-    startCommand: java -jar cafeteria/target/cafeteria-0.1.0-SNAPSHOT.jar
+    dockerfilePath: cafeteria/Dockerfile
+    dockerContext: .
     envVars:
       - key: PORT
         value: 10000
@@ -59,10 +56,10 @@ services:
 
   - type: web
     name: smart-campus-notifications
-    runtime: java
+    runtime: docker
     rootDir: spring-backend
-    buildCommand: mvn -q -pl notifications -am package -DskipTests
-    startCommand: java -jar notifications/target/notifications-0.1.0-SNAPSHOT.jar
+    dockerfilePath: notifications/Dockerfile
+    dockerContext: .
     envVars:
       - key: PORT
         value: 10000
@@ -70,10 +67,10 @@ services:
 
   - type: web
     name: smart-campus-ai
-    runtime: java
+    runtime: docker
     rootDir: spring-backend
-    buildCommand: mvn -q -pl ai -am package -DskipTests
-    startCommand: java -jar ai/target/ai-0.1.0-SNAPSHOT.jar
+    dockerfilePath: ai/Dockerfile
+    dockerContext: .
     envVars:
       - key: PORT
         value: 10000
