@@ -9,6 +9,8 @@ import {
 import { provideRouter } from '@angular/router';
 
 import { httpErrorInterceptor } from './core/interceptors/http-error.interceptor';
+import { authInterceptor } from './core/interceptors/auth.interceptor';
+import { RuntimeConfigService } from './core/config/runtime-config.service';
 import { AuthService } from './core/services/auth.service';
 import { routes } from './app.routes';
 
@@ -17,7 +19,8 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
-    provideHttpClient(withInterceptors([httpErrorInterceptor])),
+    provideHttpClient(withInterceptors([authInterceptor, httpErrorInterceptor])),
+    provideAppInitializer(() => inject(RuntimeConfigService).load()),
     provideAppInitializer(() => inject(AuthService).init()),
   ],
 };

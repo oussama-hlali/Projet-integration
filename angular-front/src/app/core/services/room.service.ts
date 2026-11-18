@@ -54,18 +54,10 @@ export class RoomService {
 
   private commit(rooms: Room[]): void {
     this.state.set(rooms);
-    this.persist(rooms);
   }
 
   private load(): Room[] {
-    const stored = this.read();
-    if (stored) {
-      return stored;
-    }
-
-    const seeded = this.seed();
-    this.persist(seeded);
-    return seeded;
+    return this.seed();
   }
 
   private read(): Room[] | null {

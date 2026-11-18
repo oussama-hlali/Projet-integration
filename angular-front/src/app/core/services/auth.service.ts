@@ -1,4 +1,5 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { Observable, of } from 'rxjs';
 import { User } from '../models/user.model';
 import { UserService } from './user.service';
 
@@ -43,6 +44,8 @@ export class AuthService {
   private readonly userService = inject(UserService);
 
   private readonly currentUserIdState = signal<string | null>(null);
+  /** In-memory access token (no localStorage, per security guidelines). */
+  readonly accessToken = signal<string | null>(null);
   private readonly pendingUserIdState = signal<string | null>(null);
 
   /** Currently signed-in user, or `null` when signed out. */
@@ -70,24 +73,9 @@ export class AuthService {
 
   /** Load and validate any persisted session. Called before bootstrap. */
   async init(): Promise<void> {
-    if (typeof localStorage === 'undefined') {
-      return;
-    }
-
-    localStorage.removeItem(LEGACY_ROLE_KEY);
-
-    const token = localStorage.getItem(TOKEN_KEY);
-    if (!token) {
-      this.currentUserIdState.set(null);
-      return;
-    }
-
-    const userId = await this.verifyToken(token);
-    if (userId && this.userService.findById(userId)) {
-      this.currentUserIdState.set(userId);
-    } else {
-      this.clearSession();
-    }
+    // No persisted session: tokens live in memory only (security guideline).
+    this.currentUserIdState.set(null);
+    this.accessToken.set(null);
   }
 
   /** Sign in with email and password. May require OTP/setup afterwards. */
@@ -241,6 +229,11 @@ export class AuthService {
     this.pendingUserIdState.set(null);
   }
 
+  /** Single-flight token refresh (mock: returns the current token). */
+  refresh(): Observable<string | null> {
+    return of(this.accessToken());
+  }
+
   /** Current TOTP code for a secret (demo helper). */
   async currentTotpCode(secret: string): Promise<string> {
     const counter = Math.floor(Date.now() / 1000 / TOTP_PERIOD);
@@ -257,16 +250,12 @@ export class AuthService {
 
   private async startSession(user: User): Promise<void> {
     const token = await this.createToken(user);
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(TOKEN_KEY, token);
-    }
+    this.accessToken.set(token);
     this.currentUserIdState.set(user.id);
   }
 
   private clearSession(): void {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem(TOKEN_KEY);
-    }
+    this.accessToken.set(null);
     this.currentUserIdState.set(null);
   }
 
