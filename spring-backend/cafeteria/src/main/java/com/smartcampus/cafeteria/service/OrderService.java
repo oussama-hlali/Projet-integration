@@ -20,9 +20,11 @@ public class OrderService {
     private final CafeteriaOrderRepository orders;
     private final CafeteriaMenuRepository menus;
     private final MenuItemRepository items;
+    private final com.smartcampus.cafeteria.config.NotificationClient notifications;
 
-    public OrderService(CafeteriaOrderRepository orders, CafeteriaMenuRepository menus, MenuItemRepository items) {
-        this.orders = orders; this.menus = menus; this.items = items;
+    public OrderService(CafeteriaOrderRepository orders, CafeteriaMenuRepository menus, MenuItemRepository items,
+                        com.smartcampus.cafeteria.config.NotificationClient notifications) {
+        this.orders = orders; this.menus = menus; this.items = items; this.notifications = notifications;
     }
 
     @Transactional
@@ -58,7 +60,9 @@ public class OrderService {
         o.setQrPayload("CAF:" + userId + ":" + itemId + ":" + menuId);
         o.setIdempotencyKey(idempotencyKey);
         try {
-            return orders.save(o);
+            CafeteriaOrder saved = orders.save(o);
+            notifications.notify(userId, "SYSTEM", "Order " + saved.getReference() + " confirmed", saved.getId());
+            return saved;
         } catch (org.springframework.dao.DataIntegrityViolationException e) {
             // race: another request won
             return orders.findByUserIdAndMenuIdAndItemId(userId, menuId, itemId)

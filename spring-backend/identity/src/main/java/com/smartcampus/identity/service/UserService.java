@@ -20,11 +20,14 @@ public class UserService {
     private final UserRepository users;
     private final AuditEventRepository audit;
     private final PasswordEncoder encoder;
+    private final com.smartcampus.identity.config.NotificationClient notifications;
 
-    public UserService(UserRepository users, AuditEventRepository audit, PasswordEncoder encoder) {
+    public UserService(UserRepository users, AuditEventRepository audit, PasswordEncoder encoder,
+                       com.smartcampus.identity.config.NotificationClient notifications) {
         this.users = users;
         this.audit = audit;
         this.encoder = encoder;
+        this.notifications = notifications;
     }
 
     public User register(String fullName, String email, String password) {
@@ -41,6 +44,7 @@ public class UserService {
         u.setLanguage("en");
         users.save(u);
         record("REGISTER", u.getId(), null);
+        notifications.notify(u.getId(), "SYSTEM", "Welcome to Smart Campus", u.getId());
         return u;
     }
 
