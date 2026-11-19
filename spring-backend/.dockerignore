@@ -1,0 +1,16 @@
+target/
+*.class
+*.jar
+*.war
+.mvn/wrapper/maven-wrapper.jar
+.git
+.idea
+*.iml
+node_modules
+angular-front
+docs
+supabase
+load
+security
+*.md
+.env
