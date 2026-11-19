@@ -53,10 +53,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ProblemDetails> handleGeneric(Exception ex) {
+        ex.printStackTrace();
         ProblemDetails problem = ProblemDetails.of(
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 "Internal server error",
-                "The server ran into a problem. Try again shortly.",
+                ex.getClass().getSimpleName() + ": " + ex.getMessage(),
                 "INTERNAL_ERROR"
         );
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(problem);
