@@ -1,0 +1,33 @@
+<section class="page assistant">
+  <header class="assistant__head">
+    <h1>Smart Campus Assistant</h1>
+    <button type="button" class="btn" (click)="clear()">Clear</button>
+  </header>
+
+  <div class="assistant__chat" role="log" aria-live="polite">
+    @for (m of messages(); track $index) {
+      <div class="msg" [class.msg--user]="m.role === 'user'" [class.msg--assistant]="m.role === 'assistant'">
+        <span class="msg__role">{{ m.role === 'user' ? 'You' : 'Assistant' }}</span>
+        <p class="msg__text">{{ m.content }}</p>
+      </div>
+    }
+    @if (busy()) {
+      <div class="msg msg--assistant">
+        <span class="msg__role">Assistant</span>
+        <p class="msg__text">Thinking…</p>
+      </div>
+    }
+  </div>
+
+  <form class="assistant__input" (ngSubmit)="send()">
+    <input
+      type="text"
+      [(ngModel)]="draft"
+      name="draft"
+      placeholder="Ask about rooms, events, meals, lost & found…"
+      aria-label="Message"
+      [disabled]="busy()"
+    />
+    <button type="submit" class="btn btn--primary" [disabled]="busy() || !draft.trim()">Send</button>
+  </form>
+</section>

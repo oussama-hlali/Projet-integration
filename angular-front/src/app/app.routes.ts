@@ -101,6 +101,13 @@ export const routes: Routes = [
           import('./features/notifications/notifications').then((m) => m.Notifications),
       },
       {
+        path: 'assistant',
+        title: 'Assistant \u2013 Smart Campus',
+        canActivate: [studentGuard],
+        loadComponent: () =>
+          import('./features/assistant/assistant').then((m) => m.Assistant),
+      },
+      {
         path: 'profile',
         title: 'Profile · Smart Campus',
         loadComponent: () => import('./features/profile/profile').then((m) => m.Profile),
