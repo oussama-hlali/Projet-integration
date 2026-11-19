@@ -1,17 +1,11 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, signal } from '@angular/core';
-import { environment } from '../../../environments/environment';
 
-/**
- * SCRUM-102 — runtime configuration.
- *
- * The API base URL is baked into the build via `environment.ts`, but Vercel can
- * override it at runtime by serving `/config.json` (see `public/config.json`).
- * We load it once during app init so the rest of the app reads a single signal.
- */
+const DEFAULT_API_BASE_URL = 'http://localhost:8080/api/v1';
+
 @Injectable({ providedIn: 'root' })
 export class RuntimeConfigService {
-  readonly apiBaseUrl = signal(environment.apiBaseUrl);
+  readonly apiBaseUrl = signal(DEFAULT_API_BASE_URL);
 
   constructor(private readonly http: HttpClient) {}
 
@@ -22,7 +16,7 @@ export class RuntimeConfigService {
           if (cfg?.apiBaseUrl) this.apiBaseUrl.set(cfg.apiBaseUrl);
           resolve();
         },
-        error: () => resolve(), // keep the build-time default
+        error: () => resolve(),
       });
     });
   }
