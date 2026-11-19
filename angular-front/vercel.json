@@ -5,13 +5,5 @@
   "framework": "angular",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
-  ],
-  "env": {
-    "NG_APP_API_BASE_URL": "https://smart-campus-gateway.onrender.com/api/v1"
-  },
-  "preview": {
-    "env": {
-      "NG_APP_API_BASE_URL": "https://smart-campus-gateway-staging.onrender.com/api/v1"
-    }
-  }
+  ]
 }
