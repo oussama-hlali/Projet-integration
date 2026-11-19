@@ -1,26 +1,29 @@
 spring:
   application:
     name: identity
-
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/smartcampus}
     username: ${DB_USER:identity_user}
     password: ${DB_PASSWORD:identity_pass}
-    driver-class-name: org.postgresql.Driver
-
+    hikari:
+      maximum-pool-size: 2
+      minimum-idle: 1
   jpa:
     hibernate:
       ddl-auto: validate
-    show-sql: false
     properties:
       hibernate:
         default_schema: identity
-
   flyway:
     enabled: true
     schemas: identity
     default-schema: identity
     locations: classpath:db/migration
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${IDENTITY_JWKS_URL:http://localhost:8081/.well-known/jwks.json}
 
 server:
   port: ${PORT:8081}
@@ -30,6 +33,3 @@ management:
     web:
       exposure:
         include: health,info,prometheus
-  endpoint:
-    health:
-      show-details: always
