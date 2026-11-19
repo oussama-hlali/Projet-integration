@@ -18,6 +18,10 @@ export class HttpAuthService {
     return this.http.post(`${this.base()}/auth/login`, { email, password });
   }
 
+  register(fullName: string, email: string, password: string): Observable<any> {
+    return this.http.post(`${this.base()}/auth/register`, { fullName, email, password });
+  }
+
   verifyMfa(challengeId: string, code: string): Observable<any> {
     return this.http.post(`${this.base()}/auth/mfa/verify`, { challengeId, code });
   }
@@ -30,7 +34,7 @@ export class HttpAuthService {
     return this.http.get(`${this.base()}/users/me`);
   }
 
-  logout(): Observable<void> {
-    return this.http.post<void>(`${this.base()}/auth/logout`, {});
+  mfaSetup(userId: string): Observable<{ secret: string; otpauthUri: string }> {
+    return this.http.get<{ secret: string; otpauthUri: string }>(`${this.base()}/auth/mfa/setup?userId=${userId}`);
   }
 }

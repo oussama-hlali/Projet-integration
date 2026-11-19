@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
 
 import { AuthService } from './auth.service';
 import { UserService } from './user.service';
@@ -9,7 +10,9 @@ describe('AuthService registration', () => {
 
   beforeEach(() => {
     localStorage.clear();
-    TestBed.configureTestingModule({});
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient()],
+    });
     auth = TestBed.inject(AuthService);
     users = TestBed.inject(UserService);
   });
