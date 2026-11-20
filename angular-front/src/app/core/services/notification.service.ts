@@ -107,60 +107,10 @@ export class NotificationService {
 
   private commit(notifications: Notification[]): void {
     this.state.set(notifications);
-    this.persist(notifications);
   }
 
   private load(): Notification[] {
-    if (typeof localStorage !== 'undefined') {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) {
-          const parsed: unknown = JSON.parse(raw);
-          if (Array.isArray(parsed) && parsed.length) {
-            return parsed.map((entry) => {
-              const value = entry as Record<string, unknown>;
-              return {
-                id: String(value['id']),
-                message: String(value['message']),
-                createdAt: new Date(String(value['createdAt'])),
-                read: Boolean(value['read']),
-                userId: String(value['userId'] ?? DEMO_USER_ID),
-                type: (value['type'] as NotificationType) ?? 'SYSTEM',
-                announcementId: value['announcementId'] as string | undefined,
-                eventId: value['eventId'] as string | undefined,
-                reservationId: value['reservationId'] as string | undefined,
-                lostFoundId: value['lostFoundId'] as string | undefined,
-                actionUrl: value['actionUrl'] as string | undefined,
-              } satisfies Notification;
-            });
-          }
-        }
-      } catch {
-        // Fall through to the demo notifications.
-      }
-    }
-
     return this.seed();
-  }
-
-  private persist(notifications: Notification[]): void {
-    if (typeof localStorage === 'undefined') {
-      return;
-    }
-
-    try {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(
-          notifications.map((notification) => ({
-            ...notification,
-            createdAt: notification.createdAt.toISOString(),
-          })),
-        ),
-      );
-    } catch {
-      // Storage can be full or blocked; the in-memory list still works.
-    }
   }
 
   private seed(): Notification[] {

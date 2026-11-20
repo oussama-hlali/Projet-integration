@@ -107,37 +107,10 @@ export class UserService {
 
   private commit(users: User[]): void {
     this.state.set(users);
-    this.persist(users);
   }
 
   private load(): User[] {
-    if (typeof localStorage !== 'undefined') {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) {
-          const parsed: unknown = JSON.parse(raw);
-          if (Array.isArray(parsed) && parsed.length) {
-            return parsed as User[];
-          }
-        }
-      } catch {
-        // Fall through to the seeded directory.
-      }
-    }
-
     return this.seed();
-  }
-
-  private persist(users: User[]): void {
-    if (typeof localStorage === 'undefined') {
-      return;
-    }
-
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
-    } catch {
-      // Storage can be full or blocked; the in-memory directory still works.
-    }
   }
 
   private seed(): User[] {

@@ -208,7 +208,6 @@ export class ReservationService {
 
   private commit(reservations: Reservation[]): void {
     this.state.set(reservations);
-    this.persist(reservations);
   }
 
   /**
@@ -216,46 +215,7 @@ export class ReservationService {
    * `[]` is valid and must not resurrect the demo data.
    */
   private load(): Reservation[] {
-    const stored = this.read();
-    if (stored !== null) {
-      return stored;
-    }
-
-    const seeded = this.seed();
-    this.persist(seeded);
-    return seeded;
-  }
-
-  private read(): Reservation[] | null {
-    if (typeof localStorage === 'undefined') {
-      return null;
-    }
-
-    let raw: string | null;
-    try {
-      raw = localStorage.getItem(STORAGE_KEY);
-    } catch {
-      return null;
-    }
-
-    if (raw === null) {
-      return null;
-    }
-
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(raw);
-    } catch {
-      return null;
-    }
-
-    if (!Array.isArray(parsed)) {
-      return null;
-    }
-
-    return parsed
-      .map((entry) => this.normalize(entry))
-      .filter((entry): entry is Reservation => entry !== null);
+    return this.seed();
   }
 
   /** Accepts both the current shape and the earlier date/time-string shape. */
@@ -337,28 +297,6 @@ export class ReservationService {
     return this.rooms.rooms().find((room) => room.name === roomName)?.id ?? roomName;
   }
 
-  private persist(reservations: Reservation[]): void {
-    if (typeof localStorage === 'undefined') {
-      return;
-    }
-
-    try {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(
-          reservations.map((reservation) => ({
-            ...reservation,
-            startTime: reservation.startTime.toISOString(),
-            endTime: reservation.endTime.toISOString(),
-          })),
-        ),
-      );
-    } catch {
-      // Storage can be full or blocked; the in-memory list still works.
-    }
-  }
-
-  /** Demo data: one past, one cancelled and one pending booking. */
   private seed(): Reservation[] {
     const at = (offsetDays: number, time: string): Date => {
       const date = new Date();

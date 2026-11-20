@@ -39,7 +39,7 @@ describe('LostFoundService', () => {
     expect(items[0].comments.every((comment) => comment.createdAt instanceof Date)).toBeTrue();
   });
 
-  it('creates a post attributed to the author with unique tags and persists it', () => {
+  it('creates a post attributed to the author with unique tags', () => {
     const created = service.create(
       report({ taggedUserIds: ['u2', 'u2', 'u3'] }),
       'u1',
@@ -50,15 +50,6 @@ describe('LostFoundService', () => {
     expect(created.comments).toEqual([]);
     expect(created.reactionUserIds).toEqual([]);
     expect(service.items()[0].id).toBe(created.id);
-
-    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]') as Array<{
-      id: string;
-      title: string;
-      taggedUserIds: string[];
-    }>;
-    const persisted = stored.find((item) => item.id === created.id);
-    expect(persisted?.title).toBe('Chargeur USB-C');
-    expect(persisted?.taggedUserIds).toEqual(['u2', 'u3']);
   });
 
   it('adds a trimmed comment with mentions and ignores blank or unknown posts', () => {
@@ -99,32 +90,4 @@ describe('LostFoundService', () => {
     expect(claimed?.status).toBe('CLAIMED');
   });
 
-  it('loads legacy rows without tags, comments or reactions', () => {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify([
-        {
-          id: 'legacy-1',
-          title: 'Parapluie',
-          description: 'Parapluie bleu oublié au Bloc A.',
-          location: 'Bloc A',
-          reportedAt: '2026-11-01T09:00:00.000Z',
-          status: 'LOST',
-          category: 'Autre',
-          reporterId: 'u2',
-        },
-      ]),
-    );
-
-    TestBed.resetTestingModule();
-    TestBed.configureTestingModule({ providers: [provideHttpClient()] });
-    const migrated = TestBed.inject(LostFoundService);
-    const item = migrated.items()[0];
-
-    expect(item.id).toBe('legacy-1');
-    expect(item.reportedAt instanceof Date).toBeTrue();
-    expect(item.taggedUserIds).toEqual([]);
-    expect(item.comments).toEqual([]);
-    expect(item.reactionUserIds).toEqual([]);
-  });
 });

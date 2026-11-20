@@ -83,49 +83,6 @@ export class RoomService {
     return this.seed();
   }
 
-  private read(): Room[] | null {
-    if (typeof localStorage === 'undefined') {
-      return null;
-    }
-
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) {
-        return null;
-      }
-
-      const parsed: unknown = JSON.parse(raw);
-      if (!Array.isArray(parsed)) {
-        return null;
-      }
-
-      const rows = parsed.filter(
-        (entry): entry is Room =>
-          !!entry &&
-          typeof entry === 'object' &&
-          typeof (entry as Room).id === 'string' &&
-          typeof (entry as Room).name === 'string' &&
-          typeof (entry as Room).status === 'string',
-      );
-
-      return rows.length ? rows : null;
-    } catch {
-      return null;
-    }
-  }
-
-  private persist(rooms: Room[]): void {
-    if (typeof localStorage === 'undefined') {
-      return;
-    }
-
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(rooms));
-    } catch {
-      // Storage can be full or blocked; the in-memory store still works.
-    }
-  }
-
   private seed(): Room[] {
     const building = (id: string): string => this.buildings.nameOf(id);
 

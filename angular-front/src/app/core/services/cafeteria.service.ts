@@ -138,72 +138,9 @@ export class CafeteriaService {
 
   private commitOrders(orders: CafeteriaOrder[]): void {
     this.ordersState.set(orders);
-    if (typeof localStorage === 'undefined') {
-      return;
-    }
-
-    try {
-      localStorage.setItem(
-        ORDERS_KEY,
-        JSON.stringify(
-          orders.map((order) => ({
-            ...order,
-            date: order.date.toISOString(),
-            createdAt: order.createdAt.toISOString(),
-          })),
-        ),
-      );
-    } catch {
-      // Storage can be full or blocked; the in-memory store still works.
-    }
   }
 
   private loadOrders(menus: CafeteriaMenu[]): CafeteriaOrder[] {
-    if (typeof localStorage !== 'undefined') {
-      try {
-        const raw = localStorage.getItem(ORDERS_KEY);
-        if (raw) {
-          const parsed: unknown = JSON.parse(raw);
-          if (Array.isArray(parsed)) {
-            return parsed
-              .filter((entry): entry is Record<string, unknown> => {
-                if (!entry || typeof entry !== 'object') {
-                  return false;
-                }
-                const order = entry as Partial<CafeteriaOrder>;
-                return (
-                  typeof order.id === 'string' &&
-                  typeof order.reference === 'string' &&
-                  typeof order.itemName === 'string' &&
-                  typeof order.menuId === 'string' &&
-                  typeof order.itemId === 'string' &&
-                  typeof order.userId === 'string' &&
-                  typeof order.price === 'number' &&
-                  typeof order.qrPayload === 'string'
-                );
-              })
-              .map((entry) => ({
-                id: String(entry['id']),
-                reference: String(entry['reference']),
-                userId: String(entry['userId']),
-                menuId: String(entry['menuId']),
-                itemId: String(entry['itemId']),
-                itemName: String(entry['itemName']),
-                menuLabel: String(entry['menuLabel'] ?? 'Menu'),
-                building: String(entry['building'] ?? 'Cafétéria'),
-                date: new Date(String(entry['date'])),
-                pickupTime: String(entry['pickupTime'] ?? '11:30 – 14:30'),
-                price: Number(entry['price']),
-                createdAt: new Date(String(entry['createdAt'])),
-                qrPayload: String(entry['qrPayload']),
-              }));
-          }
-        }
-      } catch {
-        // Fall through to the seeded receipt.
-      }
-    }
-
     return this.seedOrders(menus);
   }
 

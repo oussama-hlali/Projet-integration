@@ -26,7 +26,7 @@ describe('CafeteriaService', () => {
     expect(service.todayMenu().items.length).toBeGreaterThan(0);
   });
 
-  it('reserves a dish and persists a receipt with a QR payload', () => {
+  it('reserves a dish with a QR payload', () => {
     const menu = service.menus()[1];
     const dish = menu.items[0];
 
@@ -39,13 +39,6 @@ describe('CafeteriaService', () => {
     expect(order?.qrPayload).toContain('u2');
     expect(order?.qrPayload).toContain(dish.id);
     expect(service.ordersFor('u2').length).toBe(1);
-
-    const stored = JSON.parse(localStorage.getItem(ORDERS_KEY) ?? '[]') as Array<{
-      id: string;
-      qrPayload: string;
-    }>;
-    expect(stored.some((entry) => entry.id === order?.id)).toBeTrue();
-    expect(stored[0].qrPayload).toContain(order?.reference ?? '');
   });
 
   it('returns the existing receipt when the same dish is reserved twice', () => {
@@ -83,36 +76,4 @@ describe('CafeteriaService', () => {
     expect(service.ordersFor('u2').length).toBe(0);
   });
 
-  it('reloads saved receipts as dates after a fresh start', () => {
-    localStorage.setItem(
-      ORDERS_KEY,
-      JSON.stringify([
-        {
-          id: 'stored-1',
-          reference: 'CAF-20261111-TEST',
-          userId: 'u2',
-          menuId: 'menu-1',
-          itemId: 'mi-1',
-          itemName: 'Poulet rôti aux herbes',
-          menuLabel: 'Poulet rôti & légumes',
-          building: 'Cafétéria',
-          date: '2026-11-09T00:00:00.000Z',
-          pickupTime: '11:30 – 14:30',
-          price: 9.5,
-          createdAt: '2026-11-11T10:15:00.000Z',
-          qrPayload: 'SMARTCAMPUS|CAFETERIA|CAF-20261111-TEST|u2|mi-1',
-        },
-      ]),
-    );
-
-    TestBed.resetTestingModule();
-    TestBed.configureTestingModule({ providers: [provideHttpClient()] });
-    const reloaded = TestBed.inject(CafeteriaService);
-    const order = reloaded.findOrder('stored-1');
-
-    expect(order?.reference).toBe('CAF-20261111-TEST');
-    expect(order?.date instanceof Date).toBeTrue();
-    expect(order?.createdAt instanceof Date).toBeTrue();
-    expect(reloaded.ordersFor('u2').length).toBe(1);
-  });
 });

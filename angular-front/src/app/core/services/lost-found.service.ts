@@ -166,40 +166,9 @@ export class LostFoundService {
 
   private commit(items: LostFoundItem[]): void {
     this.state.set(items);
-    this.persist(items);
   }
 
   private load(): LostFoundItem[] {
-    if (typeof localStorage !== 'undefined') {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) {
-          const parsed: unknown = JSON.parse(raw);
-          if (Array.isArray(parsed) && parsed.length) {
-            return parsed.map((entry) => {
-              const value = entry as Record<string, unknown>;
-              return {
-                id: String(value['id']),
-                title: String(value['title']),
-                description: String(value['description']),
-                location: String(value['location']),
-                reportedAt: new Date(String(value['reportedAt'])),
-                status: this.normalizeStatus(value['status']),
-                category: String(value['category'] ?? 'Autre'),
-                contactPhone: value['contactPhone'] as string | undefined,
-                reporterId: String(value['reporterId'] ?? DEMO_USER_ID),
-                taggedUserIds: this.toStringArray(value['taggedUserIds']),
-                comments: this.parseComments(value['comments']),
-                reactionUserIds: this.toStringArray(value['reactionUserIds']),
-              } satisfies LostFoundItem;
-            });
-          }
-        }
-      } catch {
-        // Fall through to the demo items.
-      }
-    }
-
     return this.seed();
   }
 
@@ -226,30 +195,6 @@ export class LostFoundService {
 
   private normalizeStatus(value: unknown): LostFoundStatus {
     return value === 'FOUND' || value === 'CLAIMED' || value === 'LOST' ? value : 'LOST';
-  }
-
-  private persist(items: LostFoundItem[]): void {
-    if (typeof localStorage === 'undefined') {
-      return;
-    }
-
-    try {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(
-          items.map((item) => ({
-            ...item,
-            reportedAt: item.reportedAt.toISOString(),
-            comments: item.comments.map((comment) => ({
-              ...comment,
-              createdAt: comment.createdAt.toISOString(),
-            })),
-          })),
-        ),
-      );
-    } catch {
-      // Storage can be full or blocked; the in-memory list still works.
-    }
   }
 
   private seed(): LostFoundItem[] {
