@@ -8,6 +8,8 @@ spring:
           '[/**]':
             allowed-origins:
               - "http://localhost:4200"
+              - "https://smart-campus-2026.vercel.app"
+            allowed-origin-patterns:
               - "https://*.vercel.app"
             allowed-methods: "*"
             allowed-headers: "*"
