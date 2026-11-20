@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 @RestController
@@ -27,23 +28,20 @@ public class KpiController {
 
     @GetMapping("/campus/kpi")
     public Map<String, Object> kpi() {
-        long roomsTotal = rooms.count();
-        long roomsAvailable = rooms.findAll().stream().filter(r -> "AVAILABLE".equals(r.getStatus())).count();
-        long reservationsTotal = reservations.count();
-        long reservationsPending = reservations.findAll().stream().filter(r -> r.getStatus() == ReservationStatus.PENDING).count();
-        long reservationsConfirmed = reservations.findAll().stream().filter(r -> r.getStatus() == ReservationStatus.CONFIRMED).count();
-        long reservationsCancelled = reservations.findAll().stream().filter(r -> r.getStatus() == ReservationStatus.CANCELLED).count();
-        long reservationsCompleted = reservations.findAll().stream().filter(r -> r.getStatus() == ReservationStatus.COMPLETED).count();
-        return Map.of(
-                "roomsTotal", roomsTotal,
-                "roomsAvailable", roomsAvailable,
-                "reservationsTotal", reservationsTotal,
-                "reservationsPending", reservationsPending,
-                "reservationsConfirmed", reservationsConfirmed,
-                "reservationsCancelled", reservationsCancelled,
-                "reservationsCompleted", reservationsCompleted,
-                "announcementsTotal", announcements.count(),
-                "transportRoutes", routes.count()
-        );
+        var allRooms = rooms.findAll();
+        Map<String, Object> kpi = new LinkedHashMap<>();
+        kpi.put("roomsTotal", rooms.count());
+        kpi.put("roomsAvailable", allRooms.stream().filter(r -> "AVAILABLE".equals(r.getStatus())).count());
+        kpi.put("roomsOccupied", allRooms.stream().filter(r -> "OCCUPIED".equals(r.getStatus())).count());
+        kpi.put("roomsReserved", allRooms.stream().filter(r -> "RESERVED".equals(r.getStatus())).count());
+        kpi.put("roomsMaintenance", allRooms.stream().filter(r -> "MAINTENANCE".equals(r.getStatus())).count());
+        kpi.put("reservationsTotal", reservations.count());
+        kpi.put("reservationsPending", reservations.findAll().stream().filter(r -> r.getStatus() == ReservationStatus.PENDING).count());
+        kpi.put("reservationsConfirmed", reservations.findAll().stream().filter(r -> r.getStatus() == ReservationStatus.CONFIRMED).count());
+        kpi.put("reservationsCancelled", reservations.findAll().stream().filter(r -> r.getStatus() == ReservationStatus.CANCELLED).count());
+        kpi.put("reservationsCompleted", reservations.findAll().stream().filter(r -> r.getStatus() == ReservationStatus.COMPLETED).count());
+        kpi.put("announcementsTotal", announcements.count());
+        kpi.put("transportRoutes", routes.count());
+        return kpi;
     }
 }
