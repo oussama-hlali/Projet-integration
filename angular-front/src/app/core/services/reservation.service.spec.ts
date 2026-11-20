@@ -1,3 +1,4 @@
+import { provideHttpClient } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { Reservation } from '../models/reservation.model';
 import { ReservationService } from './reservation.service';
@@ -28,7 +29,7 @@ describe('ReservationService', () => {
 
   beforeEach(() => {
     localStorage.clear();
-    TestBed.configureTestingModule({});
+    TestBed.configureTestingModule({ providers: [provideHttpClient()] });
     service = TestBed.inject(ReservationService);
   });
 
@@ -149,7 +150,7 @@ describe('ReservationService', () => {
     );
 
     TestBed.resetTestingModule();
-    TestBed.configureTestingModule({});
+    TestBed.configureTestingModule({ providers: [provideHttpClient()] });
     const migrated = TestBed.inject(ReservationService);
 
     expect(migrated.reservations().length).toBe(1);

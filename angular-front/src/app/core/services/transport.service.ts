@@ -1,4 +1,7 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
+import { RuntimeConfigService } from '../config/runtime-config.service';
 import {
   TransportDeparture,
   TransportRoute,
@@ -9,11 +12,22 @@ import {
 /** Campus shuttle timetable, grouped by route then by ordered stop. */
 @Injectable({ providedIn: 'root' })
 export class TransportService {
+  private readonly http = inject(HttpClient);
+  private readonly cfg = inject(RuntimeConfigService);
   private readonly routeState = signal<TransportRoute[]>([
     { id: 't1', name: 'Ligne Centre-ville', color: '#0c6f6b' },
     { id: 't2', name: 'Ligne Résidence', color: '#1c4fa8' },
     { id: 't3', name: 'Navette Campus', color: '#8a5200' },
   ]);
+
+  constructor() {
+    if (!environment.useMocks) {
+      this.http.get<any[]>(`${this.cfg.apiBaseUrl()}/transport/routes`).subscribe({
+        next: (rows) => this.routeState.set(rows as TransportRoute[]),
+        error: () => {},
+      });
+    }
+  }
 
   private readonly stopState = signal<TransportStop[]>([
     { id: 'st-1', routeId: 't1', name: 'Gare Centrale', order: 1 },
