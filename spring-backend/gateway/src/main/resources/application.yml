@@ -13,6 +13,27 @@ spring:
             allowed-headers: "*"
             allow-credentials: true
       routes:
+        # KPI endpoints first — they must win over the generic /api/v1/<domain>/** routes.
+        - id: identity-kpi
+          uri: ${IDENTITY_URL:http://localhost:8081}
+          predicates:
+            - Path=/api/v1/identity/kpi
+        - id: campus-kpi
+          uri: ${CAMPUS_URL:http://localhost:8082}
+          predicates:
+            - Path=/api/v1/campus/kpi
+        - id: engagement-kpi
+          uri: ${ENGAGEMENT_URL:http://localhost:8083}
+          predicates:
+            - Path=/api/v1/engagement/kpi
+        - id: cafeteria-kpi
+          uri: ${CAFETERIA_URL:http://localhost:8084}
+          predicates:
+            - Path=/api/v1/cafeteria/kpi
+        - id: notifications-kpi
+          uri: ${NOTIFICATIONS_URL:http://localhost:8085}
+          predicates:
+            - Path=/api/v1/notifications/kpi
         - id: identity
           uri: ${IDENTITY_URL:http://localhost:8081}
           predicates:
