@@ -1,4 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
+import { RuntimeConfigService } from '../config/runtime-config.service';
 import { Room, RoomInput } from '../models/room.model';
 import { BuildingService } from './building.service';
 
@@ -14,7 +17,18 @@ const STORAGE_KEY = 'smart-campus.rooms';
 @Injectable({ providedIn: 'root' })
 export class RoomService {
   private readonly buildings = inject(BuildingService);
+  private readonly http = inject(HttpClient, { optional: true });
+  private readonly cfg = inject(RuntimeConfigService, { optional: true });
   private readonly state = signal<Room[]>(this.load());
+
+  constructor() {
+    if (!environment.useMocks) {
+      this.http!.get<any[]>(`${this.cfg!.apiBaseUrl()}/rooms`).subscribe({
+        next: (rows) => this.commit(rows as Room[]),
+        error: () => { /* keep mock data */ },
+      });
+    }
+  }
 
   readonly rooms = this.state.asReadonly();
 
@@ -25,6 +39,9 @@ export class RoomService {
   add(input: RoomInput): Room {
     const room: Room = { ...input, id: this.newId() };
     this.commit([...this.state(), room]);
+    if (!environment.useMocks) {
+      this.http!.post(`${this.cfg!.apiBaseUrl()}/rooms`, input).subscribe({ error: () => {} });
+    }
     return room;
   }
 
@@ -36,6 +53,9 @@ export class RoomService {
 
     const updated: Room = { ...target, ...changes, id };
     this.commit(this.state().map((room) => (room.id === id ? updated : room)));
+    if (!environment.useMocks) {
+      this.http!.put(`${this.cfg!.apiBaseUrl()}/rooms/${id}`, changes).subscribe({ error: () => {} });
+    }
     return updated;
   }
 
@@ -45,6 +65,9 @@ export class RoomService {
     }
 
     this.commit(this.state().filter((room) => room.id !== id));
+    if (!environment.useMocks) {
+      this.http!.delete(`${this.cfg!.apiBaseUrl()}/rooms/${id}`).subscribe({ error: () => {} });
+    }
     return true;
   }
 

@@ -1,4 +1,7 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
+import { RuntimeConfigService } from '../config/runtime-config.service';
 import { Notification, NotificationType } from '../models/notification.model';
 
 const STORAGE_KEY = 'smart-campus.notifications';
@@ -11,7 +14,18 @@ const DEMO_USER_ID = 'u1';
  */
 @Injectable({ providedIn: 'root' })
 export class NotificationService {
+  private readonly http = inject(HttpClient, { optional: true });
+  private readonly cfg = inject(RuntimeConfigService, { optional: true });
   private readonly state = signal<Notification[]>(this.load());
+
+  constructor() {
+    if (!environment.useMocks) {
+      this.http!.get<any[]>(`${this.cfg!.apiBaseUrl()}/notifications?userId=u1`).subscribe({
+        next: (rows) => this.state.set(rows as Notification[]),
+        error: () => {},
+      });
+    }
+  }
 
   readonly notifications = this.state.asReadonly();
 
@@ -34,6 +48,9 @@ export class NotificationService {
 
   markAllRead(): void {
     this.commit(this.state().map((notification) => ({ ...notification, read: true })));
+    if (!environment.useMocks) {
+      this.http!.post(`${this.cfg!.apiBaseUrl()}/notifications/read-all?userId=u1`, {}).subscribe({ error: () => {} });
+    }
   }
 
   remove(id: string): boolean {
@@ -42,6 +59,9 @@ export class NotificationService {
     }
 
     this.commit(this.state().filter((notification) => notification.id !== id));
+    if (!environment.useMocks) {
+      this.http!.delete(`${this.cfg!.apiBaseUrl()}/notifications/${id}`).subscribe({ error: () => {} });
+    }
     return true;
   }
 
@@ -79,6 +99,9 @@ export class NotificationService {
 
     const updated: Notification = { ...target, ...changes, id };
     this.commit(this.state().map((notification) => (notification.id === id ? updated : notification)));
+    if (!environment.useMocks) {
+      this.http!.patch(`${this.cfg!.apiBaseUrl()}/notifications/${id}`, { read: changes.read }).subscribe({ error: () => {} });
+    }
     return updated;
   }
 

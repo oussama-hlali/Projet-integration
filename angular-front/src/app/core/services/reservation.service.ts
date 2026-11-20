@@ -1,4 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
+import { RuntimeConfigService } from '../config/runtime-config.service';
 import {
   CreateReservationInput,
   CreateReservationResult,
@@ -25,10 +28,18 @@ const DEMO_USER_ID = 'u1';
 export class ReservationService {
   private readonly rooms = inject(RoomService);
   private readonly notifications = inject(NotificationService);
+  private readonly http = inject(HttpClient, { optional: true });
+  private readonly cfg = inject(RuntimeConfigService, { optional: true });
   private readonly state = signal<Reservation[]>(this.load());
 
   constructor() {
     this.syncCompleted();
+    if (!environment.useMocks) {
+      this.http!.get<any[]>(`${this.cfg!.apiBaseUrl()}/reservations`).subscribe({
+        next: (rows) => this.state.set(rows as Reservation[]),
+        error: () => {},
+      });
+    }
   }
 
   /** All bookings; the page sorts them for display. */
@@ -97,6 +108,15 @@ export class ReservationService {
     };
 
     this.commit([...this.state(), reservation]);
+    if (!environment.useMocks) {
+      this.http!.post(`${this.cfg!.apiBaseUrl()}/reservations`, {
+        roomId: input.roomId,
+        userId: input.userId ?? DEMO_USER_ID,
+        startTime: input.startTime.toISOString(),
+        endTime: input.endTime.toISOString(),
+        purpose: input.purpose.trim(),
+      }).subscribe({ error: () => {} });
+    }
     this.notifications.add({
       message: `Votre réservation pour ${reservation.room} est confirmée.`,
       type: 'RESERVATION',

@@ -1,4 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
+import { RuntimeConfigService } from '../config/runtime-config.service';
 import { Observable, of } from 'rxjs';
 import { CampusEvent, EventCategory } from '../models/campus-event.model';
 import { NotificationService } from './notification.service';
@@ -22,8 +25,21 @@ export interface CampusEventInput {
 @Injectable({ providedIn: 'root' })
 export class CampusEventService {
   private readonly notifications = inject(NotificationService);
-  private readonly state = signal<CampusEvent[]>([
-    {
+  private readonly http = inject(HttpClient, { optional: true });
+  private readonly cfg = inject(RuntimeConfigService, { optional: true });
+  private readonly state = signal<CampusEvent[]>(this.seedEvents());
+
+  constructor() {
+    if (!environment.useMocks) {
+      this.http!.get<any[]>(`${this.cfg!.apiBaseUrl()}/events`).subscribe({
+        next: (rows) => this.state.set(rows as CampusEvent[]),
+        error: () => {},
+      });
+    }
+  }
+  private seedEvents(): CampusEvent[] {
+    return [
+{
       id: 'e1',
       title: 'Journée portes ouvertes',
       description: 'Découverte des clubs du campus.',
@@ -149,7 +165,8 @@ export class CampusEventService {
       organizerId: 'u3',
       roomId: 'room-1',
     },
-  ]);
+    ];
+  }
 
   readonly events = this.state.asReadonly();
 

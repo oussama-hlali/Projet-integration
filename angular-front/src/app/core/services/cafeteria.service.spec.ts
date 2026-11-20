@@ -1,3 +1,4 @@
+import { provideHttpClient } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { CafeteriaService } from './cafeteria.service';
 
@@ -8,7 +9,7 @@ describe('CafeteriaService', () => {
 
   beforeEach(() => {
     localStorage.clear();
-    TestBed.configureTestingModule({});
+    TestBed.configureTestingModule({ providers: [provideHttpClient()] });
     service = TestBed.inject(CafeteriaService);
   });
 
@@ -105,7 +106,7 @@ describe('CafeteriaService', () => {
     );
 
     TestBed.resetTestingModule();
-    TestBed.configureTestingModule({});
+    TestBed.configureTestingModule({ providers: [provideHttpClient()] });
     const reloaded = TestBed.inject(CafeteriaService);
     const order = reloaded.findOrder('stored-1');
 

@@ -1,4 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
+import { RuntimeConfigService } from '../config/runtime-config.service';
 import { EventRegistration } from '../models/event-registration.model';
 import { CampusEventService } from './campus-event.service';
 import { NotificationService } from './notification.service';
@@ -17,7 +20,19 @@ const DEMO_USER_ID = 'u1';
 export class RegistrationService {
   private readonly events = inject(CampusEventService);
   private readonly notifications = inject(NotificationService);
+  private readonly http = inject(HttpClient, { optional: true });
+  private readonly cfg = inject(RuntimeConfigService, { optional: true });
   private readonly state = signal<EventRegistration[]>(this.load());
+
+  constructor() {
+    if (!environment.useMocks) {
+      // Load registrations from backend (best-effort, per user)
+      this.http?.get<any[]>(`${this.cfg?.apiBaseUrl()}/events`).subscribe({
+        next: () => {},
+        error: () => {},
+      });
+    }
+  }
 
   canRegister(eventId: string, userId: string = 'u1'): boolean {
     if (this.isRegistered(eventId, userId)) {
@@ -68,6 +83,9 @@ export class RegistrationService {
     };
 
     this.commit([...this.state(), registration]);
+    if (!environment.useMocks) {
+      this.http!.post(`${this.cfg!.apiBaseUrl()}/events/${eventId}/registrations?userId=${userId}`, {}).subscribe({ error: () => {} });
+    }
     const event = this.events.findById(eventId);
     this.notifications.add({
       message: `Votre inscription à « ${event?.title ?? 'l\u2019événement'} » est enregistrée. Votre QR code est prêt.`,
@@ -87,6 +105,9 @@ export class RegistrationService {
         (registration) => !(registration.eventId === eventId && registration.userId === userId),
       ),
     );
+    if (!environment.useMocks) {
+      this.http!.delete(`${this.cfg!.apiBaseUrl()}/events/${eventId}/registrations/me?userId=${userId}`).subscribe({ error: () => {} });
+    }
     return true;
   }
 

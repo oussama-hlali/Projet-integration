@@ -1,3 +1,4 @@
+import { provideHttpClient } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { LostFoundReportInput } from '../models/lost-found.model';
 import { LostFoundService } from './lost-found.service';
@@ -19,7 +20,7 @@ describe('LostFoundService', () => {
 
   beforeEach(() => {
     localStorage.clear();
-    TestBed.configureTestingModule({});
+    TestBed.configureTestingModule({ providers: [provideHttpClient()] });
     service = TestBed.inject(LostFoundService);
   });
 
@@ -116,7 +117,7 @@ describe('LostFoundService', () => {
     );
 
     TestBed.resetTestingModule();
-    TestBed.configureTestingModule({});
+    TestBed.configureTestingModule({ providers: [provideHttpClient()] });
     const migrated = TestBed.inject(LostFoundService);
     const item = migrated.items()[0];
 

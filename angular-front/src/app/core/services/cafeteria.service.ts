@@ -1,4 +1,7 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
+import { RuntimeConfigService } from '../config/runtime-config.service';
 import {
   CafeteriaMenu,
   CafeteriaOrder,
@@ -17,8 +20,23 @@ const DEMO_USER_ID = 'u1';
  */
 @Injectable({ providedIn: 'root' })
 export class CafeteriaService {
+  private readonly http = inject(HttpClient, { optional: true });
+  private readonly cfg = inject(RuntimeConfigService, { optional: true });
   private readonly menusState = signal<CafeteriaMenu[]>(this.seedMenus());
   private readonly ordersState = signal<CafeteriaOrder[]>(this.loadOrders(this.menusState()));
+
+  constructor() {
+    if (!environment.useMocks) {
+      this.http!.get<any[]>(`${this.cfg!.apiBaseUrl()}/menus`).subscribe({
+        next: (rows) => this.menusState.set(rows as CafeteriaMenu[]),
+        error: () => {},
+      });
+      this.http!.get<any[]>(`${this.cfg!.apiBaseUrl()}/orders?userId=u1`).subscribe({
+        next: (rows) => this.ordersState.set(rows as CafeteriaOrder[]),
+        error: () => {},
+      });
+    }
+  }
 
   readonly menus = this.menusState.asReadonly();
   readonly orders = this.ordersState.asReadonly();
@@ -99,6 +117,11 @@ export class CafeteriaService {
     };
 
     this.commitOrders([order, ...this.ordersState()]);
+    if (!environment.useMocks) {
+      this.http!.post(`${this.cfg!.apiBaseUrl()}/orders`, {
+        menuId: menu.id, itemId: item.id, userId,
+      }).subscribe({ error: () => {} });
+    }
     return order;
   }
 

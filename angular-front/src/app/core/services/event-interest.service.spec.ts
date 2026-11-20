@@ -1,3 +1,4 @@
+import { provideHttpClient } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { EventInterestService } from './event-interest.service';
 
@@ -8,7 +9,7 @@ describe('EventInterestService', () => {
 
   beforeEach(() => {
     localStorage.clear();
-    TestBed.configureTestingModule({});
+    TestBed.configureTestingModule({ providers: [provideHttpClient()] });
     service = TestBed.inject(EventInterestService);
   });
 
@@ -64,7 +65,7 @@ describe('EventInterestService', () => {
     );
 
     TestBed.resetTestingModule();
-    TestBed.configureTestingModule({});
+    TestBed.configureTestingModule({ providers: [provideHttpClient()] });
     const reloaded = TestBed.inject(EventInterestService);
     const interests = reloaded.interestsFor('u2');
 

@@ -1,4 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
+import { RuntimeConfigService } from '../config/runtime-config.service';
 import {
   LostFoundComment,
   LostFoundCommentInput,
@@ -21,7 +24,18 @@ const DEMO_USER_ID = 'u1';
 @Injectable({ providedIn: 'root' })
 export class LostFoundService {
   private readonly notifications = inject(NotificationService);
+  private readonly http = inject(HttpClient, { optional: true });
+  private readonly cfg = inject(RuntimeConfigService, { optional: true });
   private readonly state = signal<LostFoundItem[]>(this.load());
+
+  constructor() {
+    if (!environment.useMocks) {
+      this.http!.get<any[]>(`${this.cfg!.apiBaseUrl()}/lost-found`).subscribe({
+        next: (rows) => this.state.set(rows as LostFoundItem[]),
+        error: () => {},
+      });
+    }
+  }
 
   readonly items = this.state.asReadonly();
 
@@ -46,6 +60,9 @@ export class LostFoundService {
     };
 
     this.commit([item, ...this.state()]);
+    if (!environment.useMocks) {
+      this.http!.post(`${this.cfg!.apiBaseUrl()}/lost-found`, { ...input, reporterId }).subscribe({ error: () => {} });
+    }
     this.notifications.add({
       message: `Un nouvel objet « ${item.title} » a été signalé à ${item.location}.`,
       type: 'LOST_FOUND',
@@ -101,6 +118,13 @@ export class LostFoundService {
     };
 
     this.commit(this.state().map((item) => (item.id === postId ? updated : item)));
+    if (!environment.useMocks) {
+      if (reacted) {
+        this.http!.delete(`${this.cfg!.apiBaseUrl()}/lost-found/${postId}/reactions/me?userId=${userId}`).subscribe({ error: () => {} });
+      } else {
+        this.http!.put(`${this.cfg!.apiBaseUrl()}/lost-found/${postId}/reactions/me?userId=${userId}`, {}).subscribe({ error: () => {} });
+      }
+    }
     return updated;
   }
 
