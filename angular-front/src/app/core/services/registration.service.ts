@@ -113,38 +113,9 @@ export class RegistrationService {
 
   private commit(registrations: EventRegistration[]): void {
     this.state.set(registrations);
-    this.persist(registrations);
   }
 
   private load(): EventRegistration[] {
-    if (typeof localStorage !== 'undefined') {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) {
-          const parsed: unknown = JSON.parse(raw);
-          if (Array.isArray(parsed)) {
-            return parsed
-              .filter(
-                (entry): entry is Record<string, unknown> =>
-                  !!entry &&
-                  typeof entry === 'object' &&
-                  typeof (entry as EventRegistration).id === 'string' &&
-                  typeof (entry as EventRegistration).eventId === 'string',
-              )
-              .map((entry) => ({
-                id: String(entry['id']),
-                registeredAt: new Date(String(entry['registeredAt'])),
-                qrCode: String(entry['qrCode']),
-                userId: String(entry['userId']),
-                eventId: String(entry['eventId']),
-              }));
-          }
-        }
-      } catch {
-        // Fall through to the seeded registration.
-      }
-    }
-
     return [
       {
         id: 'reg-seed-1',
@@ -156,23 +127,4 @@ export class RegistrationService {
     ];
   }
 
-  private persist(registrations: EventRegistration[]): void {
-    if (typeof localStorage === 'undefined') {
-      return;
-    }
-
-    try {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(
-          registrations.map((registration) => ({
-            ...registration,
-            registeredAt: registration.registeredAt.toISOString(),
-          })),
-        ),
-      );
-    } catch {
-      // Storage can be full or blocked; the in-memory store still works.
-    }
-  }
 }

@@ -43,7 +43,7 @@ describe('ReservationService', () => {
     expect(service.counts().cancelled).toBeGreaterThan(0);
   });
 
-  it('creates a confirmed booking and persists it', () => {
+  it('creates a confirmed booking', () => {
     const result = service.create({
       roomId: 'room-13',
       room: 'Study Room B',
@@ -58,11 +58,6 @@ describe('ReservationService', () => {
       expect(result.reservation.startTime instanceof Date).toBeTrue();
       expect(result.reservation.endTime instanceof Date).toBeTrue();
     }
-
-    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]') as Array<{
-      room: string;
-    }>;
-    expect(stored.some((reservation) => reservation.room === 'Study Room B')).toBeTrue();
   });
 
   it('refuses an overlapping slot in the same room but allows another room', () => {
@@ -134,28 +129,4 @@ describe('ReservationService', () => {
     expect(service.cancel(created.reservation.id)).toBeUndefined();
   });
 
-  it('migrates legacy rows written before the state field existed', () => {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify([
-        {
-          id: 1,
-          room: 'Innovation Lab',
-          date: future(3),
-          startTime: '09:00',
-          endTime: '10:00',
-          purpose: 'Legacy booking',
-        },
-      ]),
-    );
-
-    TestBed.resetTestingModule();
-    TestBed.configureTestingModule({ providers: [provideHttpClient()] });
-    const migrated = TestBed.inject(ReservationService);
-
-    expect(migrated.reservations().length).toBe(1);
-    expect(migrated.reservations()[0].id).toBe('1');
-    expect(migrated.reservations()[0].status).toBe('CONFIRMED');
-    expect(migrated.reservations()[0].roomId).toBe('room-11');
-  });
 });

@@ -74,54 +74,9 @@ export class EventInterestService {
 
   private commit(interests: EventInterest[]): void {
     this.state.set(interests);
-    if (typeof localStorage === 'undefined') {
-      return;
-    }
-
-    try {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(
-          interests.map((interest) => ({
-            ...interest,
-            createdAt: interest.createdAt.toISOString(),
-          })),
-        ),
-      );
-    } catch {
-      // Storage can be full or blocked; the in-memory store still works.
-    }
   }
 
   private load(): EventInterest[] {
-    if (typeof localStorage !== 'undefined') {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) {
-          const parsed: unknown = JSON.parse(raw);
-          if (Array.isArray(parsed)) {
-            return parsed
-              .filter((entry): entry is Record<string, unknown> => {
-                if (!entry || typeof entry !== 'object') {
-                  return false;
-                }
-                const interest = entry as Partial<EventInterest>;
-                return (
-                  typeof interest.eventId === 'string' && typeof interest.userId === 'string'
-                );
-              })
-              .map((entry) => ({
-                eventId: String(entry['eventId']),
-                userId: String(entry['userId']),
-                createdAt: new Date(String(entry['createdAt'])),
-              }));
-          }
-        }
-      } catch {
-        // Fall through to the seeded marks.
-      }
-    }
-
     return [
       { eventId: 'e2', userId: DEMO_USER_ID, createdAt: new Date('2026-11-02T10:00:00') },
       { eventId: 'e6', userId: DEMO_USER_ID, createdAt: new Date('2026-11-04T14:30:00') },
