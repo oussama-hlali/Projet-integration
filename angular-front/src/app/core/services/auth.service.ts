@@ -1,5 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { Observable, of } from 'rxjs';
+import { Observable, firstValueFrom, of } from 'rxjs';
+import { environment } from '../../../environments/environment';
+import { HttpAuthService } from './http-auth.service';
 import { User } from '../models/user.model';
 import { UserService } from './user.service';
 
@@ -42,14 +44,24 @@ export type AuthResult =
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly userService = inject(UserService);
+  private readonly httpAuth = inject(HttpAuthService);
 
   private readonly currentUserIdState = signal<string | null>(null);
+  /** Cached user from HTTP login (for HTTP mode). */
+  readonly httpUser = signal<User | null>(null);
   /** In-memory access token (no localStorage, per security guidelines). */
   readonly accessToken = signal<string | null>(null);
   private readonly pendingUserIdState = signal<string | null>(null);
+  /** Pending MFA challenge id from the backend. */
+  pendingMfaChallenge: string | null = null;
+  /** Cached otpauth URI for HTTP-mode TOTP setup. */
+  pendingOtpauthUri: string | null = null;
 
   /** Currently signed-in user, or `null` when signed out. */
   readonly currentUser = computed<User | null>(() => {
+    if (!environment.useMocks) {
+      return this.httpUser();
+    }
     const id = this.currentUserIdState();
     return id ? this.userService.findById(id) ?? null : null;
   });
@@ -73,13 +85,47 @@ export class AuthService {
 
   /** Load and validate any persisted session. Called before bootstrap. */
   async init(): Promise<void> {
-    // No persisted session: tokens live in memory only (security guideline).
+    // Clear any stale localStorage data — the app uses Render services, not mocks.
+    if (typeof localStorage !== 'undefined') {
+      localStorage.clear();
+    }
     this.currentUserIdState.set(null);
     this.accessToken.set(null);
   }
 
   /** Sign in with email and password. May require OTP/setup afterwards. */
   async login(email: string, password: string): Promise<AuthResult> {
+    if (!environment.useMocks) {
+      try {
+        const res: any = await firstValueFrom(this.httpAuth.login(email, password));
+        if (res.mfaRequired) {
+          this.pendingMfaChallenge = res.challengeId;
+          const user = this.userService.findByEmail(email);
+          if (user) this.pendingUserIdState.set(user.id);
+          return { ok: false, reason: 'otp-required' };
+        }
+        this.accessToken.set(res.accessToken);
+        const u = res.user;
+        // Cache user for currentUser() compatibility
+        this.httpUser.set({
+          id: u.id,
+          fullName: u.fullName,
+          email: u.email,
+          role: u.role,
+          avatarUrl: 'assets/avatars/default.png',
+          preferences: { language: 'fr', notificationsEnabled: true, theme: 'light' },
+          passwordHash: '',
+          salt: '',
+          totpSecret: '',
+          totpEnabled: u.totpEnabled,
+        });
+        this.currentUserIdState.set(u.id);
+        return { ok: true };
+      } catch {
+        return { ok: false, reason: 'invalid-credentials' };
+      }
+    }
+
     const user = this.userService.findByEmail(email);
     if (!user || !user.passwordHash || !user.salt || !user.totpSecret) {
       return { ok: false, reason: 'invalid-credentials' };
@@ -104,6 +150,16 @@ export class AuthService {
    * administrator. Only the admin console (`createManagedUser`) may do that.
    */
   async register(input: RegisterInput): Promise<AuthResult> {
+    if (!environment.useMocks) {
+      try {
+        const res: any = await firstValueFrom(this.httpAuth.register(input.fullName, input.email, input.password));
+        this.pendingUserIdState.set(res.id);
+        return { ok: true };
+      } catch {
+        return { ok: false, reason: 'email-taken' };
+      }
+    }
+
     const password = input.password ?? '';
     if (password.length < 8) {
       return { ok: false, reason: 'weak-password' };
@@ -200,6 +256,25 @@ export class AuthService {
 
   /** Confirm the first TOTP code and enable 2FA for the pending user. */
   async setupTotp(code: string): Promise<AuthResult> {
+    if (!environment.useMocks) {
+      const challengeId = this.pendingMfaChallenge;
+      if (!challengeId) {
+        return { ok: false, reason: 'no-pending' };
+      }
+      try {
+        const res: any = await firstValueFrom(this.httpAuth.verifyMfa(challengeId, code));
+        this.accessToken.set(res.accessToken);
+        const u = res.user;
+        this.currentUserIdState.set(u.id);
+        this.pendingUserIdState.set(null);
+        this.pendingMfaChallenge = null;
+        this.pendingOtpauthUri = null;
+        return { ok: true };
+      } catch {
+        return { ok: false, reason: 'invalid-otp' };
+      }
+    }
+
     const user = this.pendingUser();
     if (!user || !user.totpSecret) {
       return { ok: false, reason: 'no-pending' };
@@ -242,6 +317,9 @@ export class AuthService {
 
   /** Build the otpauth URI scanned by Google Authenticator. */
   otpAuthUri(user: User): string {
+    if (!environment.useMocks && this.pendingOtpauthUri) {
+      return this.pendingOtpauthUri;
+    }
     const secret = user.totpSecret ?? '';
     const label = encodeURIComponent(`Smart Campus:${user.email}`);
     const issuer = encodeURIComponent('Smart Campus');
@@ -256,6 +334,7 @@ export class AuthService {
 
   private clearSession(): void {
     this.accessToken.set(null);
+    this.httpUser.set(null);
     this.currentUserIdState.set(null);
   }
 

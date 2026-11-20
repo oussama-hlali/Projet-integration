@@ -1,0 +1,8 @@
+{
+  "buildCommand": "cd angular-front && npm ci && npm run build",
+  "outputDirectory": "angular-front/dist/angular-front/browser",
+  "installCommand": "cd angular-front && npm ci",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
