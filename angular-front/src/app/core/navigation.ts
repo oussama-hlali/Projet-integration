@@ -17,6 +17,7 @@ export type NavIconName =
   | 'bell'
   | 'user'
   | 'admin'
+  | 'assistant'
   | 'logout';
 
 export interface NavItem {
@@ -37,6 +38,7 @@ export const PRIMARY_NAV: readonly NavItem[] = [
   { label: 'Transport', route: '/transport', icon: 'transport' },
   { label: 'Cafeteria', route: '/cafeteria', icon: 'cafeteria' },
   { label: 'Lost & Found', route: '/lost-found', icon: 'search' },
+  { label: 'Assistant', route: '/assistant', icon: 'assistant' },
 ];
 
 /**
@@ -51,6 +53,7 @@ export const ADMIN_NAV: readonly NavItem[] = [
   { label: 'Reservations', route: '/admin/reservations', icon: 'calendar' },
   { label: 'Lost & Found', route: '/admin/lost-found', icon: 'search' },
   { label: 'Users', route: '/admin/users', icon: 'user' },
+  { label: 'Assistant', route: '/assistant', icon: 'assistant' },
 ];
 
 /** Account destinations shown in the floating dock. */
