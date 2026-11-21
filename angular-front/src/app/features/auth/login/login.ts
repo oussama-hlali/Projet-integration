@@ -10,10 +10,11 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { AuthService } from '../../../core/services/auth.service';
 import { ThemeToggleComponent } from '../../../shared/components/theme-toggle.component';
+import { CinematicIntroComponent } from '../../../shared/components/cinematic-intro.component';
 
 @Component({
   selector: 'app-login',
-  imports: [ReactiveFormsModule, RouterLink, ThemeToggleComponent],
+  imports: [ReactiveFormsModule, RouterLink, ThemeToggleComponent, CinematicIntroComponent],
   templateUrl: './login.html',
   styleUrl: './login.scss',
 })
