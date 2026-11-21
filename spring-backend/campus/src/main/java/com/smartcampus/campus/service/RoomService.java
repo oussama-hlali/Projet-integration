@@ -2,6 +2,7 @@ package com.smartcampus.campus.service;
 
 import com.smartcampus.campus.domain.Room;
 import com.smartcampus.campus.repository.RoomRepository;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -13,7 +14,24 @@ public class RoomService {
     public RoomService(RoomRepository repo) { this.repo = repo; }
 
     public List<Room> search(String buildingId, String status, String type, Integer minCapacity, String q) {
-        return repo.search(buildingId, status, type, minCapacity, q);
+        Specification<Room> spec = Specification.where(null);
+        if (buildingId != null && !buildingId.isBlank()) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("buildingId"), buildingId));
+        }
+        if (status != null && !status.isBlank()) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("status"), status));
+        }
+        if (type != null && !type.isBlank()) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("type"), type));
+        }
+        if (minCapacity != null) {
+            spec = spec.and((root, query, cb) -> cb.ge(root.<Integer>get("capacity"), minCapacity));
+        }
+        if (q != null && !q.isBlank()) {
+            String pattern = "%" + q.toLowerCase() + "%";
+            spec = spec.and((root, query, cb) -> cb.like(cb.lower(root.get("name")), pattern));
+        }
+        return repo.findAll(spec);
     }
     public Room get(String id) { return repo.findById(id).orElseThrow(() -> new IllegalArgumentException("Room not found")); }
     public Room create(String buildingId, String name, int capacity, String type, String status) {

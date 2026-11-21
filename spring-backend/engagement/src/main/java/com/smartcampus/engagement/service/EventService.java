@@ -6,6 +6,7 @@ import com.smartcampus.engagement.domain.EventRegistration;
 import com.smartcampus.engagement.repository.EventInterestRepository;
 import com.smartcampus.engagement.repository.EventRegistrationRepository;
 import com.smartcampus.engagement.repository.EventRepository;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,7 +31,17 @@ public class EventService {
     }
 
     public List<Event> list(String category, Instant from, Instant to) {
-        return events.search(category, from, to);
+        Specification<Event> spec = Specification.where(null);
+        if (category != null && !category.isBlank()) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("category"), category));
+        }
+        if (from != null) {
+            spec = spec.and((root, query, cb) -> cb.greaterThanOrEqualTo(root.<Instant>get("date"), from));
+        }
+        if (to != null) {
+            spec = spec.and((root, query, cb) -> cb.lessThanOrEqualTo(root.<Instant>get("date"), to));
+        }
+        return events.findAll(spec);
     }
 
     public Event get(String id) {
