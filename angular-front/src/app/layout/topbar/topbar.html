@@ -22,7 +22,8 @@
       [attr.aria-label]="'Signed in as ' + roleLabel + ' — open profile'"
       [attr.title]="roleLabel"
     >
-      <span class="top__avatar" aria-hidden="true">{{ auth.isAdmin() ? 'A' : 'S' }}</span>
+      <img class="top__avatar top__avatar--light" src="/icon-smart-campus-light.svg" alt="">
+      <img class="top__avatar top__avatar--dark" src="/icon-smart-campus-dark.svg" alt="">
     </a>
     <button type="button" class="top__logout" (click)="logout()" aria-label="Sign out" title="Sign out">
       ⎋

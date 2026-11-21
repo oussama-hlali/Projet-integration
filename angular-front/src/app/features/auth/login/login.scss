@@ -283,6 +283,8 @@
 
 .login__visual-inner {
   position: relative;
+  display: flex;
+  flex-direction: column;
   height: 100%;
   overflow: hidden;
   border: 1px solid var(--glass-border);
@@ -302,6 +304,16 @@
     #0a1120;
 }
 
+/* Cinematic intro flexes into the space above the existing visual copy. */
+.login__intro {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  display: block;
+  z-index: 2;
+}
+
 .login__visual-glow {
   position: absolute;
   inset: -20% -10% auto auto;
@@ -313,8 +325,9 @@
 }
 
 .login__visual-body {
-  position: absolute;
-  inset: auto var(--space-7) var(--space-7);
+  position: relative;
+  flex: none;
+  padding: 0 var(--space-7) var(--space-7);
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -365,6 +378,28 @@
   height: 7px;
   border-radius: var(--radius-full);
   background: var(--color-accent-soft);
+}
+
+/* Keep the whole visual pane readable when the app switches to light theme. */
+:host-context([data-theme='light']) .login__visual-inner {
+  background:
+    radial-gradient(120% 120% at 8% 0%, rgba(13, 148, 136, 0.16), transparent 55%),
+    radial-gradient(100% 100% at 95% 100%, rgba(2, 132, 199, 0.14), transparent 55%),
+    #eef8f7;
+}
+
+:host-context([data-theme='light']) .login__visual-glow {
+  background: color-mix(in srgb, var(--color-accent) 22%, transparent);
+}
+
+:host-context([data-theme='light']) .login__visual-body,
+:host-context([data-theme='light']) .login__visual-eyebrow,
+:host-context([data-theme='light']) .login__visual-list {
+  color: var(--color-text-muted);
+}
+
+:host-context([data-theme='light']) .login__visual-title {
+  color: var(--color-text-strong);
 }
 
 .login__field {

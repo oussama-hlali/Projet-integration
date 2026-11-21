@@ -94,24 +94,32 @@
 }
 
 .top__avatar {
-  display: grid;
-  place-items: center;
+  display: block;
   width: 36px;
   height: 36px;
-  font-size: 0.8rem;
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text-strong);
-  background: var(--well);
+  object-fit: cover;
   border-radius: var(--radius-full);
   box-shadow: inset 0 0 0 1px var(--line);
   transition:
-    background-color var(--transition-fast),
+    transform var(--transition-fast),
     box-shadow var(--transition-fast);
 }
 
 .top__me:hover .top__avatar {
-  background: var(--lens);
+  transform: translateY(-1px);
   box-shadow: var(--lens-shadow);
+}
+
+.top__avatar--dark {
+  display: none;
+}
+
+:host-context([data-theme="dark"]) .top__avatar--light {
+  display: none;
+}
+
+:host-context([data-theme="dark"]) .top__avatar--dark {
+  display: block;
 }
 
 /* ── Responsive ─────────────────────────────────────────────── */
