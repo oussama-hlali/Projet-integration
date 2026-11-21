@@ -4,6 +4,7 @@ import com.smartcampus.engagement.domain.LostFoundComment;
 import com.smartcampus.engagement.domain.LostFoundItem;
 import com.smartcampus.engagement.repository.LostFoundCommentRepository;
 import com.smartcampus.engagement.repository.LostFoundRepository;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -20,7 +21,17 @@ public class LostFoundService {
         this.posts = posts; this.comments = comments;
     }
 
-    public List<LostFoundItem> list(String status, String q) { return posts.search(status, q); }
+    public List<LostFoundItem> list(String status, String q) {
+        Specification<LostFoundItem> spec = Specification.where(null);
+        if (status != null && !status.isBlank()) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("status"), status));
+        }
+        if (q != null && !q.isBlank()) {
+            String pattern = "%" + q.toLowerCase() + "%";
+            spec = spec.and((root, query, cb) -> cb.like(cb.lower(root.get("title")), pattern));
+        }
+        return posts.findAll(spec);
+    }
 
     public LostFoundItem get(String id) {
         return posts.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Post not found"));
