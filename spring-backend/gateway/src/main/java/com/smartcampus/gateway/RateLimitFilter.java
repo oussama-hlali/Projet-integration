@@ -16,24 +16,45 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
- * Simple in-memory rate limiter: 100 requests / minute per client IP.
- * Good enough for v1; swap for a Redis-backed limiter if we scale out.
+ * Simple in-memory rate limiter: 300 requests / minute per client IP.
+ * Auth flows, CORS preflights and KPI reads are exempt so login, refresh and admin
+ * statistics stay available during a burst of requests. Swap for a Redis-backed
+ * limiter if we scale out.
  */
 @Component
 public class RateLimitFilter implements GlobalFilter, Ordered {
 
-    private static final int REQUESTS_PER_MINUTE = 100;
+    static final int DEFAULT_REQUESTS_PER_MINUTE = 300;
 
+    private static final String AUTH_PATH_PREFIX = "/api/v1/auth/";
+    private static final String KPI_PATH_SUFFIX = "/kpi";
+    private static final String GET = "GET";
+    private static final String OPTIONS = "OPTIONS";
+
+    private final int requestsPerMinute;
     private final ConcurrentMap<String, Bucket> buckets = new ConcurrentHashMap<>();
+
+    public RateLimitFilter() {
+        this(DEFAULT_REQUESTS_PER_MINUTE);
+    }
+
+    RateLimitFilter(int requestsPerMinute) {
+        this.requestsPerMinute = requestsPerMinute;
+    }
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+        if (isExempt(exchange)) {
+            return chain.filter(exchange);
+        }
+
         String clientIp = exchange.getRequest().getRemoteAddress() != null
                 ? exchange.getRequest().getRemoteAddress().getAddress().getHostAddress()
                 : "unknown";
 
         Bucket bucket = buckets.computeIfAbsent(clientIp, ip -> Bucket.builder()
-                .addLimit(Bandwidth.classic(REQUESTS_PER_MINUTE, Refill.greedy(REQUESTS_PER_MINUTE, Duration.ofMinutes(1))))
+                .addLimit(Bandwidth.classic(requestsPerMinute,
+                        Refill.greedy(requestsPerMinute, Duration.ofMinutes(1))))
                 .build());
 
         if (bucket.tryConsume(1)) {
@@ -42,6 +63,16 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
 
         exchange.getResponse().setStatusCode(HttpStatus.TOO_MANY_REQUESTS);
         return exchange.getResponse().setComplete();
+    }
+
+    private boolean isExempt(ServerWebExchange exchange) {
+        String path = exchange.getRequest().getPath().value();
+        String method = exchange.getRequest().getMethod().name();
+
+        if (OPTIONS.equalsIgnoreCase(method) || path.startsWith(AUTH_PATH_PREFIX)) {
+            return true;
+        }
+        return GET.equalsIgnoreCase(method) && path.endsWith(KPI_PATH_SUFFIX);
     }
 
     @Override
