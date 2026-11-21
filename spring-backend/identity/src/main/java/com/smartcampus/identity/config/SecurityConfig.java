@@ -18,7 +18,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/auth/**").permitAll()
                 .requestMatchers("/error").permitAll()
                 .anyRequest().authenticated()
-            );
+            )
+            .oauth2ResourceServer(o -> o.jwt(j -> {}));
         return http.build();
     }
 }
