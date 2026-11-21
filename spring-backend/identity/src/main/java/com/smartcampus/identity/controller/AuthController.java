@@ -52,21 +52,17 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest req) {
-        try {
-            User u = userService.authenticate(req.email(), req.password());
-            if (u.isTotpEnabled()) {
-                String challengeId = "chl_" + UUID.randomUUID();
-                pendingMfa.put(challengeId, u.getId());
-                userService.record("LOGIN_MFA_PENDING", u.getId(), null);
-                return ResponseEntity.ok(new MfaChallenge(true, challengeId));
-            }
-            userService.record("LOGIN", u.getId(), null);
-            return ResponseEntity.ok(issueTokens(u));
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body(
-                    com.smartcampus.common.ProblemDetails.of(500, "Login failed",
-                            e.getClass().getName() + ": " + e.getMessage(), "LOGIN_ERROR"));
+        // Let ResponseStatusException propagate so the shared handler preserves
+        // the real status (401 for bad credentials) instead of rewriting it to 500.
+        User u = userService.authenticate(req.email(), req.password());
+        if (u.isTotpEnabled()) {
+            String challengeId = "chl_" + UUID.randomUUID();
+            pendingMfa.put(challengeId, u.getId());
+            userService.record("LOGIN_MFA_PENDING", u.getId(), null);
+            return ResponseEntity.ok(new MfaChallenge(true, challengeId));
         }
+        userService.record("LOGIN", u.getId(), null);
+        return ResponseEntity.ok(issueTokens(u));
     }
 
     @PostMapping("/mfa/verify")

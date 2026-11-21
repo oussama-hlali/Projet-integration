@@ -39,6 +39,18 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(problem);
     }
 
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ResponseEntity<ProblemDetails> handleUnreadable(
+            org.springframework.http.converter.HttpMessageNotReadableException ex) {
+        ProblemDetails problem = ProblemDetails.of(
+                HttpStatus.BAD_REQUEST.value(),
+                "Malformed request body",
+                "Request body could not be parsed as JSON",
+                "BAD_REQUEST"
+        );
+        return ResponseEntity.badRequest().body(problem);
+    }
+
     @ExceptionHandler(org.springframework.web.server.ResponseStatusException.class)
     public ResponseEntity<ProblemDetails> handleResponseStatus(org.springframework.web.server.ResponseStatusException ex) {
         int status = ex.getStatusCode().value();

@@ -1,19 +1,41 @@
+# Primary scheduled workflow.
+# GitHub has been delivering schedule events to "Keep Alive" but not to
+# keep-awake.yml, so the Render keep-warm job lives here.
 name: Keep Alive
 
 on:
   schedule:
-    - cron: '*/14 * * * *'
+    - cron: '*/5 * * * *'
   workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: keep-render-awake
+  cancel-in-progress: true
 
 jobs:
   ping:
+    name: Ping Render health endpoints
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - name: Ping services
+      - name: Ping all services
+        shell: bash
         run: |
-          for url in \
-            "https://smart-campus-identity.onrender.com/actuator/health" \
-            "https://smart-campus-gateway.onrender.com/actuator/health"; do
-            curl -s -o /dev/null -w "%{http_code}" "$url" || true
-            echo " $url"
-          done
+          urls=(
+            "https://smart-campus-gateway.onrender.com/actuator/health"
+            "https://smart-campus-identity.onrender.com/actuator/health"
+            "https://smart-campus-campus.onrender.com/actuator/health"
+            "https://smart-campus-engagement.onrender.com/actuator/health"
+            "https://smart-campus-cafeteria-kpng.onrender.com/actuator/health"
+            "https://smart-campus-notifications.onrender.com/actuator/health"
+            "https://smart-campus-ai-zngn.onrender.com/actuator/health"
+          )
+          printf '%s\n' "${urls[@]}" | xargs -P 7 -I {} bash -c '
+            url="$1"
+            code=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 120 "$url" || true)
+            echo "$url -> ${code:-000}"
+            [ "$code" = "200" ]
+          ' _ {}
