@@ -103,7 +103,7 @@ export const routes: Routes = [
       {
         path: 'assistant',
         title: 'Assistant \u2013 Smart Campus',
-        canActivate: [studentGuard],
+        canActivate: [authGuard],
         loadComponent: () =>
           import('./features/assistant/assistant').then((m) => m.Assistant),
       },
