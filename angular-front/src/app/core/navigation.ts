@@ -53,6 +53,7 @@ export const ADMIN_NAV: readonly NavItem[] = [
   { label: 'Reservations', route: '/admin/reservations', icon: 'calendar' },
   { label: 'Lost & Found', route: '/admin/lost-found', icon: 'search' },
   { label: 'Users', route: '/admin/users', icon: 'user' },
+  { label: 'AI Analytics', route: '/admin/ai-analytics', icon: 'admin', adminOnly: true },
   { label: 'Assistant', route: '/assistant', icon: 'assistant' },
 ];
 
