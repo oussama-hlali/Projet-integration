@@ -12,8 +12,10 @@ public class SecurityConfig {
         http.csrf(c -> c.disable())
             .authorizeHttpRequests(a -> a
                 .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+                // Admin AI analytics is restricted server-side, not just by the Angular router.
+                .requestMatchers("/api/v1/ai/admin/**").hasRole("ADMINISTRATOR")
                 .anyRequest().authenticated())
-            .oauth2ResourceServer(o -> o.jwt(j -> {}));
+            .oauth2ResourceServer(o -> o.jwt(j -> j.jwtAuthenticationConverter(new JwtRoleConverter())));
         return http.build();
     }
 }

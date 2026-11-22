@@ -166,6 +166,15 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/admin/users/admin-users').then((m) => m.AdminUsers),
       },
+      {
+        path: 'admin/ai-analytics',
+        title: 'Admin · AI Analytics',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./features/admin/ai-analytics/admin-ai-analytics').then(
+            (m) => m.AdminAiAnalytics,
+          ),
+      },
     ],
   },
   {

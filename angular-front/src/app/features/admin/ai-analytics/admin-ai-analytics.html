@@ -1,0 +1,283 @@
+<section class="page ai-analytics">
+  <app-page-header
+    title="AI Analytics"
+    subtitle="Intelligent KPI analysis, anomaly detection, forecasting and risk briefing — administrator only"
+  >
+    <button type="button" class="button button--small" (click)="load()" [disabled]="loading()">
+      {{ loading() ? 'Refreshing…' : 'Refresh' }}
+    </button>
+  </app-page-header>
+
+  @if (error()) {
+    <p class="feedback feedback--danger" role="alert">{{ error() }}</p>
+  }
+
+  @if (loading() && !bundle()) {
+    <div class="admin-panel glass glass--thick">
+      <p class="muted">Loading AI analytics from the real KPI snapshot…</p>
+    </div>
+  }
+
+  <nav class="tabs" aria-label="AI analytics modules">
+    @for (tab of tabs; track tab.key) {
+      <button
+        type="button"
+        class="tab"
+        [class.tab--active]="active() === tab.key"
+        [attr.aria-current]="active() === tab.key ? 'page' : null"
+        (click)="select(tab.key)"
+      >
+        <span>{{ tab.label }}</span>
+        <small>{{ tab.story }}</small>
+      </button>
+    }
+  </nav>
+
+  @if (bundle(); as data) {
+    <div class="admin-panel glass glass--thick">
+      @switch (active()) {
+        @case ('kpi') {
+          <div class="panel-head">
+            <div>
+              <h2>Analyse intelligente des KPIs</h2>
+              <p class="muted">Global health score, tricolour metrics and AI-recommended actions.</p>
+            </div>
+            <span class="score" [attr.data-tone]="variant(data.kpi.healthScore >= 70 ? 'GREEN' : data.kpi.healthScore >= 45 ? 'AMBER' : 'RED')">
+              {{ data.kpi.healthScore }}<small>/100</small>
+            </span>
+          </div>
+
+          <app-kpi-chart
+            title="Signal health (%)"
+            description="Each bar is a live KPI ratio scaled to 100."
+            [items]="kpiChart()"
+          />
+
+          <p class="narrative">{{ data.kpi.summary }}</p>
+
+          <div class="action-grid">
+            @for (action of data.kpi.actions; track action.title) {
+              <article class="action-card">
+                <h3>{{ action.title }}</h3>
+                <p>{{ action.rationale }}</p>
+                <dl>
+                  <dt>Owner</dt><dd>{{ action.owner }}</dd>
+                  <dt>Impact</dt><dd>{{ action.impact }}</dd>
+                </dl>
+              </article>
+            }
+          </div>
+          <p class="basis">{{ data.kpi.basis }}</p>
+        }
+
+        @case ('anomalies') {
+          <div class="panel-head">
+            <div>
+              <h2>Détection d’anomalies</h2>
+              <p class="muted">Z-scores, percentage deviations and cross-flow explanations.</p>
+            </div>
+            <span class="pill">{{ data.anomalies.total }} flagged</span>
+          </div>
+
+          <div class="admin-table-wrap glass">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Metric</th><th>Value</th><th>Expected</th><th>Z-score</th><th>Deviation</th><th>AI explanation</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of data.anomalies.anomalies; track item.metric) {
+                  <tr>
+                    <td class="admin-table__title">{{ item.metric }}</td>
+                    <td>{{ pct(item.value) }}</td>
+                    <td>{{ pct(item.expected) }}</td>
+                    <td [attr.data-tone]="variant(item.zScore > 0 ? 'GREEN' : 'RED')">{{ item.zScore }}</td>
+                    <td>{{ item.deviationPct }}%</td>
+                    <td>{{ item.explanation }}</td>
+                  </tr>
+                } @empty {
+                  <tr><td colspan="6" class="empty-row">No anomalies detected.</td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <p class="basis">{{ data.anomalies.basis }}</p>
+        }
+
+        @case ('seasonality') {
+          <div class="panel-head">
+            <div>
+              <h2>Analyse des tendances saisonnières</h2>
+              <p class="muted">Monthly indices, peaks, troughs and stock guidance.</p>
+            </div>
+          </div>
+
+          <app-kpi-chart
+            title="Monthly seasonality index (%)"
+            description="100 = baseline. Green bars are peaks, red bars are troughs."
+            [items]="seasonalityChart()"
+          />
+
+          <p class="narrative">{{ data.seasonality.ramadanEffect }}</p>
+          <ul class="notes">
+            @for (note of data.seasonality.stockRecommendations; track note) {
+              <li>{{ note }}</li>
+            }
+          </ul>
+          <p class="basis">{{ data.seasonality.basis }}</p>
+        }
+
+        @case ('stock') {
+          <div class="panel-head">
+            <div>
+              <h2>Optimisation du stock</h2>
+              <p class="muted">ABC classification, EOQ, reorder point and dynamic safety stock.</p>
+            </div>
+            <span class="pill">Investment {{ num(data.stock.totalInvestment) }}</span>
+          </div>
+
+          <div class="admin-table-wrap glass">
+            <table class="admin-table">
+              <thead>
+                <tr><th>Item</th><th>Class</th><th>Demand</th><th>Unit cost</th><th>EOQ</th><th>ROP</th><th>Safety</th><th>Advice</th></tr>
+              </thead>
+              <tbody>
+                @for (item of data.stock.items; track item.id) {
+                  <tr>
+                    <td class="admin-table__title">{{ item.name }}</td>
+                    <td><span class="abc" [attr.data-class]="item.abcClass">{{ item.abcClass }}</span></td>
+                    <td>{{ num(item.annualDemand) }}</td>
+                    <td>{{ item.unitCost }}</td>
+                    <td>{{ num(item.eoq) }}</td>
+                    <td>{{ num(item.reorderPoint) }}</td>
+                    <td>{{ num(item.safetyStock) }}</td>
+                    <td>{{ item.recommendation }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <p class="basis">{{ data.stock.basis }}</p>
+        }
+
+        @case ('churn') {
+          <div class="panel-head">
+            <div>
+              <h2>Prédiction de l’attrition client</h2>
+              <p class="muted">At-risk cohorts with scores, trends and retention plans.</p>
+            </div>
+            <span class="pill">{{ data.churn.atRiskCount }} at risk</span>
+          </div>
+
+          <div class="admin-table-wrap glass">
+            <table class="admin-table">
+              <thead><tr><th>Subject</th><th>Score</th><th>Trend</th><th>Retention plan</th></tr></thead>
+              <tbody>
+                @for (item of data.churn.subjects; track item.id) {
+                  <tr>
+                    <td class="admin-table__title">{{ item.name }}</td>
+                    <td [attr.data-tone]="variant(item.score >= 60 ? 'RED' : item.score >= 35 ? 'AMBER' : 'GREEN')">{{ item.score }}</td>
+                    <td>{{ item.trend }}</td>
+                    <td>{{ item.plan }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <p class="basis">{{ data.churn.basis }}</p>
+        }
+
+        @case ('forecast') {
+          <div class="panel-head">
+            <div>
+              <h2>Prévisions et recommandations</h2>
+              <p class="muted">Three-month P10 / P50 / P90 projection with AI narrative.</p>
+            </div>
+            <span class="pill">{{ data.forecast.confidence }}% confidence</span>
+          </div>
+
+          <app-kpi-chart
+            title="Median forecast (P50)"
+            description="Modelled activity volume per month."
+            [items]="forecastChart()"
+          />
+
+          <div class="admin-table-wrap glass">
+            <table class="admin-table">
+              <thead><tr><th>Month</th><th>P10</th><th>P50</th><th>P90</th></tr></thead>
+              <tbody>
+                @for (point of data.forecast.points; track point.month) {
+                  <tr>
+                    <td class="admin-table__title">{{ point.month }}</td>
+                    <td>{{ num(point.p10) }}</td>
+                    <td>{{ num(point.p50) }}</td>
+                    <td>{{ num(point.p90) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <p class="narrative">{{ data.forecast.narrative }}</p>
+          <p class="basis">{{ data.forecast.basis }}</p>
+        }
+
+        @case ('risk') {
+          <div class="panel-head">
+            <div>
+              <h2>Détection des informations critiques</h2>
+              <p class="muted">Aggregated executive briefing with modelled financial exposure.</p>
+            </div>
+            <span class="pill">Exposure {{ num(data.risk.totalExposure) }}</span>
+          </div>
+
+          <p class="narrative">{{ data.risk.narrative }}</p>
+          <div class="admin-table-wrap glass">
+            <table class="admin-table">
+              <thead><tr><th>Horizon</th><th>Risk</th><th>Exposure</th><th>Action</th><th>Owner</th></tr></thead>
+              <tbody>
+                @for (risk of data.risk.risks; track risk.title) {
+                  <tr>
+                    <td>{{ risk.horizon }}</td>
+                    <td class="admin-table__title">{{ risk.title }}</td>
+                    <td>{{ num(risk.exposure) }}</td>
+                    <td>{{ risk.action }}</td>
+                    <td>{{ risk.owner }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <p class="basis">{{ data.risk.basis }}</p>
+        }
+
+        @case ('churnV2') {
+          <div class="panel-head">
+            <div>
+              <h2>Scenario de prédiction de l’attrition client (US-50)</h2>
+              <p class="muted">Complementary module with refined churn score and retention actions.</p>
+            </div>
+            <span class="pill">{{ data.churnV2.atRiskCount }} at risk</span>
+          </div>
+
+          <div class="admin-table-wrap glass">
+            <table class="admin-table">
+              <thead><tr><th>Subject</th><th>Refined score</th><th>Trend</th><th>Plan</th></tr></thead>
+              <tbody>
+                @for (item of data.churnV2.subjects; track item.id) {
+                  <tr>
+                    <td class="admin-table__title">{{ item.name }}</td>
+                    <td [attr.data-tone]="variant(item.score >= 60 ? 'RED' : 'AMBER')">{{ item.score }}</td>
+                    <td>{{ item.trend }}</td>
+                    <td>{{ item.plan }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <p class="basis">{{ data.churnV2.basis }}</p>
+        }
+      }
+    </div>
+  }
+</section>
