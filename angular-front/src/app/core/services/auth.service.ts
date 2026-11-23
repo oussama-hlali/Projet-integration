@@ -1,8 +1,15 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
-import { Observable, firstValueFrom, of } from 'rxjs';
+import { Injectable, Injector, computed, inject, signal } from '@angular/core';
+import { Observable, firstValueFrom, map, of } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { HttpAuthService } from './http-auth.service';
+import {
+  HttpAuthService,
+  MfaChallenge,
+  MfaSetupResponse,
+  SessionResponse,
+  SessionUser,
+} from './http-auth.service';
 import { User } from '../models/user.model';
+import { mapUser } from './live-mappers';
 import { UserService } from './user.service';
 
 const TOKEN_KEY = 'smart-campus.auth.token';
@@ -43,7 +50,17 @@ export type AuthResult =
  */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly userService = inject(UserService);
+  private readonly injector = inject(Injector);
+  private userServiceInstance: UserService | null = null;
+  /**
+   * Resolve the directory lazily: `UserService` loads `/users` in its
+   * constructor, and that call passes through the auth interceptor which also
+   * injects `AuthService`. An eager field here would create a DI cycle at
+   * bootstrap and silently swallow the live directory load.
+   */
+  private get userService(): UserService {
+    return (this.userServiceInstance ??= this.injector.get(UserService));
+  }
   private readonly httpAuth = inject(HttpAuthService);
 
   private readonly currentUserIdState = signal<string | null>(null);
@@ -52,6 +69,8 @@ export class AuthService {
   /** In-memory access token (no localStorage, per security guidelines). */
   readonly accessToken = signal<string | null>(null);
   private readonly pendingUserIdState = signal<string | null>(null);
+  /** Live MFA identity comes from the challenge, not the mock directory. */
+  private readonly pendingLiveUserState = signal<User | null>(null);
   /** Pending MFA challenge id from the backend. */
   pendingMfaChallenge: string | null = null;
   /** Cached otpauth URI for HTTP-mode TOTP setup. */
@@ -79,48 +98,47 @@ export class AuthService {
   readonly pendingUserId = this.pendingUserIdState.asReadonly();
 
   readonly pendingUser = computed<User | null>(() => {
+    const live = this.pendingLiveUserState();
+    if (live) {
+      return live;
+    }
     const id = this.pendingUserIdState();
     return id ? this.userService.findById(id) ?? null : null;
   });
 
-  /** Load and validate any persisted session. Called before bootstrap. */
+  /**
+   * Restore a session before the first navigation. The access token is rebuilt
+   * in memory from the HttpOnly refresh cookie; no token is read from or written
+   * to localStorage.
+   */
   async init(): Promise<void> {
-    // Clear any stale localStorage data — the app uses Render services, not mocks.
-    if (typeof localStorage !== 'undefined') {
-      localStorage.clear();
+    for (const key of [TOKEN_KEY, LEGACY_ROLE_KEY]) {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem(key);
+      }
     }
-    this.currentUserIdState.set(null);
-    this.accessToken.set(null);
+    this.clearSession();
+    this.pendingMfaChallenge = null;
+    this.pendingOtpauthUri = null;
+    this.pendingLiveUserState.set(null);
+
+    if (environment.useMocks) {
+      return;
+    }
+
+    try {
+      this.applySession(await firstValueFrom(this.httpAuth.refresh()));
+    } catch {
+      // No valid cookie (first visit, logout, rotation replay) — guards own the redirect.
+      this.clearSession();
+    }
   }
 
   /** Sign in with email and password. May require OTP/setup afterwards. */
   async login(email: string, password: string): Promise<AuthResult> {
     if (!environment.useMocks) {
       try {
-        const res: any = await firstValueFrom(this.httpAuth.login(email, password));
-        if (res.mfaRequired) {
-          this.pendingMfaChallenge = res.challengeId;
-          const user = this.userService.findByEmail(email);
-          if (user) this.pendingUserIdState.set(user.id);
-          return { ok: false, reason: 'otp-required' };
-        }
-        this.accessToken.set(res.accessToken);
-        const u = res.user;
-        // Cache user for currentUser() compatibility
-        this.httpUser.set({
-          id: u.id,
-          fullName: u.fullName,
-          email: u.email,
-          role: u.role,
-          avatarUrl: 'assets/avatars/default.png',
-          preferences: { language: 'fr', notificationsEnabled: true, theme: 'light' },
-          passwordHash: '',
-          salt: '',
-          totpSecret: '',
-          totpEnabled: u.totpEnabled,
-        });
-        this.currentUserIdState.set(u.id);
-        return { ok: true };
+        return await this.startLiveMfa(email, password);
       } catch {
         return { ok: false, reason: 'invalid-credentials' };
       }
@@ -152,9 +170,12 @@ export class AuthService {
   async register(input: RegisterInput): Promise<AuthResult> {
     if (!environment.useMocks) {
       try {
-        const res: any = await firstValueFrom(this.httpAuth.register(input.fullName, input.email, input.password));
-        this.pendingUserIdState.set(res.id);
-        return { ok: true };
+        await firstValueFrom(
+          this.httpAuth.register(input.fullName.trim(), input.email.trim(), input.password),
+        );
+        // Registration does not issue a session: walk the new student through
+        // the same mandatory TOTP enrolment as any other first login.
+        return await this.startLiveMfa(input.email, input.password);
       } catch {
         return { ok: false, reason: 'email-taken' };
       }
@@ -207,6 +228,22 @@ export class AuthService {
       return { ok: false, reason: 'weak-password' };
     }
 
+    if (!environment.useMocks) {
+      try {
+        const row = await firstValueFrom(this.httpAuth.createUser({
+          fullName: input.fullName.trim(),
+          email: input.email.trim(),
+          password: input.password,
+          role: input.role,
+        }));
+        const user = mapUser(row);
+        this.userService.cache(user);
+        return { ok: true, user };
+      } catch {
+        return { ok: false, reason: 'email-taken' };
+      }
+    }
+
     if (this.userService.findByEmail(input.email)) {
       return { ok: false, reason: 'email-taken' };
     }
@@ -229,7 +266,20 @@ export class AuthService {
 
   /** Reset a user's password from the admin console. */
   async resetPassword(userId: string, password: string): Promise<boolean> {
-    if (password.length < 8 || !this.userService.findById(userId)) {
+    if (password.length < 8) {
+      return false;
+    }
+
+    if (!environment.useMocks) {
+      try {
+        await firstValueFrom(this.httpAuth.resetPassword(userId, password));
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    if (!this.userService.findById(userId)) {
       return false;
     }
 
@@ -240,6 +290,22 @@ export class AuthService {
 
   /** Verify a TOTP code for an already enrolled user. */
   async verifyOtp(code: string): Promise<AuthResult> {
+    if (!environment.useMocks) {
+      if (!this.pendingMfaChallenge) {
+        return { ok: false, reason: 'no-pending' };
+      }
+      try {
+        const res = await firstValueFrom(
+          this.httpAuth.verifyMfa(this.pendingMfaChallenge, code),
+        );
+        this.applySession(res);
+        this.clearPendingMfa();
+        return { ok: true };
+      } catch {
+        return { ok: false, reason: 'invalid-otp' };
+      }
+    }
+
     const user = this.pendingUser();
     if (!user || !user.totpSecret) {
       return { ok: false, reason: 'no-pending' };
@@ -262,13 +328,9 @@ export class AuthService {
         return { ok: false, reason: 'no-pending' };
       }
       try {
-        const res: any = await firstValueFrom(this.httpAuth.verifyMfa(challengeId, code));
-        this.accessToken.set(res.accessToken);
-        const u = res.user;
-        this.currentUserIdState.set(u.id);
-        this.pendingUserIdState.set(null);
-        this.pendingMfaChallenge = null;
-        this.pendingOtpauthUri = null;
+        const res = await firstValueFrom(this.httpAuth.verifyMfa(challengeId, code));
+        this.applySession(res);
+        this.clearPendingMfa();
         return { ok: true };
       } catch {
         return { ok: false, reason: 'invalid-otp' };
@@ -295,18 +357,33 @@ export class AuthService {
 
   /** Cancel the in-progress OTP challenge. */
   cancelPending(): void {
-    this.pendingUserIdState.set(null);
+    this.clearPendingMfa();
   }
 
-  /** End the current session. */
-  logout(): void {
+  /** End the current session, revoking the cookie-backed refresh token too. */
+  async logout(): Promise<void> {
     this.clearSession();
-    this.pendingUserIdState.set(null);
+    this.clearPendingMfa();
+    if (!environment.useMocks) {
+      try {
+        await firstValueFrom(this.httpAuth.logout());
+      } catch {
+        // Local state is already cleared; a stale cookie will fail its next refresh.
+      }
+    }
   }
 
-  /** Single-flight token refresh (mock: returns the current token). */
+  /** Real refresh used by the 401 interceptor; single-flight lives in the interceptor. */
   refresh(): Observable<string | null> {
-    return of(this.accessToken());
+    if (environment.useMocks) {
+      return of(this.accessToken());
+    }
+    return this.httpAuth.refresh().pipe(
+      map((res) => {
+        this.applySession(res);
+        return res.accessToken;
+      }),
+    );
   }
 
   /** Current TOTP code for a secret (demo helper). */
@@ -326,10 +403,94 @@ export class AuthService {
     return `otpauth://totp/${label}?secret=${secret}&issuer=${issuer}&algorithm=SHA1&digits=${TOTP_DIGITS}&period=${TOTP_PERIOD}`;
   }
 
+  /**
+   * Password verification always produces an MFA challenge. Enrolment secrets
+   * are fetched here so the setup screen can render a real authenticator QR.
+   */
+  private async startLiveMfa(email: string, password: string): Promise<AuthResult> {
+    const challenge: MfaChallenge = await firstValueFrom(this.httpAuth.login(email, password));
+    if (!challenge.mfaRequired) {
+      this.applySession(challenge as unknown as SessionResponse);
+      return { ok: true };
+    }
+
+    this.pendingMfaChallenge = challenge.challengeId;
+    this.pendingUserIdState.set(challenge.userId);
+
+    const baseUser: User = {
+      id: challenge.userId,
+      fullName: email,
+      email,
+      role: 'STUDENT',
+      avatarUrl: 'assets/avatars/default.png',
+      preferences: { language: 'en', notificationsEnabled: true, theme: 'light' },
+      passwordHash: '',
+      salt: '',
+      totpSecret: '',
+      totpEnabled: !challenge.setupRequired,
+    };
+
+    if (!challenge.setupRequired) {
+      this.pendingLiveUserState.set(baseUser);
+      return { ok: false, reason: 'otp-required' };
+    }
+
+    const setup: MfaSetupResponse = await firstValueFrom(
+      this.httpAuth.mfaSetup(challenge.challengeId),
+    );
+    this.pendingOtpauthUri = setup.otpauthUri;
+    this.pendingLiveUserState.set({ ...baseUser, totpSecret: setup.secret, totpEnabled: false });
+    return { ok: false, reason: 'setup-required' };
+  }
+
+  private clearPendingMfa(): void {
+    this.pendingMfaChallenge = null;
+    this.pendingOtpauthUri = null;
+    this.pendingUserIdState.set(null);
+    this.pendingLiveUserState.set(null);
+  }
+
+  /** Role-safe destination after login or MFA, preserving the original page. */
+  postAuthDestination(returnUrl: string | null | undefined): string {
+    const home = this.homeRoute();
+    if (
+      !returnUrl ||
+      returnUrl === '/login' ||
+      returnUrl.startsWith('/verify-otp') ||
+      returnUrl.startsWith('/setup-2fa')
+    ) {
+      return home;
+    }
+    const wantsAdmin = returnUrl.startsWith('/admin');
+    return wantsAdmin === this.isAdmin() ? returnUrl : home;
+  }
+
   private async startSession(user: User): Promise<void> {
     const token = await this.createToken(user);
     this.accessToken.set(token);
     this.currentUserIdState.set(user.id);
+  }
+
+  private applySession(res: SessionResponse): void {
+    const u: SessionUser = res.user;
+    this.accessToken.set(res.accessToken);
+    this.httpUser.set({
+      id: u.id,
+      fullName: u.fullName,
+      email: u.email,
+      role: u.role,
+      avatarUrl: 'assets/avatars/default.png',
+      preferences: {
+        language: u.language ?? 'en',
+        notificationsEnabled: u.notificationsEnabled !== false,
+        theme: u.theme ?? 'light',
+      },
+      passwordHash: '',
+      salt: '',
+      totpSecret: '',
+      totpEnabled: u.totpEnabled,
+    });
+    this.currentUserIdState.set(u.id);
   }
 
   private clearSession(): void {

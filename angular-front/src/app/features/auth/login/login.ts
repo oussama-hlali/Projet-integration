@@ -35,7 +35,9 @@ export class Login {
   constructor() {
     // Already signed in: skip the login screen and honour the role split.
     if (this.auth.isAuthenticated()) {
-      void this.router.navigateByUrl(this.auth.homeRoute());
+      void this.router.navigateByUrl(
+        this.auth.postAuthDestination(this.route.snapshot.queryParamMap.get('returnUrl')),
+      );
     }
   }
 
@@ -54,45 +56,24 @@ export class Login {
 
     this.loading.set(true);
     const { email, password } = this.form.getRawValue();
+    const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
     const result = await this.auth.login(email, password);
     this.loading.set(false);
 
     if (!result.ok) {
-      if (result.reason === 'setup-required') {
-        await this.router.navigateByUrl('/setup-2fa');
-        return;
-      }
-      if (result.reason === 'otp-required') {
-        await this.router.navigateByUrl('/verify-otp');
+      if (result.reason === 'setup-required' || result.reason === 'otp-required') {
+        // Carry the original destination through MFA so the user lands back on
+        // the page they asked for instead of the role home.
+        await this.router.navigate(
+          [result.reason === 'setup-required' ? '/setup-2fa' : '/verify-otp'],
+          { queryParams: returnUrl ? { returnUrl } : {} },
+        );
         return;
       }
       this.error.set('Invalid email or password.');
       return;
     }
 
-    await this.router.navigateByUrl(
-      this.destinationFor(this.route.snapshot.queryParamMap.get('returnUrl')),
-    );
-  }
-
-  /**
-   * A student must never be sent to `/admin`, and an administrator stays in
-   * the admin area even when a stale return URL points at a student page.
-   */
-  private destinationFor(returnUrl: string | null): string {
-    const home = this.auth.homeRoute();
-    if (
-      !returnUrl ||
-      returnUrl === '/login' ||
-      returnUrl.startsWith('/verify-otp') ||
-      returnUrl.startsWith('/setup-2fa')
-    ) {
-      return home;
-    }
-
-    const wantsAdmin = returnUrl.startsWith('/admin');
-    return wantsAdmin === this.auth.isAdmin()
-      ? returnUrl
-      : home;
+    await this.router.navigateByUrl(this.auth.postAuthDestination(returnUrl));
   }
 }

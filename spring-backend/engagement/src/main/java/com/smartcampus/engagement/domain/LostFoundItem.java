@@ -24,6 +24,12 @@ public class LostFoundItem {
     private String description;
     @Column(length = 16, nullable = false)
     private String status = "LOST"; // LOST, FOUND, CLAIMED
+    @Column(length = 120)
+    private String location;
+    @Column(length = 64)
+    private String category;
+    @Column(name = "contact_phone", length = 32)
+    private String contactPhone;
     @Column(name = "reporter_id", length = 64, nullable = false)
     private String reporterId;
     @ElementCollection
@@ -47,6 +53,12 @@ public class LostFoundItem {
     public void setDescription(String description) { this.description = description; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+    public String getLocation() { return location; }
+    public void setLocation(String location) { this.location = location; }
+    public String getCategory() { return category; }
+    public void setCategory(String category) { this.category = category; }
+    public String getContactPhone() { return contactPhone; }
+    public void setContactPhone(String contactPhone) { this.contactPhone = contactPhone; }
     public String getReporterId() { return reporterId; }
     public void setReporterId(String reporterId) { this.reporterId = reporterId; }
     public List<String> getTaggedUserIds() { return taggedUserIds; }

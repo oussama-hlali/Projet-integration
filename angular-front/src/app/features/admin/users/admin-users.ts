@@ -235,7 +235,7 @@ export class AdminUsers {
     this.dialogOpen.set(true);
   }
 
-  protected confirmDelete(): void {
+  protected async confirmDelete(): Promise<void> {
     const target = this.deleteTarget();
     this.deleteTarget.set(null);
     if (!target) {
@@ -244,7 +244,7 @@ export class AdminUsers {
 
     this.feedback.set(null);
     this.error.set(null);
-    const result = this.admin.deleteUser(target.id);
+    const result = await this.admin.deleteUser(target.id);
     if (!result.ok) {
       this.error.set(this.messageFor(result.reason));
       return;
@@ -308,6 +308,8 @@ export class AdminUsers {
         return 'That account no longer exists.';
       case 'room-in-use':
         return 'That room still has an active booking.';
+      case 'request-failed':
+        return 'The identity service could not complete that change.';
     }
   }
 

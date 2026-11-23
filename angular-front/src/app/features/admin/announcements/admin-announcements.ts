@@ -185,42 +185,42 @@ export class AdminAnnouncements {
     };
 
     const id = this.editingId();
-    if (id) {
-      const updated = this.admin.updateAnnouncement(id, input);
-      if (!updated) {
-        this.error.set('That announcement no longer exists.');
-        return;
-      }
-      this.feedback.set(`${updated.title} was updated.`);
-    } else {
-      const created = this.admin.createAnnouncement({
-        ...input,
-        authorId: this.auth.currentUser()?.id,
-      });
-      this.feedback.set(`${created.title} was published.`);
-    }
+    const request = id
+      ? this.admin.updateAnnouncement(id, input)
+      : this.admin.createAnnouncement({
+          ...input,
+          authorId: this.auth.currentUser()?.id,
+        });
 
-    this.formOpen.set(false);
-    this.resetForm();
+    request.subscribe({
+      next: (saved) => {
+        this.feedback.set(id ? `${saved.title} was updated.` : `${saved.title} was published.`);
+        this.formOpen.set(false);
+        this.resetForm();
+      },
+      error: () => {
+        this.error.set(
+          id ? 'Unable to update the announcement.' : 'Unable to publish the announcement.',
+        );
+      },
+    });
   }
 
   protected togglePinned(announcement: Announcement): void {
     this.feedback.set(null);
     this.error.set(null);
-    const updated = this.admin.updateAnnouncement(announcement.id, {
-      pinned: !announcement.pinned,
-    });
-
-    if (!updated) {
-      this.error.set('That announcement no longer exists.');
-      return;
-    }
-
-    this.feedback.set(
-      updated.pinned
-        ? `${updated.title} is now pinned.`
-        : `${updated.title} was unpinned.`,
-    );
+    this.admin
+      .updateAnnouncement(announcement.id, { pinned: !announcement.pinned })
+      .subscribe({
+        next: (updated) => {
+          this.feedback.set(
+            updated.pinned
+              ? `${updated.title} is now pinned.`
+              : `${updated.title} was unpinned.`,
+          );
+        },
+        error: () => this.error.set('Unable to change the pinned state.'),
+      });
   }
 
   protected requestDelete(announcement: Announcement): void {
@@ -237,16 +237,16 @@ export class AdminAnnouncements {
 
     this.feedback.set(null);
     this.error.set(null);
-    if (!this.admin.deleteAnnouncement(target.id)) {
-      this.error.set('That announcement no longer exists.');
-      return;
-    }
-
-    if (this.editingId() === target.id) {
-      this.formOpen.set(false);
-      this.resetForm();
-    }
-    this.feedback.set(`${target.title} was deleted.`);
+    this.admin.deleteAnnouncement(target.id).subscribe({
+      next: () => {
+        if (this.editingId() === target.id) {
+          this.formOpen.set(false);
+          this.resetForm();
+        }
+        this.feedback.set(`${target.title} was deleted.`);
+      },
+      error: () => this.error.set('Unable to delete the announcement.'),
+    });
   }
 
   protected dismissFeedback(): void {

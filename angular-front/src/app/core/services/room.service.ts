@@ -4,30 +4,36 @@ import { environment } from '../../../environments/environment';
 import { RuntimeConfigService } from '../config/runtime-config.service';
 import { Room, RoomInput } from '../models/room.model';
 import { BuildingService } from './building.service';
-
-const STORAGE_KEY = 'smart-campus.rooms';
+import { mapRoom } from './live-mappers';
 
 /**
  * Room catalogue.
  *
  * The student search page and the administrator management page share this
- * signal store, so a room added or re-statused by an admin is visible on the
- * public page immediately.
+ * signal store. Production reads and writes the campus service; mock mode
+ * keeps the deterministic demo catalogue.
  */
 @Injectable({ providedIn: 'root' })
 export class RoomService {
   private readonly buildings = inject(BuildingService);
   private readonly http = inject(HttpClient, { optional: true });
   private readonly cfg = inject(RuntimeConfigService, { optional: true });
-  private readonly state = signal<Room[]>(this.load());
+  private readonly state = signal<Room[]>(environment.useMocks ? this.load() : []);
 
   constructor() {
     if (!environment.useMocks) {
-      this.http!.get<any[]>(`${this.cfg!.apiBaseUrl()}/rooms`).subscribe({
-        next: (rows) => this.commit(rows as Room[]),
-        error: () => { /* keep mock data */ },
+      this.http!.get<any[]>(`${this.apiBase()}/rooms`).subscribe({
+        next: (rows) =>
+          this.commit(
+            rows.map((row) => mapRoom(row, this.buildings.nameOf(row?.buildingId))),
+          ),
+        error: () => {},
       });
     }
+  }
+
+  private apiBase(): string {
+    return this.cfg!.apiBaseUrl();
   }
 
   readonly rooms = this.state.asReadonly();
@@ -40,7 +46,10 @@ export class RoomService {
     const room: Room = { ...input, id: this.newId() };
     this.commit([...this.state(), room]);
     if (!environment.useMocks) {
-      this.http!.post(`${this.cfg!.apiBaseUrl()}/rooms`, input).subscribe({ error: () => {} });
+      this.http!.post<any>(`${this.apiBase()}/rooms`, this.roomPayload(input)).subscribe({
+        next: (row) => this.replace(room.id, mapRoom(row, input.building)),
+        error: () => this.commit(this.state().filter((candidate) => candidate.id !== room.id)),
+      });
     }
     return room;
   }
@@ -52,23 +61,54 @@ export class RoomService {
     }
 
     const updated: Room = { ...target, ...changes, id };
-    this.commit(this.state().map((room) => (room.id === id ? updated : room)));
+    this.replace(id, updated);
     if (!environment.useMocks) {
-      this.http!.put(`${this.cfg!.apiBaseUrl()}/rooms/${id}`, changes).subscribe({ error: () => {} });
+      this.http!.put<any>(`${this.apiBase()}/rooms/${id}`, {
+        name: updated.name,
+        capacity: updated.capacity,
+        type: this.roomType(updated),
+        status: updated.status,
+      }).subscribe({
+        next: (row) => this.replace(id, mapRoom(row, updated.building)),
+        error: () => this.replace(id, target),
+      });
     }
     return updated;
   }
 
   remove(id: string): boolean {
-    if (!this.findById(id)) {
+    const target = this.findById(id);
+    if (!target) {
       return false;
     }
 
     this.commit(this.state().filter((room) => room.id !== id));
     if (!environment.useMocks) {
-      this.http!.delete(`${this.cfg!.apiBaseUrl()}/rooms/${id}`).subscribe({ error: () => {} });
+      this.http!.delete(`${this.apiBase()}/rooms/${id}`).subscribe({
+        error: () => this.commit([...this.state(), target]),
+      });
     }
     return true;
+  }
+
+  /** The campus table stores one `type`; the UI models it as facilities. */
+  private roomType(room: RoomInput | Room): string | null {
+    const facilities = room.facilities ?? [];
+    return facilities.length ? facilities[0] : null;
+  }
+
+  private roomPayload(input: RoomInput): Record<string, unknown> {
+    return {
+      buildingId: input.buildingId,
+      name: input.name,
+      capacity: input.capacity,
+      type: this.roomType(input),
+      status: input.status,
+    };
+  }
+
+  private replace(id: string, room: Room): void {
+    this.commit(this.state().map((candidate) => (candidate.id === id ? room : candidate)));
   }
 
   private newId(): string {

@@ -1,5 +1,8 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, computed, inject } from '@angular/core';
+import { Observable, firstValueFrom } from 'rxjs';
 
+import { environment } from '../../../environments/environment';
 import { Announcement } from '../models/announcement.model';
 import { CampusEvent } from '../models/campus-event.model';
 import { LostFoundItem } from '../models/lost-found.model';
@@ -9,6 +12,8 @@ import { User, UserRole } from '../models/user.model';
 import { AnnouncementInput, AnnouncementService } from './announcement.service';
 import { AuthService } from './auth.service';
 import { CampusEventInput, CampusEventService } from './campus-event.service';
+import { HttpAuthService } from './http-auth.service';
+import { mapUser } from './live-mappers';
 import { LostFoundService } from './lost-found.service';
 import { NotificationService } from './notification.service';
 import { ReservationService } from './reservation.service';
@@ -36,7 +41,8 @@ export type AdminFailure =
   | 'weak-password'
   | 'last-admin'
   | 'self-delete'
-  | 'room-in-use';
+  | 'room-in-use'
+  | 'request-failed';
 
 export type AdminResult = { ok: true } | { ok: false; reason: AdminFailure };
 
@@ -52,6 +58,7 @@ export type AdminResult = { ok: true } | { ok: false; reason: AdminFailure };
 @Injectable({ providedIn: 'root' })
 export class AdminService {
   private readonly auth = inject(AuthService);
+  private readonly httpAuth = inject(HttpAuthService);
   private readonly users = inject(UserService);
   private readonly rooms = inject(RoomService);
   private readonly events = inject(CampusEventService);
@@ -95,12 +102,37 @@ export class AdminService {
   }
 
   async updateUser(id: string, input: UpdateUserInput): Promise<AdminResult> {
+    const email = input.email.trim();
+    if (input.password && input.password.length < 8) {
+      return { ok: false, reason: 'weak-password' };
+    }
+
+    if (!environment.useMocks) {
+      // The identity service is the source of truth for uniqueness and the
+      // last-admin rule; surface its status instead of trusting a stale signal.
+      try {
+        const row = await firstValueFrom(
+          this.httpAuth.updateUser(id, {
+            fullName: input.fullName.trim(),
+            email,
+            role: input.role,
+          }),
+        );
+        if (input.password) {
+          await firstValueFrom(this.httpAuth.resetPassword(id, input.password));
+        }
+        this.users.cache(mapUser(row));
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, reason: this.userFailure(error) };
+      }
+    }
+
     const target = this.users.findById(id);
     if (!target) {
       return { ok: false, reason: 'not-found' };
     }
 
-    const email = input.email.trim();
     if (
       this.users
         .users()
@@ -137,7 +169,17 @@ export class AdminService {
     return { ok: true };
   }
 
-  deleteUser(id: string): AdminResult {
+  async deleteUser(id: string): Promise<AdminResult> {
+    if (!environment.useMocks) {
+      try {
+        await firstValueFrom(this.httpAuth.deleteUser(id));
+        this.users.drop(id);
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, reason: this.userFailure(error) };
+      }
+    }
+
     const target = this.users.findById(id);
     if (!target) {
       return { ok: false, reason: 'not-found' };
@@ -155,6 +197,26 @@ export class AdminService {
     return this.users.remove(id)
       ? { ok: true }
       : { ok: false, reason: 'not-found' };
+  }
+
+  private userFailure(error: unknown): AdminFailure {
+    if (!(error instanceof HttpErrorResponse)) {
+      return 'request-failed';
+    }
+    const message = String(error.error?.message ?? error.message ?? '').toLowerCase();
+    if (error.status === 404) {
+      return 'not-found';
+    }
+    if (error.status === 409) {
+      return 'email-taken';
+    }
+    if (error.status === 400) {
+      if (message.includes('last administrator')) return 'last-admin';
+      if (message.includes('own account')) return 'self-delete';
+      if (message.includes('password')) return 'weak-password';
+      if (message.includes('email')) return 'email-taken';
+    }
+    return 'request-failed';
   }
 
   createRoom(input: RoomInput): Room {
@@ -193,15 +255,15 @@ export class AdminService {
     return this.events.remove(id);
   }
 
-  createAnnouncement(input: AnnouncementInput): Announcement {
-    return this.announcements.add(input);
+  createAnnouncement(input: AnnouncementInput): Observable<Announcement> {
+    return this.announcements.create(input);
   }
 
-  updateAnnouncement(id: string, changes: Partial<AnnouncementInput>): Announcement | undefined {
+  updateAnnouncement(id: string, changes: Partial<AnnouncementInput>): Observable<Announcement> {
     return this.announcements.update(id, changes);
   }
 
-  deleteAnnouncement(id: string): boolean {
+  deleteAnnouncement(id: string): Observable<void> {
     return this.announcements.remove(id);
   }
 

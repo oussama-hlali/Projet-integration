@@ -46,8 +46,15 @@ jobs:
           echo "identity did not become healthy" && exit 1
       - name: Check JWKS endpoint
         run: curl -sf http://localhost:8081/.well-known/jwks.json | grep -q '"keys"'
-      - name: Check login stub
+      - name: Check login returns MFA challenge
         run: |
-          curl -sf -X POST http://localhost:8081/api/v1/auth/login \
+          response=$(curl -sf -X POST http://localhost:8081/api/v1/auth/login \
             -H 'Content-Type: application/json' \
-            -d '{"email":"ahmed.wardi@campus.tn","password":"student123"}' | grep -q 'accessToken'
+            -d '{"email":"ahmed.wardi@campus.tn","password":"student123"}')
+          echo "$response"
+          echo "$response" | grep -q '"mfaRequired":true'
+          echo "$response" | grep -q '"challengeId"'
+          if echo "$response" | grep -q 'accessToken'; then
+            echo "login must not issue an access token before TOTP"
+            exit 1
+          fi

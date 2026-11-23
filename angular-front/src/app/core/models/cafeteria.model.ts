@@ -47,4 +47,6 @@ export interface CafeteriaOrder {
   price: number;
   createdAt: Date;
   qrPayload: string;
+  /** Cancelled receipts stay in the database for history but are hidden from the UI. */
+  status?: 'CONFIRMED' | 'CANCELLED';
 }

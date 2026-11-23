@@ -48,29 +48,33 @@ public class EventService {
         return events.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Event not found"));
     }
 
-    public Event create(String title, String description, String category, Instant date,
-                        String location, int capacity, String organizerId) {
+    public Event create(String title, String description, String category, Instant date, Instant endDate,
+                        String location, int capacity, String organizerId, String roomId) {
         Event e = new Event();
         e.setId("e" + UUID.randomUUID().toString().substring(0, 8));
         e.setTitle(title);
         e.setDescription(description);
         e.setCategory(category == null ? "ACADEMIC" : category);
         e.setDate(date);
+        e.setEndDate(endDate);
         e.setLocation(location);
         e.setCapacity(capacity);
         e.setOrganizerId(organizerId);
+        e.setRoomId(roomId);
         return events.save(e);
     }
 
     public Event update(String id, String title, String description, String category, Instant date,
-                        String location, Integer capacity) {
+                        Instant endDate, String location, Integer capacity, String roomId) {
         Event e = get(id);
         if (title != null) e.setTitle(title);
         if (description != null) e.setDescription(description);
         if (category != null) e.setCategory(category);
         if (date != null) e.setDate(date);
+        if (endDate != null) e.setEndDate(endDate);
         if (location != null) e.setLocation(location);
         if (capacity != null) e.setCapacity(capacity);
+        if (roomId != null) e.setRoomId(roomId);
         return events.save(e);
     }
 
@@ -89,6 +93,14 @@ public class EventService {
         i.setEventId(eventId);
         i.setUserId(userId);
         interests.save(i);
+        return true;
+    }
+
+    /** Explicit unmark used by the Events page; toggle is kept for the old API. */
+    public boolean removeInterest(String eventId, String userId) {
+        var existing = interests.findByEventIdAndUserId(eventId, userId);
+        if (existing.isEmpty()) return false;
+        interests.delete(existing.get());
         return true;
     }
 

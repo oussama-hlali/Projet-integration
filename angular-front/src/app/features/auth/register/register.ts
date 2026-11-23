@@ -6,7 +6,7 @@ import {
   ValidationErrors,
   Validators,
 } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { AuthService } from '../../../core/services/auth.service';
 import { ThemeToggleComponent } from '../../../shared/components/theme-toggle.component';
@@ -27,6 +27,7 @@ function passwordsMatch(control: AbstractControl): ValidationErrors | null {
 export class Register {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly formBuilder = inject(FormBuilder);
 
   readonly loading = signal(false);
@@ -57,13 +58,16 @@ export class Register {
 
     this.loading.set(true);
     const { fullName, email, password } = this.form.getRawValue();
+    const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
     const result = await this.auth.register({ fullName, email, password });
     this.loading.set(false);
 
     // Self-registration always creates a student account. The account is not
     // usable until the authenticator is set up, so send the new student there.
     if (!result.ok && result.reason === 'setup-required') {
-      await this.router.navigateByUrl('/setup-2fa');
+      await this.router.navigate(['/setup-2fa'], {
+        queryParams: returnUrl ? { returnUrl } : {},
+      });
       return;
     }
 
@@ -76,6 +80,6 @@ export class Register {
       return;
     }
 
-    await this.router.navigateByUrl(this.auth.homeRoute());
+    await this.router.navigateByUrl(this.auth.postAuthDestination(returnUrl));
   }
 }

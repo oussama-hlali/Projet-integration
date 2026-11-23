@@ -16,3 +16,8 @@ spring:
   h2:
     console:
       enabled: true
+
+auth:
+  refresh-cookie:
+    same-site: Lax
+    secure: false

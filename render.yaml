@@ -108,5 +108,19 @@ envVarGroups:
         sync: false
       - key: AI_GATEWAY_TIMEOUT_MS
         sync: false
+      - key: AI_PROVIDER
+        value: openai
+      - key: AI_BASE_URL
+        value: https://api.groq.com/openai/v1
+      - key: AI_MODEL
+        value: openai/gpt-oss-20b
+      - key: AI_TIMEOUT_MS
+        value: "30000"
+      - key: AI_API_KEY
+        sync: false
       - key: IDENTITY_JWKS_URL
         sync: false
+      - key: REFRESH_COOKIE_SAME_SITE
+        value: None
+      - key: REFRESH_COOKIE_SECURE
+        value: "true"

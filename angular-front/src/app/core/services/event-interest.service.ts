@@ -4,32 +4,42 @@ import { environment } from '../../../environments/environment';
 import { RuntimeConfigService } from '../config/runtime-config.service';
 import { EventInterest } from '../models/event-interest.model';
 
-const STORAGE_KEY = 'smart-campus.event-interests';
 const DEMO_USER_ID = 'u1';
 
 /**
  * Stores which events a student follows.
  *
  * The Events page uses these marks both to render the "For you" rail and to
- * recommend upcoming events in the categories the student cares about.
+ * recommend upcoming events in the categories the student cares about. Live
+ * mode reads/writes the engagement service; mock mode keeps demo marks.
  */
 @Injectable({ providedIn: 'root' })
 export class EventInterestService {
   private readonly http = inject(HttpClient);
   private readonly cfg = inject(RuntimeConfigService);
-  private readonly state = signal<EventInterest[]>(this.load());
+  private readonly state = signal<EventInterest[]>(environment.useMocks ? this.load() : []);
 
   constructor() {
     if (!environment.useMocks) {
-      this.http.get<any[]>(`${this.cfg.apiBaseUrl()}/me/event-interests?userId=u1`).subscribe({
-        next: (ids) => {
-          // Convert ids to EventInterest objects
-          const interests = (ids || []).map((id: string) => ({ eventId: id, userId: 'u1', createdAt: new Date() }));
-          this.state.set(interests);
-        },
-        error: () => {},
-      });
+      this.refresh(DEMO_USER_ID);
     }
+  }
+
+  private apiBase(): string {
+    return this.cfg.apiBaseUrl();
+  }
+
+  private refresh(userId: string): void {
+    this.http.get<any[]>(`${this.apiBase()}/me/event-interests?userId=${userId}`).subscribe({
+      next: (ids) => this.state.set(
+        (ids ?? []).map((id) => ({
+          eventId: String(id),
+          userId,
+          createdAt: new Date(),
+        })),
+      ),
+      error: () => {},
+    });
   }
 
   readonly interests = this.state.asReadonly();
@@ -53,21 +63,28 @@ export class EventInterestService {
 
   /** Toggle a mark and return the new state (`true` = now interested). */
   toggle(eventId: string, userId: string = DEMO_USER_ID): boolean {
+    const before = this.state();
     if (this.isInterested(eventId, userId)) {
       this.commit(
-        this.state().filter(
+        before.filter(
           (interest) => !(interest.eventId === eventId && interest.userId === userId),
         ),
       );
       if (!environment.useMocks) {
-        this.http.delete(`${this.cfg.apiBaseUrl()}/events/${eventId}/interest?userId=${userId}`).subscribe({ error: () => {} });
+        this.http.delete(`${this.apiBase()}/events/${eventId}/interest?userId=${userId}`).subscribe({
+          next: () => this.refresh(userId),
+          error: () => this.commit(before),
+        });
       }
       return false;
     }
 
-    this.commit([{ eventId, userId, createdAt: new Date() }, ...this.state()]);
+    this.commit([{ eventId, userId, createdAt: new Date() }, ...before]);
     if (!environment.useMocks) {
-      this.http.put(`${this.cfg.apiBaseUrl()}/events/${eventId}/interest?userId=${userId}`, {}).subscribe({ error: () => {} });
+      this.http.put(`${this.apiBase()}/events/${eventId}/interest?userId=${userId}`, {}).subscribe({
+        next: () => this.refresh(userId),
+        error: () => this.commit(before),
+      });
     }
     return true;
   }

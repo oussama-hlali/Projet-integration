@@ -5,6 +5,7 @@ import com.smartcampus.identity.domain.User;
 import com.smartcampus.identity.repository.RefreshTokenRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
@@ -32,6 +33,7 @@ public class RefreshTokenService {
     }
 
     /** Rotates the token. If a revoked token is reused, revoke the whole family. */
+    @Transactional
     public RefreshToken rotate(String presentedToken) {
         RefreshToken current = tokens.findById(presentedToken).orElse(null);
         if (current == null) {
@@ -64,6 +66,7 @@ public class RefreshTokenService {
         tokens.deleteByUserId(userId);
     }
 
+    @Transactional
     public void revoke(String tokenId) {
         tokens.findById(tokenId).ifPresent(t -> {
             t.setRevoked(true);
