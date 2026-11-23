@@ -97,8 +97,9 @@ import {
       <app-confirm-dialog
         [(open)]="confirmOpen"
         title="Clear all notifications"
-        message="This will remove all your notifications. Do you want to continue?"
-        confirmLabel="Clear all"
+        message="This will permanently remove every notification in your inbox."
+        confirmPhrase="delete all notifications"
+        confirmLabel="Delete all"
         cancelLabel="Cancel"
         [danger]="true"
         (confirmed)="clearAll()"

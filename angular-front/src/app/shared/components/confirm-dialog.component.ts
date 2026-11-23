@@ -2,12 +2,14 @@ import {
   Component,
   ElementRef,
   afterNextRender,
+  computed,
   effect,
   inject,
   Injector,
   input,
   model,
   output,
+  signal,
   viewChild,
 } from '@angular/core';
 
@@ -15,7 +17,7 @@ let nextDialogId = 0;
 
 /** Elements inside the dialog that can hold keyboard focus. */
 const FOCUSABLE =
-  'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"]):not([disabled])';
 
 /**
  * PB-25 — modal confirmation.
@@ -24,6 +26,9 @@ const FOCUSABLE =
  * - focus moves into the dialog when it opens and returns to the trigger on close;
  * - Escape cancels;
  * - Tab / Shift+Tab cycle inside the dialog instead of escaping to the page.
+ *
+ * Destructive actions can require an exact typed phrase. When `confirmPhrase`
+ * is set, Confirm stays disabled until the user types `delete <item>`.
  */
 @Component({
   selector: 'app-confirm-dialog',
@@ -45,11 +50,36 @@ const FOCUSABLE =
         >
           <h3 [id]="titleId">{{ title() }}</h3>
           <p [id]="messageId">{{ message() }}</p>
+
+          @if (confirmPhrase()) {
+            <div class="phrase">
+              <label class="phrase__label" [attr.for]="phraseInputId">
+                Type <code>{{ confirmPhrase() }}</code> to confirm
+              </label>
+              <input
+                #phraseInput
+                [id]="phraseInputId"
+                class="phrase__input"
+                type="text"
+                autocomplete="off"
+                autocapitalize="off"
+                spellcheck="false"
+                [attr.aria-describedby]="phraseHintId"
+                [value]="typedPhrase()"
+                (input)="onPhraseInput($event)"
+              />
+              <p class="phrase__hint" [id]="phraseHintId">
+                Confirmation is disabled until the phrase matches exactly.
+              </p>
+            </div>
+          }
+
           <div class="actions">
             <button #cancelButton type="button" (click)="cancel()">{{ cancelLabel() }}</button>
             <button
               type="button"
               [class.danger]="danger()"
+              [disabled]="!canConfirm()"
               (click)="confirm()"
             >
               {{ confirmLabel() }}
@@ -67,13 +97,16 @@ const FOCUSABLE =
         z-index: var(--z-modal);
         display: grid;
         place-items: center;
+        padding: var(--space-3);
         background: var(--color-overlay);
         backdrop-filter: blur(6px);
         -webkit-backdrop-filter: blur(6px);
       }
 
       .dialog {
-        width: min(420px, 90vw);
+        width: min(460px, 90vw);
+        max-height: calc(100vh - var(--space-6));
+        overflow-y: auto;
         padding: var(--space-5);
         color: var(--color-text);
         background-color: var(--glass-bg-strong);
@@ -99,6 +132,48 @@ const FOCUSABLE =
         color: var(--color-text-muted);
       }
 
+      .phrase {
+        margin-top: var(--space-4);
+        padding: var(--space-3);
+        background: color-mix(in srgb, var(--color-danger) 8%, transparent);
+        border: 1px solid color-mix(in srgb, var(--color-danger) 28%, transparent);
+        border-radius: var(--radius-md);
+      }
+
+      .phrase__label {
+        display: block;
+        margin-bottom: var(--space-2);
+        color: var(--color-text);
+        font-size: 0.9rem;
+      }
+
+      code {
+        color: var(--color-text-strong);
+        font-weight: 700;
+        user-select: all;
+      }
+
+      .phrase__input {
+        width: 100%;
+        min-height: 44px;
+        padding: var(--space-2) var(--space-3);
+        color: var(--color-text-strong);
+        background: var(--color-surface);
+        border: 1px solid var(--color-border-strong);
+        border-radius: var(--radius-md);
+        font: inherit;
+      }
+
+      .phrase__input:focus-visible {
+        outline: 2px solid var(--color-accent);
+        outline-offset: 2px;
+      }
+
+      .phrase__hint {
+        margin-top: var(--space-2);
+        font-size: 0.78rem;
+      }
+
       .actions {
         display: flex;
         justify-content: flex-end;
@@ -119,7 +194,7 @@ const FOCUSABLE =
           border-color var(--transition-fast);
       }
 
-      button:hover {
+      button:hover:not(:disabled) {
         background: color-mix(in srgb, var(--color-text-strong) 8%, transparent);
       }
 
@@ -129,8 +204,13 @@ const FOCUSABLE =
         border-color: var(--color-danger);
       }
 
-      button.danger:hover {
+      button.danger:hover:not(:disabled) {
         background: color-mix(in srgb, var(--color-danger) 84%, black);
+      }
+
+      button:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
       }
 
       @media (max-width: 420px) {
@@ -153,23 +233,38 @@ export class ConfirmDialogComponent {
   cancelLabel = input('Annuler');
   danger = input(false);
 
+  /** When set, the user must type this exact phrase before Confirm is enabled. */
+  confirmPhrase = input<string | null>(null);
+
   confirmed = output<void>();
   cancelled = output<void>();
+
+  protected readonly typedPhrase = signal('');
+  protected readonly canConfirm = computed(() => {
+    const phrase = this.confirmPhrase();
+    return !phrase || this.typedPhrase().trim() === phrase.trim();
+  });
 
   private readonly dialogId = ++nextDialogId;
   readonly titleId = `confirm-title-${this.dialogId}`;
   readonly messageId = `confirm-message-${this.dialogId}`;
+  protected readonly phraseInputId = `confirm-phrase-${this.dialogId}`;
+  protected readonly phraseHintId = `confirm-phrase-hint-${this.dialogId}`;
 
   private readonly dialog = viewChild<ElementRef<HTMLElement>>('dialog');
   private readonly cancelButton = viewChild<ElementRef<HTMLElement>>('cancelButton');
+  private readonly phraseInput = viewChild<ElementRef<HTMLInputElement>>('phraseInput');
   private readonly injector = inject(Injector);
   private previouslyFocused: HTMLElement | null = null;
 
   constructor() {
     effect(() => {
       const isOpen = this.open();
+      // Re-read the phrase so a target change resets the typed value too.
+      this.confirmPhrase();
 
       if (isOpen) {
+        this.typedPhrase.set('');
         this.previouslyFocused = document.activeElement as HTMLElement | null;
         afterNextRender(() => this.focusFirstControl(), { injector: this.injector });
       } else {
@@ -179,6 +274,10 @@ export class ConfirmDialogComponent {
   }
 
   confirm(): void {
+    if (!this.canConfirm()) {
+      return;
+    }
+
     this.open.set(false);
     this.confirmed.emit();
   }
@@ -186,6 +285,10 @@ export class ConfirmDialogComponent {
   cancel(): void {
     this.open.set(false);
     this.cancelled.emit();
+  }
+
+  protected onPhraseInput(event: Event): void {
+    this.typedPhrase.set((event.target as HTMLInputElement).value);
   }
 
   /** Keeps Tab and Shift+Tab inside the dialog while it is open. */
@@ -217,8 +320,10 @@ export class ConfirmDialogComponent {
   }
 
   private focusFirstControl(): void {
-    // Cancel is the safe default for destructive dialogs.
-    const target = this.cancelButton()?.nativeElement ?? this.dialog()?.nativeElement;
+    const target =
+      this.phraseInput()?.nativeElement ??
+      this.cancelButton()?.nativeElement ??
+      this.dialog()?.nativeElement;
     target?.focus();
   }
 

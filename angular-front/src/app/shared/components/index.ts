@@ -2,6 +2,7 @@ export * from './stat-card.component';
 export * from './status-badge.component';
 export * from './empty-state.component';
 export * from './confirm-dialog.component';
+export * from './form-dialog.component';
 export * from './page-header.component';
 export * from './theme-toggle.component';
 export * from './cinematic-intro.component';
