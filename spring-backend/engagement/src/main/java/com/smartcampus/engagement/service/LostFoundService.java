@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -38,14 +39,18 @@ public class LostFoundService {
     }
 
     public LostFoundItem create(String title, String description, String status, String reporterId,
-                               java.util.List<String> taggedUserIds) {
+                                String location, String category, String contactPhone,
+                                List<String> taggedUserIds) {
         LostFoundItem p = new LostFoundItem();
         p.setId("lf" + UUID.randomUUID().toString().substring(0, 8));
         p.setTitle(title);
         p.setDescription(description);
         p.setStatus(status == null ? "LOST" : status);
         p.setReporterId(reporterId);
-        if (taggedUserIds != null) p.setTaggedUserIds(new java.util.ArrayList<>(taggedUserIds));
+        p.setLocation(location);
+        p.setCategory(category);
+        p.setContactPhone(contactPhone);
+        if (taggedUserIds != null) p.setTaggedUserIds(new ArrayList<>(taggedUserIds));
         return posts.save(p);
     }
 
@@ -75,14 +80,14 @@ public class LostFoundService {
     }
 
     public LostFoundComment addComment(String postId, String authorId, String message,
-                                      java.util.List<String> taggedUserIds) {
+                                       List<String> taggedUserIds) {
         get(postId);
         LostFoundComment c = new LostFoundComment();
         c.setId("c" + UUID.randomUUID().toString().substring(0, 8));
         c.setPostId(postId);
         c.setAuthorId(authorId);
         c.setMessage(message);
-        if (taggedUserIds != null) c.setTaggedUserIds(new java.util.ArrayList<>(taggedUserIds));
+        if (taggedUserIds != null) c.setTaggedUserIds(new ArrayList<>(taggedUserIds));
         return comments.save(c);
     }
 

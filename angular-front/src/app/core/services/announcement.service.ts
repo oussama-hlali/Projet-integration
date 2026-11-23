@@ -1,6 +1,14 @@
-import { Injectable, signal } from '@angular/core';
-import { Observable, of } from 'rxjs';
-import { Announcement, AnnouncementCategory } from '../models/announcement.model';
+import { HttpClient } from '@angular/common/http';
+import { Injectable, inject, signal } from '@angular/core';
+import { Observable, defer, of } from 'rxjs';
+import { catchError, map, shareReplay, tap } from 'rxjs/operators';
+
+import { RuntimeConfigService } from '../config/runtime-config.service';
+import {
+  ANNOUNCEMENT_CATEGORIES,
+  Announcement,
+  AnnouncementCategory,
+} from '../models/announcement.model';
 
 export interface AnnouncementInput {
   title: string;
@@ -10,83 +18,48 @@ export interface AnnouncementInput {
   authorId?: string;
 }
 
+interface AnnouncementDto {
+  id: string;
+  title: string;
+  body: string;
+  category: string;
+  pinned: boolean;
+  authorId?: string | null;
+  createdAt: string;
+}
+
 /**
- * Announcement store used by the dashboard, the student page and the admin
- * management screen. Administrator changes are visible immediately because
- * every page reads this one signal.
+ * Supabase-backed announcement store. All pages read the same signal so an
+ * administrator's change is reflected immediately. The campus service owns the
+ * `campus.announcements` table; the gateway routes `/announcements/**` to it.
  */
 @Injectable({ providedIn: 'root' })
 export class AnnouncementService {
-  private readonly state = signal<Announcement[]>([
-    {
-      id: 'a1',
-      title: 'Rentrée universitaire',
-      content: 'La rentrée aura lieu le 15 septembre.',
-      publishedAt: new Date('2026-09-01'),
-      category: 'GENERAL',
-      pinned: true,
-      authorId: 'u3',
-    },
-    {
-      id: 'a2',
-      title: 'Planning des examens',
-      content: 'Le planning des examens est disponible.',
-      publishedAt: new Date('2026-10-10'),
-      category: 'ACADEMIC',
-      pinned: false,
-      authorId: 'u3',
-    },
-    {
-      id: 'a3',
-      title: 'Maintenance du réseau',
-      content: 'Le wifi sera coupé samedi de 8h à 12h.',
-      publishedAt: new Date('2026-10-12'),
-      category: 'MAINTENANCE',
-      pinned: false,
-      authorId: 'u3',
-    },
-    {
-      id: 'a4',
-      title: 'Forum des stages',
-      content: 'Le forum des stages se tiendra le 12 novembre au hall principal, de 9h à 17h.',
-      publishedAt: new Date('2026-11-04'),
-      category: 'EVENTS',
-      pinned: true,
-      authorId: 'u3',
-    },
-    {
-      id: 'a5',
-      title: 'Inscriptions aux examens',
-      content: 'Les inscriptions aux examens du premier semestre ferment le 20 novembre.',
-      publishedAt: new Date('2026-11-02'),
-      category: 'ACADEMIC',
-      pinned: false,
-      authorId: 'u3',
-    },
-    {
-      id: 'a6',
-      title: 'Nouveaux horaires du secrétariat',
-      content: 'Le secrétariat est désormais ouvert de 8h30 à 16h30, du lundi au jeudi.',
-      publishedAt: new Date('2026-10-28'),
-      category: 'ADMINISTRATIVE',
-      pinned: false,
-      authorId: 'u3',
-    },
-    {
-      id: 'a7',
-      title: 'Coupure de chauffage',
-      content: 'Le chauffage du bloc C sera interrompu mardi matin pour entretien.',
-      publishedAt: new Date('2026-10-24'),
-      category: 'MAINTENANCE',
-      pinned: false,
-      authorId: 'u3',
-    },
-  ]);
+  private readonly http = inject(HttpClient);
+  private readonly cfg = inject(RuntimeConfigService);
+  private readonly state = signal<Announcement[]>([]);
 
   readonly announcements = this.state.asReadonly();
 
+  /**
+   * One shared request starts when the service is first injected. Components
+   * that call `getAnnouncements()` receive the replayed result.
+   */
+  private readonly loaded$ = defer(() =>
+    this.http.get<AnnouncementDto[]>(this.baseUrl()),
+  ).pipe(
+    map((rows) => rows.map((row) => this.fromDto(row))),
+    tap((rows) => this.state.set(rows)),
+    catchError(() => of([] as Announcement[])),
+    shareReplay({ bufferSize: 1, refCount: false }),
+  );
+
+  constructor() {
+    this.loaded$.subscribe();
+  }
+
   getAnnouncements(): Observable<Announcement[]> {
-    return of(this.state());
+    return this.loaded$;
   }
 
   getAnnouncementById(id: string): Observable<Announcement | undefined> {
@@ -97,47 +70,62 @@ export class AnnouncementService {
     return this.state().find((announcement) => announcement.title === title);
   }
 
-  add(input: AnnouncementInput): Announcement {
-    const announcement: Announcement = {
-      id: `a_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+  create(input: AnnouncementInput): Observable<Announcement> {
+    const payload: Record<string, unknown> = {
       title: input.title.trim(),
-      content: input.content.trim(),
+      body: input.content.trim(),
       category: input.category,
       pinned: input.pinned,
-      publishedAt: new Date(),
-      authorId: input.authorId ?? 'u3',
     };
-
-    this.state.update((items) => [announcement, ...items]);
-    return announcement;
-  }
-
-  update(id: string, changes: Partial<AnnouncementInput>): Announcement | undefined {
-    const target = this.state().find((announcement) => announcement.id === id);
-    if (!target) {
-      return undefined;
+    if (input.authorId) {
+      payload['authorId'] = input.authorId;
     }
-
-    const updated: Announcement = {
-      ...target,
-      ...changes,
-      id,
-      title: changes.title?.trim() ?? target.title,
-      content: changes.content?.trim() ?? target.content,
-    };
-
-    this.state.update((items) =>
-      items.map((announcement) => (announcement.id === id ? updated : announcement)),
+    return this.http.post<AnnouncementDto>(this.baseUrl(), payload).pipe(
+      map((row) => this.fromDto(row)),
+      tap((created) => this.state.update((items) => [created, ...items])),
     );
-    return updated;
   }
 
-  remove(id: string): boolean {
-    if (!this.state().some((announcement) => announcement.id === id)) {
-      return false;
-    }
+  update(id: string, changes: Partial<AnnouncementInput>): Observable<Announcement> {
+    const payload: Record<string, unknown> = {};
+    if (changes.title !== undefined) payload['title'] = changes.title.trim();
+    if (changes.content !== undefined) payload['body'] = changes.content.trim();
+    if (changes.category !== undefined) payload['category'] = changes.category;
+    if (changes.pinned !== undefined) payload['pinned'] = changes.pinned;
+    if (changes.authorId !== undefined) payload['authorId'] = changes.authorId;
 
-    this.state.update((items) => items.filter((announcement) => announcement.id !== id));
-    return true;
+    return this.http.put<AnnouncementDto>(`${this.baseUrl()}/${id}`, payload).pipe(
+      map((row) => this.fromDto(row)),
+      tap((updated) =>
+        this.state.update((items) =>
+          items.map((announcement) => (announcement.id === id ? updated : announcement)),
+        ),
+      ),
+    );
+  }
+
+  remove(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl()}/${id}`).pipe(
+      tap(() => this.state.update((items) => items.filter((announcement) => announcement.id !== id))),
+    );
+  }
+
+  private baseUrl(): string {
+    return `${this.cfg.apiBaseUrl()}/announcements`;
+  }
+
+  private fromDto(row: AnnouncementDto): Announcement {
+    const category = ANNOUNCEMENT_CATEGORIES.includes(row.category as AnnouncementCategory)
+      ? (row.category as AnnouncementCategory)
+      : 'GENERAL';
+    return {
+      id: row.id,
+      title: row.title,
+      content: row.body,
+      publishedAt: new Date(row.createdAt),
+      category,
+      pinned: row.pinned,
+      authorId: row.authorId ?? '',
+    };
   }
 }

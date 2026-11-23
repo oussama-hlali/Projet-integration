@@ -1,5 +1,6 @@
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { forkJoin } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { RuntimeConfigService } from '../config/runtime-config.service';
 import {
@@ -8,34 +9,56 @@ import {
   CafeteriaOrderInput,
   MenuItem,
 } from '../models/cafeteria.model';
+import { mapCafeteriaMenu, mapCafeteriaOrder } from './live-mappers';
 
-const ORDERS_KEY = 'smart-campus.cafeteria-orders';
 const DEMO_USER_ID = 'u1';
 
 /**
  * Weekly cafeteria menus plus the dish reservations made against them.
  *
- * Menus stay deterministic for the current week, while reservations persist in
- * localStorage so a receipt and its QR code survive a reload.
+ * Production reads and writes the cafeteria service through the gateway;
+ * mock mode keeps the deterministic weekly menu and receipts for local demos.
  */
 @Injectable({ providedIn: 'root' })
 export class CafeteriaService {
   private readonly http = inject(HttpClient, { optional: true });
   private readonly cfg = inject(RuntimeConfigService, { optional: true });
-  private readonly menusState = signal<CafeteriaMenu[]>(this.seedMenus());
-  private readonly ordersState = signal<CafeteriaOrder[]>(this.loadOrders(this.menusState()));
+  private readonly menusState = signal<CafeteriaMenu[]>(
+    environment.useMocks ? this.seedMenus() : [],
+  );
+  private readonly ordersState = signal<CafeteriaOrder[]>(
+    environment.useMocks ? this.loadOrders(this.menusState()) : [],
+  );
 
   constructor() {
     if (!environment.useMocks) {
-      this.http!.get<any[]>(`${this.cfg!.apiBaseUrl()}/menus`).subscribe({
-        next: (rows) => this.menusState.set(rows as CafeteriaMenu[]),
+      this.http!.get<any[]>(`${this.apiBase()}/menus`).subscribe({
+        next: (rows) => {
+          if (!rows.length) {
+            this.menusState.set([]);
+            return;
+          }
+          // The menu endpoint owns the header; items live in a separate table.
+          forkJoin(rows.map((row) => this.http!.get<any[]>(`${this.apiBase()}/menus/${row.id}/items`)))
+            .subscribe({
+              next: (itemLists) =>
+                this.menusState.set(
+                  rows.map((row, index) => mapCafeteriaMenu({ ...row, items: itemLists[index] })),
+                ),
+              error: () => this.menusState.set(rows.map(mapCafeteriaMenu)),
+            });
+        },
         error: () => {},
       });
-      this.http!.get<any[]>(`${this.cfg!.apiBaseUrl()}/orders?userId=u1`).subscribe({
-        next: (rows) => this.ordersState.set(rows as CafeteriaOrder[]),
+      this.http!.get<any[]>(`${this.apiBase()}/orders?userId=${DEMO_USER_ID}`).subscribe({
+        next: (rows) => this.ordersState.set(rows.map(mapCafeteriaOrder)),
         error: () => {},
       });
     }
+  }
+
+  private apiBase(): string {
+    return this.cfg!.apiBaseUrl();
   }
 
   readonly menus = this.menusState.asReadonly();
@@ -60,10 +83,10 @@ export class CafeteriaService {
     return this.ordersState().find((order) => order.id === orderId);
   }
 
-  /** Newest reservation first, scoped to one diner. */
+  /** Newest active reservation first, scoped to one diner. Cancelled receipts stay in the DB but are hidden. */
   ordersFor(userId: string = DEMO_USER_ID): CafeteriaOrder[] {
     return this.ordersState()
-      .filter((order) => order.userId === userId)
+      .filter((order) => order.userId === userId && order.status !== 'CANCELLED')
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }
 
@@ -75,7 +98,10 @@ export class CafeteriaService {
   hasReserved(menuId: string, itemId: string, userId: string = DEMO_USER_ID): boolean {
     return this.ordersState().some(
       (order) =>
-        order.menuId === menuId && order.itemId === itemId && order.userId === userId,
+        order.status !== 'CANCELLED' &&
+        order.menuId === menuId &&
+        order.itemId === itemId &&
+        order.userId === userId,
     );
   }
 
@@ -93,7 +119,10 @@ export class CafeteriaService {
     const userId = input.userId ?? DEMO_USER_ID;
     const existing = this.ordersState().find(
       (order) =>
-        order.menuId === menu.id && order.itemId === item.id && order.userId === userId,
+        order.status !== 'CANCELLED' &&
+        order.menuId === menu.id &&
+        order.itemId === item.id &&
+        order.userId === userId,
     );
     if (existing) {
       return existing;
@@ -114,13 +143,29 @@ export class CafeteriaService {
       price: item.price,
       createdAt: new Date(),
       qrPayload: `SMARTCAMPUS|CAFETERIA|${reference}|${userId}|${item.id}`,
+      status: 'CONFIRMED',
     };
 
     this.commitOrders([order, ...this.ordersState()]);
     if (!environment.useMocks) {
-      this.http!.post(`${this.cfg!.apiBaseUrl()}/orders`, {
-        menuId: menu.id, itemId: item.id, userId,
-      }).subscribe({ error: () => {} });
+      // A fresh key per attempt keeps a retry idempotent without resurrecting
+      // a cancelled receipt from an earlier reservation of the same dish.
+      const idempotencyKey = `caf-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+      const headers = new HttpHeaders({ 'Idempotency-Key': idempotencyKey });
+      this.http!.post<any>(`${this.apiBase()}/orders`, {
+        menuId: menu.id,
+        itemId: item.id,
+        userId,
+        idempotencyKey,
+      }, { headers }).subscribe({
+        next: (row) => this.replaceOrder(order.id, mapCafeteriaOrder(row)),
+        error: () => {
+          this.commitOrders(this.ordersState().filter((candidate) => candidate.id !== order.id));
+          // A 409 means another tab already owns the active receipt; reconcile
+          // from Supabase so the UI shows the backend row instead of the temp one.
+          this.refreshOrders(userId);
+        },
+      });
     }
     return order;
   }
@@ -128,12 +173,38 @@ export class CafeteriaService {
   /** Cancel one reservation. Only the diner who booked it can cancel. */
   cancel(orderId: string, userId: string = DEMO_USER_ID): boolean {
     const order = this.findOrder(orderId);
-    if (!order || order.userId !== userId) {
+    if (!order || order.userId !== userId || order.status === 'CANCELLED') {
       return false;
     }
 
-    this.commitOrders(this.ordersState().filter((candidate) => candidate.id !== orderId));
+    const cancelled: CafeteriaOrder = { ...order, status: 'CANCELLED' };
+    this.replaceOrder(orderId, cancelled);
+    if (!environment.useMocks) {
+      this.http!.post<{ cancelled: boolean }>(
+        `${this.apiBase()}/orders/${orderId}/cancel`,
+        {},
+        { params: { userId } },
+      ).subscribe({
+        next: (result) => {
+          if (!result?.cancelled) this.replaceOrder(orderId, order);
+        },
+        error: () => this.replaceOrder(orderId, order),
+      });
+    }
     return true;
+  }
+
+  private replaceOrder(id: string, order: CafeteriaOrder): void {
+    this.commitOrders(
+      this.ordersState().map((candidate) => (candidate.id === id ? order : candidate)),
+    );
+  }
+
+  private refreshOrders(userId: string): void {
+    this.http!.get<any[]>(`${this.apiBase()}/orders?userId=${userId}`).subscribe({
+      next: (rows) => this.ordersState.set(rows.map(mapCafeteriaOrder)),
+      error: () => {},
+    });
   }
 
   private commitOrders(orders: CafeteriaOrder[]): void {

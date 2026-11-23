@@ -72,7 +72,7 @@ describe('CafeteriaService', () => {
     expect(service.findOrder(order!.id)).toBeDefined();
 
     expect(service.cancel(order!.id, 'u2')).toBeTrue();
-    expect(service.findOrder(order!.id)).toBeUndefined();
+    expect(service.findOrder(order!.id)?.status).toBe('CANCELLED');
     expect(service.ordersFor('u2').length).toBe(0);
   });
 

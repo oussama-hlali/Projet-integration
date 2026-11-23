@@ -1,12 +1,12 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, effect, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { RuntimeConfigService } from '../config/runtime-config.service';
 import { EventRegistration } from '../models/event-registration.model';
 import { CampusEventService } from './campus-event.service';
+import { mapEventRegistration } from './live-mappers';
 import { NotificationService } from './notification.service';
 
-const STORAGE_KEY = 'smart-campus.event-registrations';
 const DEMO_USER_ID = 'u1';
 
 /**
@@ -15,6 +15,7 @@ const DEMO_USER_ID = 'u1';
  *
  * A registration owns the QR code shown on the event detail page, so
  * registering immediately reveals the code and unregistering removes it.
+ * Live mode persists through the engagement service; mock mode uses seeds.
  */
 @Injectable({ providedIn: 'root' })
 export class RegistrationService {
@@ -22,19 +23,40 @@ export class RegistrationService {
   private readonly notifications = inject(NotificationService);
   private readonly http = inject(HttpClient, { optional: true });
   private readonly cfg = inject(RuntimeConfigService, { optional: true });
-  private readonly state = signal<EventRegistration[]>(this.load());
+  private readonly state = signal<EventRegistration[]>(environment.useMocks ? this.load() : []);
+  private readonly loadedEventIds = new Set<string>();
 
   constructor() {
     if (!environment.useMocks) {
-      // Load registrations from backend (best-effort, per user)
-      this.http?.get<any[]>(`${this.cfg?.apiBaseUrl()}/events`).subscribe({
-        next: () => {},
-        error: () => {},
+      // Events arrive asynchronously; check each event's registration once it
+      // appears so a page refresh can show the QR code again.
+      effect(() => {
+        for (const event of this.events.events()) {
+          if (this.loadedEventIds.has(event.id)) continue;
+          this.loadedEventIds.add(event.id);
+          this.http!.get<any>(`${this.apiBase()}/events/${event.id}/registrations/me?userId=${DEMO_USER_ID}`).subscribe({
+            next: (row) => {
+              if (!row?.registered) return;
+              const mapped = mapEventRegistration(row, event.id, DEMO_USER_ID);
+              // `/registrations/me` only returns the QR code; give the local row
+              // a stable id so a later registration cannot duplicate it.
+              this.commit([
+                { ...mapped, id: mapped.id || `reg_${event.id}_${DEMO_USER_ID}` },
+                ...this.state().filter((candidate) => candidate.eventId !== event.id),
+              ]);
+            },
+            error: () => {},
+          });
+        }
       });
     }
   }
 
-  canRegister(eventId: string, userId: string = 'u1'): boolean {
+  private apiBase(): string {
+    return this.cfg!.apiBaseUrl();
+  }
+
+  canRegister(eventId: string, userId: string = DEMO_USER_ID): boolean {
     if (this.isRegistered(eventId, userId)) {
       return false;
     }
@@ -83,32 +105,56 @@ export class RegistrationService {
     };
 
     this.commit([...this.state(), registration]);
+    const notify = (): void => {
+      const event = this.events.findById(eventId);
+      this.notifications.add({
+        message: `Votre inscription à « ${event?.title ?? 'l\u2019événement'} » est enregistrée. Votre QR code est prêt.`,
+        type: 'EVENT',
+        eventId,
+      });
+    };
+
     if (!environment.useMocks) {
-      this.http!.post(`${this.cfg!.apiBaseUrl()}/events/${eventId}/registrations?userId=${userId}`, {}).subscribe({ error: () => {} });
+      this.http!.post<any>(`${this.apiBase()}/events/${eventId}/registrations?userId=${userId}`, {}).subscribe({
+        next: (row) => {
+          this.replace(registration.id, mapEventRegistration(row, eventId, userId));
+          notify();
+        },
+        error: () =>
+          this.commit(this.state().filter((candidate) => candidate.id !== registration.id)),
+      });
+    } else {
+      notify();
     }
-    const event = this.events.findById(eventId);
-    this.notifications.add({
-      message: `Votre inscription à « ${event?.title ?? 'l\u2019événement'} » est enregistrée. Votre QR code est prêt.`,
-      type: 'EVENT',
-      eventId,
-    });
     return registration;
   }
 
   unregister(eventId: string, userId: string = DEMO_USER_ID): boolean {
-    if (!this.isRegistered(eventId, userId)) {
+    const before = this.state();
+    const target = before.find(
+      (registration) => registration.eventId === eventId && registration.userId === userId,
+    );
+    if (!target) {
       return false;
     }
 
     this.commit(
-      this.state().filter(
+      before.filter(
         (registration) => !(registration.eventId === eventId && registration.userId === userId),
       ),
     );
     if (!environment.useMocks) {
-      this.http!.delete(`${this.cfg!.apiBaseUrl()}/events/${eventId}/registrations/me?userId=${userId}`).subscribe({ error: () => {} });
+      this.http!.delete(`${this.apiBase()}/events/${eventId}/registrations/me?userId=${userId}`).subscribe({
+        error: () => this.commit(before),
+      });
     }
     return true;
+  }
+
+  private replace(id: string, registration: EventRegistration): void {
+    this.commit(
+      this.state().map((candidate) => (candidate.id === id ? registration : candidate)),
+    );
   }
 
   private commit(registrations: EventRegistration[]): void {
@@ -126,5 +172,4 @@ export class RegistrationService {
       },
     ];
   }
-
 }

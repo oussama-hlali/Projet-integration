@@ -1,5 +1,6 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { Injectable, computed, inject, signal } from '@angular/core';
+import { forkJoin } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { RuntimeConfigService } from '../config/runtime-config.service';
 import {
@@ -8,28 +9,86 @@ import {
   TransportRouteView,
   TransportStop,
 } from '../models/transport.model';
+import {
+  mapTransportDeparture,
+  mapTransportRoute,
+  mapTransportStop,
+} from './live-mappers';
 
 /** Campus shuttle timetable, grouped by route then by ordered stop. */
 @Injectable({ providedIn: 'root' })
 export class TransportService {
   private readonly http = inject(HttpClient);
   private readonly cfg = inject(RuntimeConfigService);
-  private readonly routeState = signal<TransportRoute[]>([
-    { id: 't1', name: 'Ligne Centre-ville', color: '#0c6f6b' },
-    { id: 't2', name: 'Ligne Résidence', color: '#1c4fa8' },
-    { id: 't3', name: 'Navette Campus', color: '#8a5200' },
-  ]);
+  private readonly routeState = signal<TransportRoute[]>(
+    environment.useMocks
+      ? [
+          { id: 't1', name: 'Ligne Centre-ville', color: '#0c6f6b' },
+          { id: 't2', name: 'Ligne Résidence', color: '#1c4fa8' },
+          { id: 't3', name: 'Navette Campus', color: '#8a5200' },
+        ]
+      : [],
+  );
 
   constructor() {
     if (!environment.useMocks) {
-      this.http.get<any[]>(`${this.cfg.apiBaseUrl()}/transport/routes`).subscribe({
-        next: (rows) => this.routeState.set(rows as TransportRoute[]),
-        error: () => {},
-      });
+      this.loadLive();
     }
   }
 
-  private readonly stopState = signal<TransportStop[]>([
+  private apiBase(): string {
+    return this.cfg.apiBaseUrl();
+  }
+
+  private loadLive(): void {
+    this.http.get<any[]>(`${this.apiBase()}/transport/routes`).subscribe({
+      next: (rows) => {
+        const routes = rows.map(mapTransportRoute);
+        this.routeState.set(routes);
+        if (!routes.length) {
+          this.stopState.set([]);
+          this.departureState.set([]);
+          return;
+        }
+
+        forkJoin(
+          routes.map((route) =>
+            this.http.get<any[]>(`${this.apiBase()}/transport/routes/${route.id}/stops`),
+          ),
+        ).subscribe({
+          next: (lists) => {
+            const stops = lists.flat().map(mapTransportStop);
+            this.stopState.set(stops);
+            if (!stops.length) {
+              this.departureState.set([]);
+              return;
+            }
+
+            forkJoin(
+              stops.map((stop) =>
+                this.http.get<any[]>(`${this.apiBase()}/transport/stops/${stop.id}/departures`),
+              ),
+            ).subscribe({
+              next: (departures) =>
+                this.departureState.set(departures.flat().map(mapTransportDeparture)),
+              error: () => this.departureState.set([]),
+            });
+          },
+          error: () => {
+            this.stopState.set([]);
+            this.departureState.set([]);
+          },
+        });
+      },
+      error: () => {
+        this.routeState.set([]);
+        this.stopState.set([]);
+        this.departureState.set([]);
+      },
+    });
+  }
+
+  private readonly stopState = signal<TransportStop[]>(environment.useMocks ? [
     { id: 'st-1', routeId: 't1', name: 'Gare Centrale', order: 1 },
     { id: 'st-2', routeId: 't1', name: 'Avenue Habib', order: 2 },
     { id: 'st-3', routeId: 't1', name: 'Campus Nord', order: 3 },
@@ -41,9 +100,9 @@ export class TransportService {
     { id: 'st-9', routeId: 't3', name: 'Bloc C', order: 2 },
     { id: 'st-10', routeId: 't3', name: 'Cafétéria', order: 3 },
     { id: 'st-11', routeId: 't3', name: 'Bibliothèque', order: 4 },
-  ]);
+  ] : []);
 
-  private readonly departureState = signal<TransportDeparture[]>([
+  private readonly departureState = signal<TransportDeparture[]>(environment.useMocks ? [
     { id: 'd-1', stopId: 'st-1', time: '07:30', days: 'Mon-Fri' },
     { id: 'd-2', stopId: 'st-1', time: '08:00', days: 'Mon-Fri' },
     { id: 'd-3', stopId: 'st-1', time: '12:15', days: 'Mon-Fri' },
@@ -86,7 +145,7 @@ export class TransportService {
     { id: 'd-40', stopId: 'st-11', time: '08:22', days: 'Mon-Fri' },
     { id: 'd-41', stopId: 'st-11', time: '11:22', days: 'Mon-Fri' },
     { id: 'd-42', stopId: 'st-11', time: '15:22', days: 'Mon-Fri' },
-  ]);
+  ] : []);
 
   readonly routes = this.routeState.asReadonly();
 

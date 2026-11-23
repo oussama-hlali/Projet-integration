@@ -10,19 +10,18 @@ import {
   ReservationPhase,
   ReservationStatus,
 } from '../models/reservation.model';
+import { mapReservation } from './live-mappers';
 import { NotificationService } from './notification.service';
 import { RoomService } from './room.service';
 
-const STORAGE_KEY = 'smart-campus-reservations';
 const DEMO_USER_ID = 'u1';
 
 /**
  * PB-09 — Reservation store.
  *
- * Demo data lives in `localStorage` so the list survives reloads without a
- * backend. The persisted shape follows the class diagram (`startTime` and
- * `endTime` are dates, `status` is one of the four enum values); records from
- * the earlier form (separate date/time strings, `state`) are migrated on read.
+ * Production reads and writes the campus service through the gateway. Mock
+ * mode keeps deterministic demo bookings; the shape follows the class diagram
+ * (`startTime` and `endTime` are dates, `status` is one of four enum values).
  */
 @Injectable({ providedIn: 'root' })
 export class ReservationService {
@@ -30,16 +29,25 @@ export class ReservationService {
   private readonly notifications = inject(NotificationService);
   private readonly http = inject(HttpClient, { optional: true });
   private readonly cfg = inject(RuntimeConfigService, { optional: true });
-  private readonly state = signal<Reservation[]>(this.load());
+  private readonly state = signal<Reservation[]>(environment.useMocks ? this.load() : []);
 
   constructor() {
-    this.syncCompleted();
-    if (!environment.useMocks) {
-      this.http!.get<any[]>(`${this.cfg!.apiBaseUrl()}/reservations`).subscribe({
-        next: (rows) => this.state.set(rows as Reservation[]),
-        error: () => {},
-      });
+    if (environment.useMocks) {
+      this.syncCompleted();
+    } else {
+      this.refresh();
     }
+  }
+
+  private apiBase(): string {
+    return this.cfg!.apiBaseUrl();
+  }
+
+  private refresh(): void {
+    this.http!.get<any[]>(`${this.apiBase()}/reservations`).subscribe({
+      next: (rows) => this.commit(rows.map(mapReservation)),
+      error: () => {},
+    });
   }
 
   /** All bookings; the page sorts them for display. */
@@ -103,25 +111,41 @@ export class ReservationService {
       startTime: input.startTime,
       endTime: input.endTime,
       purpose: input.purpose.trim(),
-      status: 'CONFIRMED',
+      // The campus service creates PENDING bookings; an admin confirms them.
+      status: environment.useMocks ? 'CONFIRMED' : 'PENDING',
       userId: input.userId ?? DEMO_USER_ID,
     };
 
     this.commit([...this.state(), reservation]);
+    const notify = (saved: Reservation): void => {
+      this.notifications.add({
+        message: `Votre réservation pour ${saved.room} est confirmée.`,
+        type: 'RESERVATION',
+        reservationId: saved.id,
+      });
+    };
+
     if (!environment.useMocks) {
-      this.http!.post(`${this.cfg!.apiBaseUrl()}/reservations`, {
+      this.http!.post<any>(`${this.apiBase()}/reservations`, {
         roomId: input.roomId,
-        userId: input.userId ?? DEMO_USER_ID,
+        userId: reservation.userId,
         startTime: input.startTime.toISOString(),
         endTime: input.endTime.toISOString(),
-        purpose: input.purpose.trim(),
-      }).subscribe({ error: () => {} });
+        purpose: reservation.purpose,
+      }).subscribe({
+        next: (row) => {
+          const saved = mapReservation(row);
+          this.replace(reservation.id, saved);
+          notify(saved);
+        },
+        error: () => {
+          this.commit(this.state().filter((candidate) => candidate.id !== reservation.id));
+          this.refresh();
+        },
+      });
+    } else {
+      notify(reservation);
     }
-    this.notifications.add({
-      message: `Votre réservation pour ${reservation.room} est confirmée.`,
-      type: 'RESERVATION',
-      reservationId: reservation.id,
-    });
     return { ok: true, reservation };
   }
 
@@ -132,15 +156,13 @@ export class ReservationService {
       return undefined;
     }
 
-    const cancelled = this.setStatus(id, 'CANCELLED');
-    if (cancelled) {
+    return this.transition(id, 'CANCELLED', (saved) => {
       this.notifications.add({
-        message: `Votre réservation pour ${cancelled.room} a été annulée.`,
+        message: `Votre réservation pour ${saved.room} a été annulée.`,
         type: 'RESERVATION',
-        reservationId: cancelled.id,
+        reservationId: saved.id,
       });
-    }
-    return cancelled;
+    });
   }
 
   /** Approve a pending booking. */
@@ -150,15 +172,13 @@ export class ReservationService {
       return undefined;
     }
 
-    const approved = this.setStatus(id, 'CONFIRMED');
-    if (approved) {
+    return this.transition(id, 'CONFIRMED', (saved) => {
       this.notifications.add({
-        message: `Votre réservation pour ${approved.room} est confirmée.`,
+        message: `Votre réservation pour ${saved.room} est confirmée.`,
         type: 'RESERVATION',
-        reservationId: approved.id,
+        reservationId: saved.id,
       });
-    }
-    return approved;
+    });
   }
 
   /** Mark a booking as completed once its slot is over. */
@@ -168,11 +188,17 @@ export class ReservationService {
       return undefined;
     }
 
-    return this.setStatus(id, 'COMPLETED');
+    return this.transition(id, 'COMPLETED');
   }
 
   /** Refresh statuses so past confirmed bookings become completed. */
   syncCompleted(): void {
+    if (!environment.useMocks) {
+      // The campus service has the authoritative auto-complete scheduler.
+      this.refresh();
+      return;
+    }
+
     const now = new Date();
     let changed = false;
     const next = this.state().map((reservation) => {
@@ -190,20 +216,62 @@ export class ReservationService {
 
   /** Administrator transitions used by the management screens. */
   setStatus(id: string, status: ReservationStatus): Reservation | undefined {
+    return this.transition(id, status);
+  }
+
+  /**
+   * Apply a transition optimistically, reconcile with the backend row, and
+   * roll back if the campus service rejects it.
+   */
+  private transition(
+    id: string,
+    status: ReservationStatus,
+    onSaved?: (reservation: Reservation) => void,
+  ): Reservation | undefined {
     const target = this.state().find((reservation) => reservation.id === id);
     if (!target) {
       return undefined;
     }
 
     const updated: Reservation = { ...target, status };
-    this.commit(
-      this.state().map((reservation) => (reservation.id === id ? updated : reservation)),
-    );
+    this.replace(id, updated);
+
+    const endpoint =
+      status === 'CANCELLED'
+        ? 'cancel'
+        : status === 'CONFIRMED'
+          ? 'confirm'
+          : status === 'COMPLETED'
+            ? 'complete'
+            : null;
+
+    if (environment.useMocks || !endpoint) {
+      onSaved?.(updated);
+      return updated;
+    }
+
+    this.http!.post<any>(`${this.apiBase()}/reservations/${id}/${endpoint}`, {}).subscribe({
+      next: (row) => {
+        const saved = mapReservation(row);
+        this.replace(id, saved);
+        onSaved?.(saved);
+      },
+      error: () => {
+        this.replace(id, target);
+        this.refresh();
+      },
+    });
     return updated;
   }
 
   private newId(): string {
     return `r_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+  }
+
+  private replace(id: string, reservation: Reservation): void {
+    this.commit(
+      this.state().map((candidate) => (candidate.id === id ? reservation : candidate)),
+    );
   }
 
   private commit(reservations: Reservation[]): void {

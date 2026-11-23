@@ -21,12 +21,16 @@ public class Event {
     private String category; // ACADEMIC, SOCIAL, SPORT, CULTURE, CAREER
     @Column(nullable = false)
     private Instant date;
+    @Column(name = "end_date")
+    private Instant endDate;
     @Column(length = 160)
     private String location;
     @Column(nullable = false)
     private int capacity;
     @Column(name = "organizer_id", length = 64)
     private String organizerId;
+    @Column(name = "room_id", length = 64)
+    private String roomId;
     @Column(name = "created_at", nullable = false)
     private Instant createdAt = Instant.now();
 
@@ -40,12 +44,16 @@ public class Event {
     public void setCategory(String category) { this.category = category; }
     public Instant getDate() { return date; }
     public void setDate(Instant date) { this.date = date; }
+    public Instant getEndDate() { return endDate; }
+    public void setEndDate(Instant endDate) { this.endDate = endDate; }
     public String getLocation() { return location; }
     public void setLocation(String location) { this.location = location; }
     public int getCapacity() { return capacity; }
     public void setCapacity(int capacity) { this.capacity = capacity; }
     public String getOrganizerId() { return organizerId; }
     public void setOrganizerId(String organizerId) { this.organizerId = organizerId; }
+    public String getRoomId() { return roomId; }
+    public void setRoomId(String roomId) { this.roomId = roomId; }
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
 }

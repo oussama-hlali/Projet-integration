@@ -4,7 +4,7 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 
 import { AuthService } from '../../../core/services/auth.service';
 import { ThemeToggleComponent } from '../../../shared/components/theme-toggle.component';
@@ -18,6 +18,7 @@ import { ThemeToggleComponent } from '../../../shared/components/theme-toggle.co
 export class VerifyOtp implements OnDestroy {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly formBuilder = inject(FormBuilder);
 
   readonly loading = signal(false);
@@ -45,12 +46,17 @@ export class VerifyOtp implements OnDestroy {
       return;
     }
 
-    await this.router.navigateByUrl(this.auth.homeRoute());
+    await this.router.navigateByUrl(
+      this.auth.postAuthDestination(this.route.snapshot.queryParamMap.get('returnUrl')),
+    );
   }
 
   cancel(): void {
+    const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
     this.auth.cancelPending();
-    void this.router.navigateByUrl('/login');
+    void this.router.navigate(['/login'], {
+      queryParams: returnUrl ? { returnUrl } : {},
+    });
   }
 
   ngOnDestroy(): void {}

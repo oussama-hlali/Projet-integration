@@ -5,5 +5,8 @@ public record UserDto(
         String fullName,
         String email,
         String role,
-        boolean totpEnabled
+        boolean totpEnabled,
+        String theme,
+        String language,
+        boolean notificationsEnabled
 ) {}

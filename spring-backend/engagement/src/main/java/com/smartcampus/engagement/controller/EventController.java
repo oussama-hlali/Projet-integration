@@ -2,9 +2,20 @@ package com.smartcampus.engagement.controller;
 
 import com.smartcampus.engagement.domain.Event;
 import com.smartcampus.engagement.service.EventService;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
 
@@ -18,9 +29,7 @@ public class EventController {
     public List<Event> list(@RequestParam(required = false) String category,
                             @RequestParam(required = false) String from,
                             @RequestParam(required = false) String to) {
-        return service.list(category,
-                from == null ? null : Instant.parse(from),
-                to == null ? null : Instant.parse(to));
+        return service.list(category, parseInstant(from, "from"), parseInstant(to, "to"));
     }
 
     @GetMapping("/events/{id}")
@@ -29,25 +38,29 @@ public class EventController {
     @PostMapping("/events")
     public Event create(@RequestBody Map<String, Object> body) {
         return service.create(
-                (String) body.get("title"),
-                (String) body.get("description"),
-                (String) body.get("category"),
-                Instant.parse((String) body.get("date")),
-                (String) body.get("location"),
-                ((Number) body.getOrDefault("capacity", 0)).intValue(),
-                (String) body.get("organizerId"));
+                requireText(body.get("title"), "title", 160, true),
+                requireText(body.get("description"), "description", 2000, false),
+                requireText(body.get("category"), "category", 32, false),
+                parseInstant(requiredText(body.get("date"), "date"), "date"),
+                parseInstant(optionalText(body.get("endDate")), "endDate"),
+                requireText(body.get("location"), "location", 160, false),
+                requireCapacity(body.get("capacity")),
+                optionalText(body.get("organizerId")),
+                optionalText(body.get("roomId")));
     }
 
     @PutMapping("/events/{id}")
     public Event update(@PathVariable String id, @RequestBody Map<String, Object> body) {
         return service.update(
                 id,
-                (String) body.get("title"),
-                (String) body.get("description"),
-                (String) body.get("category"),
-                body.get("date") == null ? null : Instant.parse((String) body.get("date")),
-                (String) body.get("location"),
-                body.get("capacity") == null ? null : ((Number) body.get("capacity")).intValue());
+                requireText(body.get("title"), "title", 160, false),
+                requireText(body.get("description"), "description", 2000, false),
+                requireText(body.get("category"), "category", 32, false),
+                parseInstant(optionalText(body.get("date")), "date"),
+                parseInstant(optionalText(body.get("endDate")), "endDate"),
+                requireText(body.get("location"), "location", 160, false),
+                body.get("capacity") == null ? null : requireCapacity(body.get("capacity")),
+                optionalText(body.get("roomId")));
     }
 
     @DeleteMapping("/events/{id}")
@@ -60,8 +73,12 @@ public class EventController {
 
     @PutMapping("/events/{id}/interest")
     public Map<String, Object> toggleInterest(@PathVariable String id, @RequestParam String userId) {
-        boolean now = service.toggleInterest(id, userId);
-        return Map.of("interested", now);
+        return Map.of("interested", service.toggleInterest(id, userId));
+    }
+
+    @DeleteMapping("/events/{id}/interest")
+    public Map<String, Object> removeInterest(@PathVariable String id, @RequestParam String userId) {
+        return Map.of("interested", !service.removeInterest(id, userId));
     }
 
     @GetMapping("/me/event-interests")
@@ -94,5 +111,47 @@ public class EventController {
     @DeleteMapping("/events/{id}/registrations/me")
     public void unregister(@PathVariable String id, @RequestParam String userId) {
         service.unregister(id, userId);
+    }
+
+    private Instant parseInstant(String raw, String field) {
+        if (raw == null || raw.isBlank()) return null;
+        try {
+            return Instant.parse(raw);
+        } catch (DateTimeParseException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, field + " must be an ISO date-time");
+        }
+    }
+
+    private String requiredText(Object raw, String field) {
+        String text = optionalText(raw);
+        if (text == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, field + " is required");
+        }
+        return text;
+    }
+
+    private String optionalText(Object raw) {
+        if (raw == null) return null;
+        String text = String.valueOf(raw).trim();
+        return text.isEmpty() ? null : text;
+    }
+
+    private String requireText(Object raw, String field, int maxLength, boolean required) {
+        String text = optionalText(raw);
+        if (text == null) {
+            if (required) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, field + " is required");
+            return null;
+        }
+        if (text.length() > maxLength) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, field + " is too long");
+        }
+        return text;
+    }
+
+    private int requireCapacity(Object raw) {
+        if (!(raw instanceof Number number) || number.intValue() < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "capacity must be a positive number");
+        }
+        return number.intValue();
     }
 }

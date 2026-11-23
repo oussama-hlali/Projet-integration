@@ -25,6 +25,13 @@ spring:
         jwt:
           jwk-set-uri: ${IDENTITY_JWKS_URL:http://localhost:8081/.well-known/jwks.json}
 
+auth:
+  refresh-cookie:
+    name: sc_refresh
+    same-site: ${REFRESH_COOKIE_SAME_SITE:None}
+    secure: ${REFRESH_COOKIE_SECURE:true}
+    max-age-seconds: 2592000
+
 server:
   port: ${PORT:8081}
 

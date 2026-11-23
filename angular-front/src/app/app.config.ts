@@ -20,7 +20,11 @@ export const appConfig: ApplicationConfig = {
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
     provideHttpClient(withInterceptors([authInterceptor, httpErrorInterceptor])),
-    provideAppInitializer(() => inject(RuntimeConfigService).load()),
-    provideAppInitializer(() => inject(AuthService).init()),
+    // Order matters: the runtime API base URL must be known before the silent
+    // cookie refresh runs, otherwise the bootstrap may call a stale host.
+    provideAppInitializer(async () => {
+      await inject(RuntimeConfigService).load();
+      await inject(AuthService).init();
+    }),
   ],
 };

@@ -9,9 +9,11 @@ import com.smartcampus.identity.util.Totp;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 @Service
@@ -31,27 +33,54 @@ public class UserService {
     }
 
     public User register(String fullName, String email, String password) {
+        requireEmail(email);
+        requirePassword(password);
         if (users.findByEmail(email).isPresent()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already registered");
         }
         User u = new User();
         u.setId("u" + UUID.randomUUID().toString().substring(0, 8));
-        u.setFullName(fullName);
-        u.setEmail(email);
+        u.setFullName(requireName(fullName));
+        u.setEmail(email.trim().toLowerCase(Locale.ROOT));
         u.setPasswordHash(encoder.encode(password));
         u.setRole(Role.STUDENT); // forced server-side, never from client
         u.setTheme("light");
         u.setLanguage("en");
+        u.setNotificationsEnabled(true);
         users.save(u);
         record("REGISTER", u.getId(), null);
         notifications.notify(u.getId(), "SYSTEM", "Welcome to Smart Campus", u.getId());
         return u;
     }
 
+    /** Administrator-created account: role is explicit and 2FA is enrolled on first login. */
+    public User createManaged(String fullName, String email, String password, Role role) {
+        requireEmail(email);
+        requirePassword(password);
+        if (role == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "role is required");
+        }
+        if (users.findByEmail(email).isPresent()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already registered");
+        }
+        User u = new User();
+        u.setId("u" + UUID.randomUUID().toString().substring(0, 8));
+        u.setFullName(requireName(fullName));
+        u.setEmail(email.trim().toLowerCase(Locale.ROOT));
+        u.setPasswordHash(encoder.encode(password));
+        u.setRole(role);
+        u.setTheme("light");
+        u.setLanguage("en");
+        u.setNotificationsEnabled(true);
+        users.save(u);
+        record("USER_CREATED", u.getId(), null);
+        return u;
+    }
+
     public User authenticate(String email, String password) {
-        User u = users.findByEmail(email)
+        User u = users.findByEmail(email == null ? "" : email.trim().toLowerCase(Locale.ROOT))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials"));
-        if (!encoder.matches(password, u.getPasswordHash())) {
+        if (!encoder.matches(password == null ? "" : password, u.getPasswordHash())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
         }
         return u;
@@ -69,7 +98,7 @@ public class UserService {
 
     public User updateProfile(String id, String fullName) {
         User u = findById(id);
-        if (fullName != null && !fullName.isBlank()) u.setFullName(fullName);
+        if (fullName != null && !fullName.isBlank()) u.setFullName(fullName.trim());
         users.save(u);
         record("PROFILE_UPDATE", id, null);
         return u;
@@ -85,12 +114,82 @@ public class UserService {
         return u;
     }
 
+    @Transactional
+    public User updateAccount(String id, String fullName, String email, Role role) {
+        User u = findById(id);
+        String normalizedEmail = email == null ? u.getEmail() : email.trim().toLowerCase(Locale.ROOT);
+        if (!normalizedEmail.equals(u.getEmail())) {
+            requireEmail(normalizedEmail);
+            if (users.findByEmail(normalizedEmail).isPresent()) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already registered");
+            }
+            u.setEmail(normalizedEmail);
+        }
+        if (fullName != null) u.setFullName(requireName(fullName));
+        if (role != null) {
+            if (u.getRole() == Role.ADMINISTRATOR && role != Role.ADMINISTRATOR && adminCount() <= 1) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot demote the last administrator");
+            }
+            u.setRole(role);
+        }
+        users.save(u);
+        record("USER_UPDATED", id, null);
+        return u;
+    }
+
     public User updateRole(String id, Role role) {
         User u = findById(id);
+        if (u.getRole() == Role.ADMINISTRATOR && role != Role.ADMINISTRATOR && adminCount() <= 1) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot demote the last administrator");
+        }
         u.setRole(role);
         users.save(u);
         record("ROLE_CHANGE", id, null);
         return u;
+    }
+
+    @Transactional
+    public void deleteUser(String id, String requesterId) {
+        User u = findById(id);
+        if (id.equals(requesterId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot delete your own account");
+        }
+        if (u.getRole() == Role.ADMINISTRATOR && adminCount() <= 1) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot delete the last administrator");
+        }
+        users.delete(u);
+        record("USER_DELETED", id, null);
+    }
+
+    public void resetPassword(String id, String password) {
+        requirePassword(password);
+        User u = findById(id);
+        u.setPasswordHash(encoder.encode(password));
+        users.save(u);
+        record("PASSWORD_RESET", id, null);
+    }
+
+    private long adminCount() {
+        return users.findAll().stream().filter(u -> u.getRole() == Role.ADMINISTRATOR).count();
+    }
+
+    private String requireName(String fullName) {
+        if (fullName == null || fullName.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "fullName is required");
+        }
+        return fullName.trim();
+    }
+
+    private void requireEmail(String email) {
+        if (email == null || email.isBlank() || !email.contains("@")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A valid email is required");
+        }
+    }
+
+    private void requirePassword(String password) {
+        if (password == null || password.length() < 8) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Password must be at least 8 characters");
+        }
     }
 
     public List<User> listAll() {

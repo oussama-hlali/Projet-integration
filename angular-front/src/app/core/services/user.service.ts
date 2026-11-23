@@ -1,5 +1,6 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { Observable, of } from 'rxjs';
+import { environment } from '../../../environments/environment';
 import {
   Preferences,
   UpdatePreferencesInput,
@@ -7,19 +8,28 @@ import {
   User,
   UserRole,
 } from '../models/user.model';
-
-const STORAGE_KEY = 'smart-campus.users';
+import { HttpAuthService } from './http-auth.service';
+import { mapUser } from './live-mappers';
 
 /**
- * User directory and the signed-in demo profile.
+ * User directory and the signed-in profile.
  *
- * The active profile follows the demo role chosen on the sign-in page, which
- * keeps `/profile` and `/admin/users` consistent with the shell's role
- * switcher. Profile and preference edits are persisted locally.
+ * Live mode reads and writes the identity service through the gateway. Mock
+ * mode keeps the deterministic demo directory used by the local UI tests.
  */
 @Injectable({ providedIn: 'root' })
 export class UserService {
-  private readonly state = signal<User[]>(this.load());
+  private readonly httpAuth = inject(HttpAuthService, { optional: true });
+  private readonly state = signal<User[]>(environment.useMocks ? this.seed() : []);
+
+  constructor() {
+    if (!environment.useMocks && this.httpAuth) {
+      this.httpAuth.listUsers().subscribe({
+        next: (rows) => this.state.set(rows.map(mapUser)),
+        error: () => {},
+      });
+    }
+  }
 
   readonly users = this.state.asReadonly();
 
@@ -28,7 +38,7 @@ export class UserService {
   }
 
   getUserById(id: string): Observable<User | undefined> {
-    return of(this.state().find((user) => user.id === id));
+    return of(this.findById(id));
   }
 
   findById(id: string): User | undefined {
@@ -51,20 +61,41 @@ export class UserService {
     return updated;
   }
 
-  /** Replace the stored password digest after an administrator reset. */
+  /** Replace the stored password digest after an administrator reset (mock mode). */
   setCredentials(id: string, passwordHash: string, salt: string): User | undefined {
     return this.patch(id, { passwordHash, salt });
   }
 
   updateProfile(id: string, input: UpdateProfileInput): User | undefined {
+    const target = this.findById(id);
+    if (!target) {
+      return undefined;
+    }
+
+    if (!environment.useMocks && this.httpAuth) {
+      // Backend enforces email uniqueness and refuses demoting the last admin.
+      this.httpAuth.updateUser(id, { fullName: input.fullName, email: input.email }).subscribe({
+        next: (row) => this.replace(id, mapUser(row)),
+      });
+    }
     return this.patch(id, input);
   }
 
   updatePreferences(id: string, preferences: UpdatePreferencesInput): User | undefined {
+    if (!environment.useMocks && this.httpAuth) {
+      this.httpAuth.updatePreferences({ ...preferences }).subscribe({
+        next: (row) => this.replace(id, mapUser(row)),
+      });
+    }
     return this.patch(id, { preferences: { ...preferences } });
   }
 
   updateRole(id: string, role: UserRole): User | undefined {
+    if (!environment.useMocks && this.httpAuth) {
+      this.httpAuth.updateUser(id, { role }).subscribe({
+        next: (row) => this.replace(id, mapUser(row)),
+      });
+    }
     return this.patch(id, { role });
   }
 
@@ -76,16 +107,54 @@ export class UserService {
     };
 
     this.commit([...this.state(), user]);
+    if (!environment.useMocks && this.httpAuth) {
+      this.httpAuth.createUser({
+        fullName: input.fullName,
+        email: input.email,
+        password: input.passwordHash ?? '',
+        role: input.role,
+      }).subscribe({
+        next: (row) => {
+          const saved = mapUser(row);
+          this.commit(this.state().map((candidate) => (candidate.id === user.id ? saved : candidate)));
+        },
+        error: () => this.commit(this.state().filter((candidate) => candidate.id !== user.id)),
+      });
+    }
     return user;
   }
 
   remove(id: string): boolean {
-    if (!this.findById(id) || this.state().length <= 1) {
+    const target = this.findById(id);
+    if (!target || this.state().length <= 1) {
       return false;
     }
 
     this.commit(this.state().filter((user) => user.id !== id));
+    if (!environment.useMocks && this.httpAuth) {
+      this.httpAuth.deleteUser(id).subscribe({
+        error: () => this.commit([...this.state(), target]),
+      });
+    }
     return true;
+  }
+
+  /** Remove a user from the local signal after the backend confirmed deletion. */
+  drop(id: string): boolean {
+    if (!this.findById(id)) {
+      return false;
+    }
+    this.commit(this.state().filter((user) => user.id !== id));
+    return true;
+  }
+
+  /** Optimistically cache a backend-created user (admin console). */
+  cache(user: User): void {
+    this.replace(user.id, user);
+  }
+
+  private replace(id: string, user: User): void {
+    this.commit(this.state().map((candidate) => (candidate.id === id ? user : candidate)));
   }
 
   private patch(id: string, changes: Partial<Omit<User, 'id'>>): User | undefined {

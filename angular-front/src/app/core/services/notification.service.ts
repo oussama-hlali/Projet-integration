@@ -3,28 +3,33 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { RuntimeConfigService } from '../config/runtime-config.service';
 import { Notification, NotificationType } from '../models/notification.model';
+import { mapNotification } from './live-mappers';
 
-const STORAGE_KEY = 'smart-campus.notifications';
 const DEMO_USER_ID = 'u1';
 
 /**
  * Notification store. Each notification may reference the announcement,
  * event, reservation or lost & found item it is about, matching the diagram's
- * `0..*` associations.
+ * `0..*` associations. Live mode reads and writes the notifications service
+ * through the gateway; mock mode keeps the deterministic demo inbox.
  */
 @Injectable({ providedIn: 'root' })
 export class NotificationService {
   private readonly http = inject(HttpClient, { optional: true });
   private readonly cfg = inject(RuntimeConfigService, { optional: true });
-  private readonly state = signal<Notification[]>(this.load());
+  private readonly state = signal<Notification[]>(environment.useMocks ? this.load() : []);
 
   constructor() {
     if (!environment.useMocks) {
-      this.http!.get<any[]>(`${this.cfg!.apiBaseUrl()}/notifications?userId=u1`).subscribe({
-        next: (rows) => this.state.set(rows as Notification[]),
+      this.http!.get<any[]>(`${this.apiBase()}/notifications?userId=${DEMO_USER_ID}`).subscribe({
+        next: (rows) => this.commit(rows.map(mapNotification)),
         error: () => {},
       });
     }
+  }
+
+  private apiBase(): string {
+    return this.cfg!.apiBaseUrl();
   }
 
   readonly notifications = this.state.asReadonly();
@@ -47,20 +52,26 @@ export class NotificationService {
   }
 
   markAllRead(): void {
-    this.commit(this.state().map((notification) => ({ ...notification, read: true })));
+    const before = this.state();
+    this.commit(before.map((notification) => ({ ...notification, read: true })));
     if (!environment.useMocks) {
-      this.http!.post(`${this.cfg!.apiBaseUrl()}/notifications/read-all?userId=u1`, {}).subscribe({ error: () => {} });
+      this.http!.post(`${this.apiBase()}/notifications/read-all?userId=${DEMO_USER_ID}`, {}).subscribe({
+        error: () => this.commit(before),
+      });
     }
   }
 
   remove(id: string): boolean {
-    if (!this.state().some((notification) => notification.id === id)) {
+    const target = this.state().find((notification) => notification.id === id);
+    if (!target) {
       return false;
     }
 
     this.commit(this.state().filter((notification) => notification.id !== id));
     if (!environment.useMocks) {
-      this.http!.delete(`${this.cfg!.apiBaseUrl()}/notifications/${id}`).subscribe({ error: () => {} });
+      this.http!.delete(`${this.apiBase()}/notifications/${id}`).subscribe({
+        error: () => this.commit([target, ...this.state()]),
+      });
     }
     return true;
   }
@@ -88,6 +99,25 @@ export class NotificationService {
     };
 
     this.commit([notification, ...this.state()]);
+    if (!environment.useMocks) {
+      // The backend stores one association column (`event_id`); the notification
+      // type tells the mapper which UI field it belongs to.
+      const associationId =
+        input.announcementId ??
+        input.eventId ??
+        input.reservationId ??
+        input.lostFoundId ??
+        notification.id;
+      this.http!.post<any>(`${this.apiBase()}/notifications/ingest`, {
+        userId: notification.userId,
+        type: notification.type,
+        message: notification.message,
+        eventId: associationId,
+      }).subscribe({
+        next: (row) => this.replace(notification.id, mapNotification(row)),
+        error: () => this.commit(this.state().filter((candidate) => candidate.id !== notification.id)),
+      });
+    }
     return notification;
   }
 
@@ -100,9 +130,16 @@ export class NotificationService {
     const updated: Notification = { ...target, ...changes, id };
     this.commit(this.state().map((notification) => (notification.id === id ? updated : notification)));
     if (!environment.useMocks) {
-      this.http!.patch(`${this.cfg!.apiBaseUrl()}/notifications/${id}`, { read: changes.read }).subscribe({ error: () => {} });
+      this.http!.patch<any>(`${this.apiBase()}/notifications/${id}`, { read: changes.read }).subscribe({
+        next: (row) => this.replace(id, mapNotification(row)),
+        error: () => this.replace(id, target),
+      });
     }
     return updated;
+  }
+
+  private replace(id: string, notification: Notification): void {
+    this.commit(this.state().map((candidate) => (candidate.id === id ? notification : candidate)));
   }
 
   private commit(notifications: Notification[]): void {
@@ -110,10 +147,6 @@ export class NotificationService {
   }
 
   private load(): Notification[] {
-    return this.seed();
-  }
-
-  private seed(): Notification[] {
     return [
       {
         id: 'n1',

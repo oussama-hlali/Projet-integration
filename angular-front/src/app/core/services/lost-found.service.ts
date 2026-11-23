@@ -9,9 +9,9 @@ import {
   LostFoundReportInput,
   LostFoundStatus,
 } from '../models/lost-found.model';
+import { mapLostFound, mapLostFoundComment } from './live-mappers';
 import { NotificationService } from './notification.service';
 
-const STORAGE_KEY = 'smart-campus.lost-found';
 const DEMO_USER_ID = 'u1';
 
 /**
@@ -26,15 +26,19 @@ export class LostFoundService {
   private readonly notifications = inject(NotificationService);
   private readonly http = inject(HttpClient, { optional: true });
   private readonly cfg = inject(RuntimeConfigService, { optional: true });
-  private readonly state = signal<LostFoundItem[]>(this.load());
+  private readonly state = signal<LostFoundItem[]>(environment.useMocks ? this.load() : []);
 
   constructor() {
     if (!environment.useMocks) {
-      this.http!.get<any[]>(`${this.cfg!.apiBaseUrl()}/lost-found`).subscribe({
-        next: (rows) => this.state.set(rows as LostFoundItem[]),
+      this.http!.get<any[]>(`${this.apiBase()}/lost-found`).subscribe({
+        next: (rows) => this.commit(rows.map(mapLostFound)),
         error: () => {},
       });
     }
+  }
+
+  private apiBase(): string {
+    return this.cfg!.apiBaseUrl();
   }
 
   readonly items = this.state.asReadonly();
@@ -60,14 +64,35 @@ export class LostFoundService {
     };
 
     this.commit([item, ...this.state()]);
+    const notify = (id: string): void => {
+      this.notifications.add({
+        message: `Un nouvel objet « ${item.title} » a été signalé à ${item.location}.`,
+        type: 'LOST_FOUND',
+        lostFoundId: id,
+      });
+    };
+
     if (!environment.useMocks) {
-      this.http!.post(`${this.cfg!.apiBaseUrl()}/lost-found`, { ...input, reporterId }).subscribe({ error: () => {} });
+      this.http!.post<any>(`${this.apiBase()}/lost-found`, {
+        title: item.title,
+        description: item.description,
+        status: item.status,
+        location: item.location,
+        category: item.category,
+        contactPhone: item.contactPhone,
+        reporterId,
+        taggedUserIds: item.taggedUserIds,
+      }).subscribe({
+        next: (row) => {
+          const saved = mapLostFound(row);
+          this.replace(item.id, saved);
+          notify(saved.id);
+        },
+        error: () => this.commit(this.state().filter((candidate) => candidate.id !== item.id)),
+      });
+    } else {
+      notify(item.id);
     }
-    this.notifications.add({
-      message: `Un nouvel objet « ${item.title} » a été signalé à ${item.location}.`,
-      type: 'LOST_FOUND',
-      lostFoundId: item.id,
-    });
     return item;
   }
 
@@ -95,11 +120,30 @@ export class LostFoundService {
         item.id === postId ? { ...item, comments: [...item.comments, comment] } : item,
       ),
     );
-    this.notifications.add({
-      message: `Nouveau commentaire sur « ${target.title} ».`,
-      type: 'LOST_FOUND',
-      lostFoundId: postId,
-    });
+    const notify = (): void => {
+      this.notifications.add({
+        message: `Nouveau commentaire sur « ${target.title} ».`,
+        type: 'LOST_FOUND',
+        lostFoundId: postId,
+      });
+    };
+
+    if (!environment.useMocks) {
+      this.http!.post<any>(`${this.apiBase()}/lost-found/${postId}/comments`, {
+        authorId,
+        message,
+        taggedUserIds: comment.taggedUserIds,
+      }).subscribe({
+        next: (row) => {
+          const saved = mapLostFoundComment(row);
+          this.replaceComment(postId, comment.id, saved);
+          notify();
+        },
+        error: () => this.replaceComment(postId, comment.id, null),
+      });
+    } else {
+      notify();
+    }
     return comment;
   }
 
@@ -119,11 +163,18 @@ export class LostFoundService {
 
     this.commit(this.state().map((item) => (item.id === postId ? updated : item)));
     if (!environment.useMocks) {
-      if (reacted) {
-        this.http!.delete(`${this.cfg!.apiBaseUrl()}/lost-found/${postId}/reactions/me?userId=${userId}`).subscribe({ error: () => {} });
-      } else {
-        this.http!.put(`${this.cfg!.apiBaseUrl()}/lost-found/${postId}/reactions/me?userId=${userId}`, {}).subscribe({ error: () => {} });
-      }
+      const request = reacted
+        ? this.http!.delete(`${this.apiBase()}/lost-found/${postId}/reactions/me?userId=${userId}`)
+        : this.http!.put(`${this.apiBase()}/lost-found/${postId}/reactions/me?userId=${userId}`, {});
+      request.subscribe({
+        next: () => {
+          this.http!.get<any>(`${this.apiBase()}/lost-found/${postId}`).subscribe({
+            next: (row) => this.replace(postId, mapLostFound(row)),
+            error: () => {},
+          });
+        },
+        error: () => this.replace(postId, target),
+      });
     }
     return updated;
   }
@@ -136,10 +187,41 @@ export class LostFoundService {
 
     const updated: LostFoundItem = { ...target, status };
     this.commit(this.state().map((item) => (item.id === id ? updated : item)));
+    if (!environment.useMocks) {
+      this.http!.patch<any>(`${this.apiBase()}/lost-found/${id}`, { status }).subscribe({
+        next: (row) => this.replace(id, mapLostFound(row)),
+        error: () => this.replace(id, target),
+      });
+    }
     return updated;
   }
 
   claim(id: string): LostFoundItem | undefined {
+    const target = this.findById(id);
+    if (!target) {
+      return undefined;
+    }
+
+    if (!environment.useMocks) {
+      // Claim has its own endpoint so the backend can enforce the LOST/FOUND
+      // transition in one transaction.
+      const optimistic: LostFoundItem = { ...target, status: 'CLAIMED' };
+      this.replace(id, optimistic);
+      this.http!.post<any>(`${this.apiBase()}/lost-found/${id}/claim`, {}).subscribe({
+        next: (row) => {
+          const saved = mapLostFound(row);
+          this.replace(id, saved);
+          this.notifications.add({
+            message: `L'objet « ${saved.title} » a été réclamé.`,
+            type: 'LOST_FOUND',
+            lostFoundId: saved.id,
+          });
+        },
+        error: () => this.replace(id, target),
+      });
+      return optimistic;
+    }
+
     const claimed = this.setStatus(id, 'CLAIMED');
     if (claimed) {
       this.notifications.add({
@@ -152,11 +234,17 @@ export class LostFoundService {
   }
 
   remove(id: string): boolean {
-    if (!this.findById(id)) {
+    const target = this.findById(id);
+    if (!target) {
       return false;
     }
 
     this.commit(this.state().filter((item) => item.id !== id));
+    if (!environment.useMocks) {
+      this.http!.delete(`${this.apiBase()}/lost-found/${id}`).subscribe({
+        error: () => this.commit([target, ...this.state()]),
+      });
+    }
     return true;
   }
 
@@ -168,33 +256,25 @@ export class LostFoundService {
     this.state.set(items);
   }
 
+  private replace(id: string, item: LostFoundItem): void {
+    this.commit(this.state().map((candidate) => (candidate.id === id ? item : candidate)));
+  }
+
+  /** Replace a temp comment with the backend row; `null` removes it on failure. */
+  private replaceComment(postId: string, commentId: string, saved: LostFoundComment | null): void {
+    this.commit(
+      this.state().map((item) => {
+        if (item.id !== postId) return item;
+        const comments = saved
+          ? item.comments.map((comment) => (comment.id === commentId ? saved : comment))
+          : item.comments.filter((comment) => comment.id !== commentId);
+        return { ...item, comments };
+      }),
+    );
+  }
+
   private load(): LostFoundItem[] {
     return this.seed();
-  }
-
-  private parseComments(value: unknown): LostFoundComment[] {
-    if (!Array.isArray(value)) {
-      return [];
-    }
-
-    return value.map((entry) => {
-      const comment = entry as Record<string, unknown>;
-      return {
-        id: String(comment['id']),
-        authorId: String(comment['authorId'] ?? DEMO_USER_ID),
-        message: String(comment['message'] ?? ''),
-        createdAt: new Date(String(comment['createdAt'])),
-        taggedUserIds: this.toStringArray(comment['taggedUserIds']),
-      } satisfies LostFoundComment;
-    });
-  }
-
-  private toStringArray(value: unknown): string[] {
-    return Array.isArray(value) ? value.map((entry) => String(entry)) : [];
-  }
-
-  private normalizeStatus(value: unknown): LostFoundStatus {
-    return value === 'FOUND' || value === 'CLAIMED' || value === 'LOST' ? value : 'LOST';
   }
 
   private seed(): LostFoundItem[] {
