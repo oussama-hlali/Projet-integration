@@ -48,7 +48,7 @@ services:
       - fromGroup: smart-campus
 
   - type: web
-    name: smart-campus-cafeteria
+    name: smart-campus-cafeteria-kpng
     runtime: docker
     rootDir: spring-backend
     dockerfilePath: cafeteria/Dockerfile
@@ -72,7 +72,7 @@ services:
       - fromGroup: smart-campus
 
   - type: web
-    name: smart-campus-ai
+    name: smart-campus-ai-zngn
     runtime: docker
     rootDir: spring-backend
     dockerfilePath: ai/Dockerfile
