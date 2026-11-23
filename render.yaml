@@ -102,7 +102,11 @@ envVarGroups:
         sync: false
       - key: NOTIFICATIONS_URL
         sync: false
+      - key: GATEWAY_URL
+        sync: false
       - key: AI_URL
+        sync: false
+      - key: AI_GATEWAY_TIMEOUT_MS
         sync: false
       - key: IDENTITY_JWKS_URL
         sync: false
