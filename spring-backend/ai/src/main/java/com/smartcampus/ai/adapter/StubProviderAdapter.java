@@ -1,18 +1,23 @@
 package com.smartcampus.ai.adapter;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.function.Consumer;
 
 /**
- * Stub provider used in dev. Returns canned replies and a hash-based embedding
- * so the service runs without any API key.
+ * Fallback provider used when no real LLM is configured. Returns canned replies
+ * and a hash-based embedding so the service still runs without an API key.
  */
 @Component
+@ConditionalOnProperty(prefix = "ai.provider", name = "type", havingValue = "stub", matchIfMissing = true)
 public class StubProviderAdapter implements ProviderAdapter {
 
     @Override
-    public String name() { return "stub"; }
+    public String name() {
+        return "stub";
+    }
 
     @Override
     public String chat(String prompt, List<String> availableTools) {
@@ -30,6 +35,20 @@ public class StubProviderAdapter implements ProviderAdapter {
     }
 
     @Override
+    public String chat(String systemPrompt, List<ChatTurn> history, String userMessage,
+                       List<String> availableTools) {
+        return chat(userMessage, availableTools);
+    }
+
+    @Override
+    public void stream(String systemPrompt, List<ChatTurn> history, String userMessage,
+                       List<String> availableTools, Consumer<String> tokenConsumer) {
+        for (String word : chat(userMessage, availableTools).split(" ")) {
+            tokenConsumer.accept(word + " ");
+        }
+    }
+
+    @Override
     public float[] embed(String text) {
         // Deterministic hash-based pseudo-embedding of fixed size.
         int dim = 16;
@@ -38,7 +57,6 @@ public class StubProviderAdapter implements ProviderAdapter {
         for (int i = 0; i < text.length(); i++) {
             v[i % dim] += (text.charAt(i) * 31 + i) % 100 / 100.0f;
         }
-        // normalize
         double norm = 0;
         for (float f : v) norm += f * f;
         norm = Math.sqrt(norm);

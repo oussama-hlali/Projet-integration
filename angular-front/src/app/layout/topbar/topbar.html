@@ -12,6 +12,41 @@
   <app-tab-nav class="top__tabs" />
 
   <div class="top__tools glass glass--chrome">
+    <a
+      class="top__icon"
+      routerLink="/assistant"
+      routerLinkActive="top__icon--active"
+      [routerLinkActiveOptions]="{ exact: true }"
+      aria-label="Open AI assistant"
+      title="AI assistant"
+    >
+      <app-nav-icon name="assistant" />
+    </a>
+    @if (auth.isAdmin()) {
+      <a
+        class="top__icon"
+        routerLink="/admin/ai-analytics"
+        routerLinkActive="top__icon--active"
+        [routerLinkActiveOptions]="{ exact: true }"
+        aria-label="Open AI analytics"
+        title="AI analytics"
+      >
+        <app-nav-icon name="analytics" />
+      </a>
+    }
+    <a
+      class="top__icon"
+      routerLink="/notifications"
+      routerLinkActive="top__icon--active"
+      [routerLinkActiveOptions]="{ exact: true }"
+      aria-label="Open notifications"
+      title="Notifications"
+    >
+      <app-nav-icon name="bell" />
+      @if (notifications.unreadCount() > 0) {
+        <span class="top__badge">{{ notifications.unreadCount() }}</span>
+      }
+    </a>
     <span class="top__user">
       {{ auth.currentUser()?.fullName }}
       <span class="top__role" [class.top__role--admin]="auth.isAdmin()">{{ roleLabel }}</span>

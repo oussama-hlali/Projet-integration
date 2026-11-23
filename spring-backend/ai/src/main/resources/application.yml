@@ -25,6 +25,15 @@ spring:
         jwt:
           jwk-set-uri: ${IDENTITY_JWKS_URL:http://localhost:8081/.well-known/jwks.json}
 
+ai:
+  provider:
+    type: ${AI_PROVIDER:stub}
+    api-key: ${AI_API_KEY:}
+    model: ${AI_MODEL:gpt-4o-mini}
+    embedding-model: ${AI_EMBEDDING_MODEL:text-embedding-3-small}
+    base-url: ${AI_BASE_URL:https://api.openai.com/v1}
+    timeout-ms: ${AI_TIMEOUT_MS:30000}
+
 server:
   port: ${PORT:8086}
 

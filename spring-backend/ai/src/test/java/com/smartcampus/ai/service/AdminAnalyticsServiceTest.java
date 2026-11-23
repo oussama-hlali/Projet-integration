@@ -5,6 +5,9 @@ import com.smartcampus.ai.dto.KpiSnapshot;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class AdminAnalyticsServiceTest {
 
@@ -42,6 +45,28 @@ class AdminAnalyticsServiceTest {
         assertThat(service.forecastAnalysis(snapshot).points()).hasSize(3);
         assertThat(service.riskBriefing(snapshot).risks()).hasSize(4);
         assertThat(service.anomalyAnalysis(snapshot).anomalies()).isNotEmpty();
+    }
+
+    @Test
+    void realProviderNarrativeOverridesWordingButKeepsComputedNumbers() {
+        AnalyticsNarrativeService llm = mock(AnalyticsNarrativeService.class);
+        when(llm.narrative(anyString(), anyString())).thenReturn("Model-written campus summary.");
+        when(llm.suffix()).thenReturn(" Narrative generated with openai.");
+        AdminAnalyticsService aiService = new AdminAnalyticsService(llm);
+        KpiSnapshot snapshot = snapshot();
+
+        AdminAnalyticsResponse.KpiAnalysis kpis = aiService.kpiAnalysis(snapshot);
+        AdminAnalyticsResponse.ForecastAnalysis forecast = aiService.forecastAnalysis(snapshot);
+        AdminAnalyticsResponse.RiskBriefing risk = aiService.riskBriefing(snapshot);
+
+        assertThat(kpis.summary()).isEqualTo("Model-written campus summary.");
+        assertThat(kpis.metrics()).hasSize(6);
+        assertThat(kpis.healthScore()).isBetween(0, 100);
+        assertThat(kpis.basis()).endsWith("Narrative generated with openai.");
+        assertThat(forecast.narrative()).isEqualTo("Model-written campus summary.");
+        assertThat(forecast.points()).hasSize(3);
+        assertThat(risk.narrative()).isEqualTo("Model-written campus summary.");
+        assertThat(risk.risks()).hasSize(4);
     }
 
     private KpiSnapshot snapshot() {
