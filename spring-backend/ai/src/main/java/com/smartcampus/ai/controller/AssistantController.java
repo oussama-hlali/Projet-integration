@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
@@ -24,6 +26,7 @@ import java.util.concurrent.Executor;
 @RestController
 @RequestMapping("/api/v1/ai")
 public class AssistantController {
+    private static final Logger log = LoggerFactory.getLogger(AssistantController.class);
     private static final String BLOCKED = "I can't help with that request.";
     private static final String UNAVAILABLE = "The AI provider is unavailable right now. Please try again.";
 
@@ -56,6 +59,7 @@ public class AssistantController {
         try {
             reply = chat.chat(userId, message, castTools(body.get("tools")));
         } catch (Exception e) {
+            log.error("AI provider call failed for user {}", userId, e);
             reply = UNAVAILABLE;
         }
         return Map.of("reply", reply, "proposals", List.of());
@@ -82,6 +86,7 @@ public class AssistantController {
                 emitter.send(SseEmitter.event().name("done").data("[DONE]"));
                 emitter.complete();
             } catch (Exception e) {
+                log.error("AI provider streaming failed for user {}", userId, e);
                 try {
                     emitter.send(SseEmitter.event().name("error").data(UNAVAILABLE));
                     emitter.complete();
