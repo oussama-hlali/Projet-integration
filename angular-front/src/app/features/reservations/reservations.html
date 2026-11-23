@@ -261,7 +261,10 @@
     (openChange)="dialogOpen.set($event)"
     title="Cancel reservation"
     [message]="dialogMessage()"
-    confirmLabel="Cancel reservation"
+    [confirmPhrase]="
+      cancelTarget() ? 'delete reservation for ' + cancelTarget()!.room : 'delete reservation'
+    "
+    confirmLabel="Delete reservation"
     cancelLabel="Keep booking"
     [danger]="true"
     (confirmed)="confirmCancel()"

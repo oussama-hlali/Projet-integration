@@ -40,7 +40,7 @@
     </div>
   }
 
-  <div class="admin-layout">
+  <div class="admin-layout admin-layout--wide">
     <section class="admin-panel glass glass--thick" aria-labelledby="announcements-list-title">
       <div class="admin-panel__head">
         <div>
@@ -49,6 +49,9 @@
             Showing {{ filtered().length }} of {{ announcements().length }} announcements
           </p>
         </div>
+        <button type="button" class="button button--small button--primary" (click)="startCreate()">
+          New announcement
+        </button>
       </div>
 
       <div class="admin-toolbar glass">
@@ -137,86 +140,76 @@
       } @else {
         <app-empty-state
           title="No announcements match"
-          message="Adjust the filters or publish a new announcement with the form."
+          message="Adjust the filters or use New announcement to publish one."
         />
       }
     </section>
-
-    <section class="admin-panel glass glass--thick" aria-labelledby="announcement-form-title">
-      <div class="admin-panel__head">
-        <div>
-          <h2 id="announcement-form-title">
-            {{ editingId() ? 'Edit announcement' : 'New announcement' }}
-          </h2>
-          <p class="muted">
-            {{ editingId() ? 'Update the wording and save.' : 'Write a notice for the campus feed.' }}
-          </p>
-        </div>
-      </div>
-
-      <form class="admin-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
-        <label class="form-field">
-          <span class="field__label">Title</span>
-          <input
-            class="control"
-            type="text"
-            formControlName="title"
-            [class.control--invalid]="isInvalid('title')"
-            placeholder="Exam schedule published"
-          />
-          @if (isInvalid('title')) {
-            <p class="field-error">An announcement title is required.</p>
-          }
-        </label>
-
-        <label class="form-field">
-          <span class="field__label">Content</span>
-          <textarea
-            class="control"
-            rows="4"
-            formControlName="content"
-            [class.control--invalid]="isInvalid('content')"
-            placeholder="What do students need to know?"
-          ></textarea>
-          @if (isInvalid('content')) {
-            <p class="field-error">A message body is required.</p>
-          }
-        </label>
-
-        <label class="form-field">
-          <span class="field__label">Category</span>
-          <select class="control" formControlName="category">
-            @for (category of categories; track category) {
-              <option [value]="category">{{ categoryLabels[category] }}</option>
-            }
-          </select>
-        </label>
-
-        <label class="checkbox">
-          <input type="checkbox" formControlName="pinned" />
-          Pin this announcement to the top of the feed
-        </label>
-
-        <div class="form-actions">
-          @if (editingId()) {
-            <button type="button" class="button" (click)="startCreate()">Cancel edit</button>
-          }
-          <button type="submit" class="button button--primary">
-            {{ editingId() ? 'Save changes' : 'Publish' }}
-          </button>
-        </div>
-      </form>
-    </section>
   </div>
 
+  <app-form-dialog
+    [(open)]="formOpen"
+    [title]="formTitle()"
+    [subtitle]="formSubtitle()"
+    [formId]="formId"
+    [submitLabel]="editingId() ? 'Save changes' : 'Publish'"
+    [wide]="true"
+    (cancelled)="closeForm()"
+  >
+    <form class="admin-form" [id]="formId" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <label class="form-field">
+        <span class="field__label">Title</span>
+        <input
+          class="control"
+          type="text"
+          formControlName="title"
+          autofocus
+          [class.control--invalid]="isInvalid('title')"
+          placeholder="Exam schedule published"
+        />
+        @if (isInvalid('title')) {
+          <p class="field-error">An announcement title is required.</p>
+        }
+      </label>
+
+      <label class="form-field">
+        <span class="field__label">Content</span>
+        <textarea
+          class="control"
+          rows="4"
+          formControlName="content"
+          [class.control--invalid]="isInvalid('content')"
+          placeholder="What do students need to know?"
+        ></textarea>
+        @if (isInvalid('content')) {
+          <p class="field-error">A message body is required.</p>
+        }
+      </label>
+
+      <label class="form-field">
+        <span class="field__label">Category</span>
+        <select class="control" formControlName="category">
+          @for (category of categories; track category) {
+            <option [value]="category">{{ categoryLabels[category] }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="checkbox">
+        <input type="checkbox" formControlName="pinned" />
+        Pin this announcement to the top of the feed
+      </label>
+    </form>
+  </app-form-dialog>
+
   <app-confirm-dialog
-    [open]="dialogOpen()"
+    [(open)]="dialogOpen"
     title="Delete announcement"
     [message]="
       deleteTarget()
         ? 'Delete ' + deleteTarget()!.title + '? It will disappear from the campus feed.'
         : ''
     "
+    [confirmPhrase]="deleteTarget() ? 'delete ' + deleteTarget()!.title : ''"
     confirmLabel="Delete"
     cancelLabel="Keep"
     [danger]="true"

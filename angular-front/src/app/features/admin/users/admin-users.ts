@@ -14,6 +14,7 @@ import {
   BadgeVariant,
   ConfirmDialogComponent,
   EmptyStateComponent,
+  FormDialogComponent,
   PageHeaderComponent,
   StatCardComponent,
   StatusBadgeComponent,
@@ -34,6 +35,7 @@ type RoleFilter = 'all' | UserRole;
     ReactiveFormsModule,
     ConfirmDialogComponent,
     EmptyStateComponent,
+    FormDialogComponent,
     PageHeaderComponent,
     StatCardComponent,
     StatusBadgeComponent,
@@ -61,6 +63,19 @@ export class AdminUsers {
 
   protected readonly deleteTarget = signal<User | null>(null);
   protected readonly dialogOpen = signal(false);
+
+  protected readonly formId = 'admin-user-form';
+  protected readonly formOpen = signal(false);
+  protected readonly saving = signal(false);
+
+  protected readonly formTitle = computed(() =>
+    this.editingId() ? 'Edit account' : 'New account',
+  );
+  protected readonly formSubtitle = computed(() =>
+    this.editingId()
+      ? 'Update details, role or reset the password.'
+      : 'New users confirm 2FA on their first sign-in.',
+  );
 
   protected readonly form = this.formBuilder.nonNullable.group({
     fullName: ['', [Validators.required, Validators.maxLength(80)]],
@@ -138,6 +153,7 @@ export class AdminUsers {
     this.resetForm();
     this.feedback.set(null);
     this.error.set(null);
+    this.formOpen.set(true);
   }
 
   protected startEdit(user: User): void {
@@ -152,6 +168,12 @@ export class AdminUsers {
       role: user.role,
       password: '',
     });
+    this.formOpen.set(true);
+  }
+
+  protected closeForm(): void {
+    this.formOpen.set(false);
+    this.resetForm();
   }
 
   protected async submit(): Promise<void> {
@@ -182,24 +204,30 @@ export class AdminUsers {
     const fullName = value.fullName.trim();
     const email = value.email.trim();
 
-    const result = id
-      ? await this.admin.updateUser(id, {
-          fullName,
-          email,
-          role: value.role,
-          password: password || undefined,
-        })
-      : await this.admin.createUser({ fullName, email, role: value.role, password });
+    this.saving.set(true);
+    try {
+      const result = id
+        ? await this.admin.updateUser(id, {
+            fullName,
+            email,
+            role: value.role,
+            password: password || undefined,
+          })
+        : await this.admin.createUser({ fullName, email, role: value.role, password });
 
-    if (!result.ok) {
-      this.error.set(this.messageFor(result.reason));
-      return;
+      if (!result.ok) {
+        this.error.set(this.messageFor(result.reason));
+        return;
+      }
+
+      this.feedback.set(
+        id ? `${fullName}'s account was updated.` : `${fullName} was added to the directory.`,
+      );
+      this.formOpen.set(false);
+      this.resetForm();
+    } finally {
+      this.saving.set(false);
     }
-
-    this.feedback.set(
-      id ? `${fullName}'s account was updated.` : `${fullName} was added to the directory.`,
-    );
-    this.resetForm();
   }
 
   protected requestDelete(user: User): void {
@@ -223,6 +251,7 @@ export class AdminUsers {
     }
 
     if (this.editingId() === target.id) {
+      this.formOpen.set(false);
       this.resetForm();
     }
     this.feedback.set(`${target.fullName} was removed from the directory.`);

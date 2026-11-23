@@ -15,6 +15,7 @@ import { RoomService } from '../../../core/services/room.service';
 import {
   ConfirmDialogComponent,
   EmptyStateComponent,
+  FormDialogComponent,
   PageHeaderComponent,
   StatCardComponent,
 } from '../../../shared/components';
@@ -35,6 +36,7 @@ type CategoryFilter = 'all' | EventCategory;
     ReactiveFormsModule,
     ConfirmDialogComponent,
     EmptyStateComponent,
+    FormDialogComponent,
     PageHeaderComponent,
     StatCardComponent,
   ],
@@ -62,6 +64,16 @@ export class AdminEvents {
 
   protected readonly deleteTarget = signal<CampusEvent | null>(null);
   protected readonly dialogOpen = signal(false);
+
+  protected readonly formId = 'admin-event-form';
+  protected readonly formOpen = signal(false);
+
+  protected readonly formTitle = computed(() => (this.editingId() ? 'Edit event' : 'New event'));
+  protected readonly formSubtitle = computed(() =>
+    this.editingId()
+      ? 'Update the schedule and save.'
+      : 'Add a new entry to the campus calendar.',
+  );
 
   protected readonly form = this.formBuilder.nonNullable.group({
     title: ['', [Validators.required, Validators.maxLength(80)]],
@@ -145,6 +157,7 @@ export class AdminEvents {
     this.resetForm();
     this.feedback.set(null);
     this.error.set(null);
+    this.formOpen.set(true);
   }
 
   protected startEdit(event: CampusEvent): void {
@@ -166,6 +179,12 @@ export class AdminEvents {
       capacity: event.capacity,
       roomId: event.roomId ?? '',
     });
+    this.formOpen.set(true);
+  }
+
+  protected closeForm(): void {
+    this.formOpen.set(false);
+    this.resetForm();
   }
 
   protected submit(): void {
@@ -212,6 +231,7 @@ export class AdminEvents {
       this.feedback.set(`${created.title} was published to the calendar.`);
     }
 
+    this.formOpen.set(false);
     this.resetForm();
   }
 
@@ -235,6 +255,7 @@ export class AdminEvents {
     }
 
     if (this.editingId() === target.id) {
+      this.formOpen.set(false);
       this.resetForm();
     }
     this.feedback.set(`${target.title} was removed from the calendar.`);

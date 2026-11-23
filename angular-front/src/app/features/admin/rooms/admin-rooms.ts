@@ -15,6 +15,7 @@ import {
   BadgeVariant,
   ConfirmDialogComponent,
   EmptyStateComponent,
+  FormDialogComponent,
   PageHeaderComponent,
   StatCardComponent,
   StatusBadgeComponent,
@@ -42,6 +43,7 @@ type StatusFilter = 'all' | RoomStatus;
     ReactiveFormsModule,
     ConfirmDialogComponent,
     EmptyStateComponent,
+    FormDialogComponent,
     PageHeaderComponent,
     StatCardComponent,
     StatusBadgeComponent,
@@ -69,6 +71,16 @@ export class AdminRooms {
 
   protected readonly deleteTarget = signal<Room | null>(null);
   protected readonly dialogOpen = signal(false);
+
+  protected readonly formId = 'admin-room-form';
+  protected readonly formOpen = signal(false);
+
+  protected readonly formTitle = computed(() => (this.editingId() ? 'Edit room' : 'Add a room'));
+  protected readonly formSubtitle = computed(() =>
+    this.editingId()
+      ? 'Update the details and save.'
+      : 'Register a new bookable space.',
+  );
 
   protected readonly form = this.formBuilder.nonNullable.group({
     name: ['', [Validators.required, Validators.maxLength(60)]],
@@ -143,6 +155,7 @@ export class AdminRooms {
     this.resetForm();
     this.feedback.set(null);
     this.error.set(null);
+    this.formOpen.set(true);
   }
 
   protected startEdit(room: Room): void {
@@ -157,6 +170,12 @@ export class AdminRooms {
       facilities: room.facilities.join(', '),
       status: room.status,
     });
+    this.formOpen.set(true);
+  }
+
+  protected closeForm(): void {
+    this.formOpen.set(false);
+    this.resetForm();
   }
 
   protected submit(): void {
@@ -195,6 +214,7 @@ export class AdminRooms {
       this.feedback.set(`${room.name} was added to the catalogue.`);
     }
 
+    this.formOpen.set(false);
     this.resetForm();
   }
 
@@ -223,6 +243,7 @@ export class AdminRooms {
     }
 
     if (this.editingId() === target.id) {
+      this.formOpen.set(false);
       this.resetForm();
     }
     this.feedback.set(`${target.name} was removed from the catalogue.`);
