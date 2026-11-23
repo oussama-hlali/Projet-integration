@@ -20,7 +20,9 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.function.Consumer;
 
@@ -153,24 +155,45 @@ public class OpenAiProviderAdapter implements ProviderAdapter {
 
     private Map<String, Object> chatBody(String systemPrompt, List<ChatTurn> history,
                                          String userMessage, List<String> tools, boolean stream) {
+        boolean gptOss = isGptOssModel();
         List<Map<String, String>> messages = new ArrayList<>();
         StringBuilder system = new StringBuilder(systemPrompt == null ? "" : systemPrompt);
         if (tools != null && !tools.isEmpty()) {
             system.append("\nAvailable actions you may propose (never execute them yourself): ")
                     .append(String.join(", ", tools));
         }
-        messages.add(message("system", system.toString()));
-        if (history != null) {
-            history.forEach(turn -> messages.add(message(turn.role(), turn.content())));
-        }
-        messages.add(message("user", userMessage == null ? "" : userMessage));
+        String userText = userMessage == null ? "" : userMessage;
 
-        return Map.of(
-                "model", properties.getModel(),
-                "messages", messages,
-                "temperature", 0.4,
-                "max_tokens", 700,
-                "stream", stream);
+        if (gptOss) {
+            // Groq recommends putting instructions in the user message for GPT-OSS models.
+            if (history != null) {
+                history.forEach(turn -> messages.add(message(turn.role(), turn.content())));
+            }
+            String guidedUserText = system.length() == 0
+                    ? userText
+                    : system.append("\n\n").append(userText).toString();
+            messages.add(message("user", guidedUserText));
+        } else {
+            messages.add(message("system", system.toString()));
+            if (history != null) {
+                history.forEach(turn -> messages.add(message(turn.role(), turn.content())));
+            }
+            messages.add(message("user", userText));
+        }
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("model", properties.getModel());
+        body.put("messages", messages);
+        body.put("temperature", gptOss ? 0.6 : 0.4);
+        body.put(gptOss ? "max_completion_tokens" : "max_tokens", 1024);
+        body.put("stream", stream);
+        return body;
+    }
+
+    private boolean isGptOssModel() {
+        String model = properties.getModel() == null ? "" : properties.getModel().toLowerCase(Locale.ROOT);
+        String base = properties.normalizedBaseUrl().toLowerCase(Locale.ROOT);
+        return model.contains("gpt-oss") || base.contains("groq");
     }
 
     private Map<String, String> message(String role, String content) {

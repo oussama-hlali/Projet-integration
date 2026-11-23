@@ -78,6 +78,32 @@ class OpenAiProviderAdapterTest {
     }
 
     @Test
+    void groqGptOssUsesCompletionTokensAndUserGuidance() throws Exception {
+        server.enqueue(new MockResponse()
+                .setHeader("Content-Type", "application/json")
+                .setBody("{\"choices\":[{\"message\":{\"content\":\"Hello\"}}]}"));
+
+        AiProviderProperties props = new AiProviderProperties();
+        props.setType("openai");
+        props.setApiKey("test-key");
+        props.setModel("openai/gpt-oss-20b");
+        props.setBaseUrl(server.url("/openai/v1/").toString());
+        OpenAiProviderAdapter gptOssAdapter = new OpenAiProviderAdapter(props, new ObjectMapper());
+
+        String reply = gptOssAdapter.chat("You are Smart Campus", List.of(), "hello", List.of());
+
+        assertThat(reply).isEqualTo("Hello");
+        RecordedRequest request = server.takeRequest(5, TimeUnit.SECONDS);
+        assertThat(request).isNotNull();
+        assertThat(request.getPath()).isEqualTo("/openai/v1/chat/completions");
+        String body = request.getBody().readUtf8();
+        assertThat(body).contains("\"max_completion_tokens\":1024")
+                .doesNotContain("\"max_tokens\"")
+                .doesNotContain("\"role\":\"system\"")
+                .contains("You are Smart Campus");
+    }
+
+    @Test
     void embedParsesVectorFromProvider() throws Exception {
         server.enqueue(new MockResponse()
                 .setHeader("Content-Type", "application/json")
