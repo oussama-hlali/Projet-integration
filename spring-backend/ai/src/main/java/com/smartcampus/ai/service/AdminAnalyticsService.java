@@ -2,6 +2,7 @@ package com.smartcampus.ai.service;
 
 import com.smartcampus.ai.dto.AdminAnalyticsResponse;
 import com.smartcampus.ai.dto.KpiSnapshot;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.YearMonth;
@@ -12,12 +13,14 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * US-24/25/26/27/28/30/35/50 — deterministic analytics for the admin AI screens.
+ * US-24/25/26/27/28/30/35/50 — analytics for the admin AI screens.
  *
  * Every input number comes from a real per-service KPI endpoint. Operations
  * that need history the platform does not yet store (seasonality, Monte Carlo
  * bands, subject-level churn) are explicitly returned as modelled projections
- * so they can never be mistaken for measured statistics.
+ * so they can never be mistaken for measured statistics. When a real provider
+ * is configured, it only rewrites narrative text; computed numbers stay
+ * authoritative and a basis suffix shows which wording was model-generated.
  */
 @Service
 public class AdminAnalyticsService {
@@ -25,6 +28,18 @@ public class AdminAnalyticsService {
     private static final String LIVE_BASIS = "Computed from live per-service KPI endpoints; no seed data.";
     private static final String MODELLED_BASIS =
             "Modelled projection from the current KPI snapshot; historical series not available.";
+
+    private final AnalyticsNarrativeService narratives;
+
+    @Autowired
+    public AdminAnalyticsService(AnalyticsNarrativeService narratives) {
+        this.narratives = narratives;
+    }
+
+    /** Unit-test/non-Spring fallback: deterministic narratives, no provider. */
+    public AdminAnalyticsService() {
+        this(new AnalyticsNarrativeService(null));
+    }
 
     public AdminAnalyticsResponse.KpiAnalysis kpiAnalysis(KpiSnapshot s) {
         List<AdminAnalyticsResponse.HealthMetric> metrics = new ArrayList<>();
@@ -51,15 +66,17 @@ public class AdminAnalyticsService {
         double total = metrics.stream().mapToDouble(AdminAnalyticsResponse.HealthMetric::value).sum();
         int score = (int) Math.round(100 * total / metrics.size());
 
+        String weakest = metrics.stream()
+                .min(Comparator.comparingDouble(AdminAnalyticsResponse.HealthMetric::value))
+                .map(AdminAnalyticsResponse.HealthMetric::label).orElse("n/a");
+
         String summary = String.format(
                 "Campus health is %d/100 across %d measured signals. %d rooms are available, "
                         + "%d reservations are confirmed, %d cafeteria orders are active and "
                         + "%d notifications remain unread. The weakest signal is %s.",
                 score, metrics.size(), KpiSnapshot.n(s.roomsAvailable()),
                 KpiSnapshot.n(s.reservationsConfirmed()), KpiSnapshot.n(s.ordersActive()),
-                KpiSnapshot.n(s.notificationsUnread()),
-                metrics.stream().min(Comparator.comparingDouble(AdminAnalyticsResponse.HealthMetric::value))
-                        .map(AdminAnalyticsResponse.HealthMetric::label).orElse("n/a"));
+                KpiSnapshot.n(s.notificationsUnread()), weakest);
 
         List<AdminAnalyticsResponse.RecommendedAction> actions = new ArrayList<>();
         metrics.stream()
@@ -67,7 +84,20 @@ public class AdminAnalyticsService {
                 .limit(3)
                 .forEach(m -> actions.add(actionFor(m, s)));
 
-        return new AdminAnalyticsResponse.KpiAnalysis(score, summary, metrics, actions, LIVE_BASIS);
+        String aiSummary = llmText(
+                "Write a one-paragraph executive summary of campus health. State the score and the "
+                        + "weakest measured signal explicitly. Do not recommend actions.",
+                "healthScore=" + score + "; weakestSignal=" + weakest
+                        + "; metrics=" + metrics.stream()
+                        .map(m -> m.label() + "=" + m.value() + " (" + m.status() + ")").toList()
+                        + "; roomsAvailable=" + KpiSnapshot.n(s.roomsAvailable())
+                        + "; reservationsConfirmed=" + KpiSnapshot.n(s.reservationsConfirmed())
+                        + "; activeOrders=" + KpiSnapshot.n(s.ordersActive())
+                        + "; unreadNotifications=" + KpiSnapshot.n(s.notificationsUnread()),
+                summary);
+
+        return new AdminAnalyticsResponse.KpiAnalysis(
+                score, aiSummary, metrics, actions, withNarrativeBasis(LIVE_BASIS));
     }
 
     public AdminAnalyticsResponse.AnomalyAnalysis anomalyAnalysis(KpiSnapshot s) {
@@ -155,9 +185,20 @@ public class AdminAnalyticsService {
                 "Keep %d menu items and %d active orders as the replenishment reference."
                         .formatted(KpiSnapshot.n(s.itemsTotal()), KpiSnapshot.n(s.ordersActive())));
 
-        String basis = s.monthlyActuals() != null && s.monthlyActuals().size() >= 3
+        String seasonalityBasis = s.monthlyActuals() != null && s.monthlyActuals().size() >= 3
                 ? "Computed from caller-supplied monthly actuals." : MODELLED_BASIS;
-        return new AdminAnalyticsResponse.SeasonalityAnalysis(months, ramadan, stockRecommendations, basis);
+        String aiRamadan = llmText(
+                "Explain the modelled Ramadan (Mar–Apr) effect in one short paragraph. Keep the word "
+                        + "'Ramadan' in the text and do not invent historical data.",
+                "ramadanIndex=" + round((months.get(2).index() + months.get(3).index()) / 2, 2)
+                        + "; baselineIndex=1.00; upcomingEvents=" + KpiSnapshot.n(s.upcomingEvents())
+                        + "; registrations=" + KpiSnapshot.n(s.registrationsTotal())
+                        + "; monthlyActuals=" + (s.monthlyActuals() != null && s.monthlyActuals().size() >= 3
+                        ? "caller-supplied" : "not supplied"),
+                ramadan);
+
+        return new AdminAnalyticsResponse.SeasonalityAnalysis(
+                months, aiRamadan, stockRecommendations, withNarrativeBasis(seasonalityBasis));
     }
 
     public AdminAnalyticsResponse.StockAnalysis stockAnalysis(KpiSnapshot s) {
@@ -279,13 +320,21 @@ public class AdminAnalyticsService {
                     round(median, 0),
                     round(median + spread, 0)));
         }
-        String narrative = String.format(
+        String computedNarrative = String.format(
                 "Three-month modelled activity starts from %d real campus signals. P50 reaches %.0f "
                         + "in %s; the P10–P90 band widens from %.0f to %.0f as uncertainty grows.",
                 (long) base, points.get(2).p50(), points.get(2).month(),
                 points.get(0).p90() - points.get(0).p10(),
                 points.get(2).p90() - points.get(2).p10());
-        return new AdminAnalyticsResponse.ForecastAnalysis(points, 80, narrative, MODELLED_BASIS);
+        String aiNarrative = llmText(
+                "Summarise the three-month activity projection in one paragraph. Use only the supplied "
+                        + "percentiles and call it a modelled projection, not a measured result.",
+                "baseSignals=" + (long) base + "; confidence=" + 80
+                        + "; points=" + points.stream()
+                        .map(p -> p.month() + " p10=" + p.p10() + " p50=" + p.p50() + " p90=" + p.p90()).toList(),
+                computedNarrative);
+        return new AdminAnalyticsResponse.ForecastAnalysis(
+                points, 80, aiNarrative, withNarrativeBasis(MODELLED_BASIS));
     }
 
     public AdminAnalyticsResponse.RiskBriefing riskBriefing(KpiSnapshot s) {
@@ -303,12 +352,35 @@ public class AdminAnalyticsService {
                 Math.max(0, KpiSnapshot.n(s.eventsTotal()) - KpiSnapshot.n(s.registrationsTotal())) * 20,
                 "Promote events with low registration to at-risk cohorts.", "Engagement lead"));
         double total = risks.stream().mapToDouble(AdminAnalyticsResponse.RiskItem::exposure).sum();
-        String narrative = String.format(
+        String largest = risks.stream()
+                .max(Comparator.comparingDouble(AdminAnalyticsResponse.RiskItem::exposure))
+                .map(AdminAnalyticsResponse.RiskItem::title).orElse("n/a");
+        String computedNarrative = String.format(
                 "Aggregated modelled exposure is %.0f across %d horizons. The largest single item is %s.",
-                total, risks.size(), risks.stream()
-                        .max(Comparator.comparingDouble(AdminAnalyticsResponse.RiskItem::exposure))
-                        .map(AdminAnalyticsResponse.RiskItem::title).orElse("n/a"));
-        return new AdminAnalyticsResponse.RiskBriefing(round(total, 0), risks, narrative, MODELLED_BASIS);
+                total, risks.size(), largest);
+        String aiNarrative = llmText(
+                "Write a one-paragraph executive risk briefing. Use only the supplied exposures and "
+                        + "horizons, and keep the modelled projection label explicit.",
+                "totalExposure=" + round(total, 0) + "; largestItem=" + largest
+                        + "; risks=" + risks.stream()
+                        .map(r -> r.horizon() + " " + r.title() + "=" + r.exposure()).toList(),
+                computedNarrative);
+        return new AdminAnalyticsResponse.RiskBriefing(
+                round(total, 0), risks, aiNarrative, withNarrativeBasis(MODELLED_BASIS));
+    }
+
+    /** Applies real model text when configured; computed numbers are never replaced. */
+    private String llmText(String instruction, String data, String computed) {
+        if (narratives == null) return computed;
+        String generated = narratives.narrative(instruction, data);
+        return generated == null || generated.isBlank() ? computed : generated;
+    }
+
+    /** Marks responses whose wording came from the configured provider. */
+    private String withNarrativeBasis(String computedBasis) {
+        if (narratives == null) return computedBasis;
+        String suffix = narratives.suffix();
+        return suffix == null || suffix.isBlank() ? computedBasis : computedBasis + suffix;
     }
 
     private AdminAnalyticsResponse.HealthMetric metric(String key, String label, double value,

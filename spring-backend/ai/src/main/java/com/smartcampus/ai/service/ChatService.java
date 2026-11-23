@@ -1,5 +1,6 @@
 package com.smartcampus.ai.service;
 
+import com.smartcampus.ai.adapter.ChatTurn;
 import com.smartcampus.ai.adapter.ProviderAdapter;
 import com.smartcampus.ai.domain.AiMessage;
 import com.smartcampus.ai.repository.AiMessageRepository;
@@ -7,47 +8,86 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 @Service
 public class ChatService {
+
+    private static final String SYSTEM_PROMPT = """
+            You are the Smart Campus assistant. Answer clearly and concisely about campus rooms,
+            reservations, events, announcements, transport, cafeteria meals, lost & found and
+            notifications. Use the conversation history for context. Never claim to have executed
+            an action; if an action is needed, describe it so the client can ask for confirmation.
+            """;
+
     private final ProviderAdapter provider;
     private final AiMessageRepository messages;
     private final ModerationService moderation;
     private final BudgetService budget;
 
     public ChatService(ProviderAdapter provider, AiMessageRepository messages,
-                      ModerationService moderation, BudgetService budget) {
-        this.provider = provider; this.messages = messages;
-        this.moderation = moderation; this.budget = budget;
+                       ModerationService moderation, BudgetService budget) {
+        this.provider = provider;
+        this.messages = messages;
+        this.moderation = moderation;
+        this.budget = budget;
     }
 
     public String chat(String userId, String message, List<String> tools) {
+        return respond(userId, message, tools, null);
+    }
+
+    /** Streams provider tokens while still persisting the final assistant reply once. */
+    public String stream(String userId, String message, List<String> tools, Consumer<String> tokenConsumer) {
+        return respond(userId, message, tools, tokenConsumer);
+    }
+
+    private String respond(String userId, String message, List<String> tools, Consumer<String> tokenConsumer) {
         if (!moderation.isSafe(message)) {
             return "I can't help with that request.";
         }
         if (!budget.hasBudget(userId, 100)) {
             return "You've reached your daily AI usage limit.";
         }
-        // store user message
-        AiMessage um = new AiMessage();
-        um.setId("m" + UUID.randomUUID().toString().substring(0, 8));
-        um.setUserId(userId);
-        um.setRole("user");
-        um.setContent(message);
-        messages.save(um);
 
-        String reply = provider.chat(message, tools);
+        List<ChatTurn> history = recentHistory(userId);
+        save(userId, "user", message);
 
-        AiMessage am = new AiMessage();
-        am.setId("m" + UUID.randomUUID().toString().substring(0, 8));
-        am.setUserId(userId);
-        am.setRole("assistant");
-        am.setContent(reply);
-        messages.save(am);
+        String reply;
+        if (tokenConsumer == null) {
+            reply = provider.chat(SYSTEM_PROMPT, history, message, tools);
+        } else {
+            StringBuilder accumulated = new StringBuilder();
+            provider.stream(SYSTEM_PROMPT, history, message, tools, token -> {
+                accumulated.append(token);
+                tokenConsumer.accept(token);
+            });
+            reply = accumulated.toString();
+        }
 
+        save(userId, "assistant", reply);
         budget.recordUsage(userId, 100);
         return reply;
     }
 
-    public List<AiMessage> history(String userId) { return messages.findByUserIdOrderByCreatedAtAsc(userId); }
+    private List<ChatTurn> recentHistory(String userId) {
+        List<AiMessage> all = history(userId);
+        int from = Math.max(0, all.size() - 10);
+        return all.subList(from, all.size()).stream()
+                .map(m -> new ChatTurn(m.getRole(), m.getContent()))
+                .toList();
+    }
+
+    private void save(String userId, String role, String content) {
+        AiMessage entry = new AiMessage();
+        entry.setId("m" + UUID.randomUUID().toString().substring(0, 8));
+        entry.setUserId(userId);
+        entry.setRole(role);
+        entry.setContent(content);
+        messages.save(entry);
+    }
+
+    public List<AiMessage> history(String userId) {
+        return messages.findByUserIdOrderByCreatedAtAsc(userId);
+    }
 }
