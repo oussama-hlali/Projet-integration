@@ -26,6 +26,9 @@ spring:
           jwk-set-uri: ${IDENTITY_JWKS_URL:http://localhost:8081/.well-known/jwks.json}
 
 ai:
+  gateway:
+    base-url: ${GATEWAY_URL:http://localhost:8080}
+    timeout-ms: ${AI_GATEWAY_TIMEOUT_MS:4000}
   provider:
     type: ${AI_PROVIDER:stub}
     api-key: ${AI_API_KEY:}

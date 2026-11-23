@@ -34,15 +34,25 @@ public class ChatService {
     }
 
     public String chat(String userId, String message, List<String> tools) {
-        return respond(userId, message, tools, null);
+        return chat(userId, message, tools, null);
+    }
+
+    public String chat(String userId, String message, List<String> tools, String liveKpiContext) {
+        return respond(userId, message, tools, liveKpiContext, null);
     }
 
     /** Streams provider tokens while still persisting the final assistant reply once. */
     public String stream(String userId, String message, List<String> tools, Consumer<String> tokenConsumer) {
-        return respond(userId, message, tools, tokenConsumer);
+        return stream(userId, message, tools, null, tokenConsumer);
     }
 
-    private String respond(String userId, String message, List<String> tools, Consumer<String> tokenConsumer) {
+    public String stream(String userId, String message, List<String> tools, String liveKpiContext,
+                         Consumer<String> tokenConsumer) {
+        return respond(userId, message, tools, liveKpiContext, tokenConsumer);
+    }
+
+    private String respond(String userId, String message, List<String> tools, String liveKpiContext,
+                           Consumer<String> tokenConsumer) {
         if (!moderation.isSafe(message)) {
             return "I can't help with that request.";
         }
@@ -53,12 +63,13 @@ public class ChatService {
         List<ChatTurn> history = recentHistory(userId);
         save(userId, "user", message);
 
+        String systemPrompt = systemPrompt(liveKpiContext);
         String reply;
         if (tokenConsumer == null) {
-            reply = provider.chat(SYSTEM_PROMPT, history, message, tools);
+            reply = provider.chat(systemPrompt, history, message, tools);
         } else {
             StringBuilder accumulated = new StringBuilder();
-            provider.stream(SYSTEM_PROMPT, history, message, tools, token -> {
+            provider.stream(systemPrompt, history, message, tools, token -> {
                 accumulated.append(token);
                 tokenConsumer.accept(token);
             });
@@ -68,6 +79,14 @@ public class ChatService {
         save(userId, "assistant", reply);
         budget.recordUsage(userId, 100);
         return reply;
+    }
+
+    /** Live KPI facts are prompt-only; they are never stored as conversation history. */
+    private String systemPrompt(String liveKpiContext) {
+        if (liveKpiContext == null || liveKpiContext.isBlank()) {
+            return SYSTEM_PROMPT;
+        }
+        return SYSTEM_PROMPT + "\n\n" + liveKpiContext;
     }
 
     private List<ChatTurn> recentHistory(String userId) {

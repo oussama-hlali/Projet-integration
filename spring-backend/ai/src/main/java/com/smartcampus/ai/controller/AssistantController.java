@@ -1,6 +1,7 @@
 package com.smartcampus.ai.controller;
 
 import com.smartcampus.ai.service.ChatService;
+import com.smartcampus.ai.service.KpiContextService;
 import com.smartcampus.ai.service.ModerationService;
 import com.smartcampus.ai.service.ProposalService;
 import com.smartcampus.ai.service.QualityService;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -29,25 +31,32 @@ public class AssistantController {
     private static final Logger log = LoggerFactory.getLogger(AssistantController.class);
     private static final String BLOCKED = "I can't help with that request.";
     private static final String UNAVAILABLE = "The AI provider is unavailable right now. Please try again.";
+    private static final String KPI_UNAVAILABLE =
+            "LIVE CAMPUS KPI CONTEXT: KPI data is temporarily unavailable. "
+                    + "Do not state campus counts as measured facts; say live data is unavailable if asked.";
 
     private final ChatService chat;
     private final ModerationService moderation;
     private final QualityService quality;
     private final ProposalService proposals;
+    private final KpiContextService kpiContext;
     private final Executor streamExecutor;
 
     public AssistantController(ChatService chat, ModerationService moderation, QualityService quality,
-                               ProposalService proposals,
+                               ProposalService proposals, KpiContextService kpiContext,
                                @Qualifier("aiStreamExecutor") Executor streamExecutor) {
         this.chat = chat;
         this.moderation = moderation;
         this.quality = quality;
         this.proposals = proposals;
+        this.kpiContext = kpiContext;
         this.streamExecutor = streamExecutor;
     }
 
     @PostMapping("/assistant/messages")
-    public Map<String, Object> messages(@RequestBody Map<String, Object> body) {
+    public Map<String, Object> messages(
+            @RequestBody Map<String, Object> body,
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization) {
         quality.recordRequest();
         String userId = (String) body.getOrDefault("userId", "u1");
         String message = (String) body.get("message");
@@ -57,7 +66,7 @@ public class AssistantController {
         }
         String reply;
         try {
-            reply = chat.chat(userId, message, castTools(body.get("tools")));
+            reply = chat.chat(userId, message, castTools(body.get("tools")), liveKpiContext(authorization));
         } catch (Exception e) {
             log.error("AI provider call failed for user {}", userId, e);
             reply = UNAVAILABLE;
@@ -70,7 +79,9 @@ public class AssistantController {
      * "token" event; the stream ends with a "done" event.
      */
     @GetMapping(value = "/assistant/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public ResponseEntity<SseEmitter> stream(@RequestParam String userId, @RequestParam String message) {
+    public ResponseEntity<SseEmitter> stream(
+            @RequestParam String userId, @RequestParam String message,
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization) {
         quality.recordRequest();
         SseEmitter emitter = new SseEmitter(180_000L);
 
@@ -80,7 +91,7 @@ public class AssistantController {
                     quality.recordBlocked();
                     emitter.send(SseEmitter.event().name("token").data(BLOCKED));
                 } else {
-                    chat.stream(userId, message, List.of(),
+                    chat.stream(userId, message, List.of(), liveKpiContext(authorization),
                             token -> sendSafely(emitter, "token", token));
                 }
                 emitter.send(SseEmitter.event().name("done").data("[DONE]"));
@@ -101,6 +112,16 @@ public class AssistantController {
                 .header("X-Accel-Buffering", "no")
                 .contentType(MediaType.TEXT_EVENT_STREAM)
                 .body(emitter);
+    }
+
+    /** KPI enrichment is additive; a KPI outage must never fail the assistant. */
+    private String liveKpiContext(String authorization) {
+        try {
+            return kpiContext.describe(authorization);
+        } catch (Exception e) {
+            log.warn("Live KPI context unavailable: {}", e.getMessage());
+            return KPI_UNAVAILABLE;
+        }
     }
 
     private void sendSafely(SseEmitter emitter, String eventName, Object data) {
