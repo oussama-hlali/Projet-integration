@@ -40,13 +40,16 @@
     </div>
   }
 
-  <div class="admin-layout">
+  <div class="admin-layout admin-layout--wide">
     <section class="admin-panel glass glass--thick" aria-labelledby="rooms-list-title">
       <div class="admin-panel__head">
         <div>
           <h2 id="rooms-list-title">Catalogue</h2>
           <p class="muted">Showing {{ filtered().length }} of {{ rooms().length }} rooms</p>
         </div>
+        <button type="button" class="button button--small button--primary" (click)="startCreate()">
+          Add room
+        </button>
       </div>
 
       <div class="admin-toolbar glass">
@@ -133,109 +136,101 @@
       } @else {
         <app-empty-state
           title="No rooms match"
-          message="Adjust the filters or add a new room with the form."
+          message="Adjust the filters or use Add room to register a space."
         />
       }
     </section>
-
-    <section class="admin-panel glass glass--thick" aria-labelledby="room-form-title">
-      <div class="admin-panel__head">
-        <div>
-          <h2 id="room-form-title">{{ editingId() ? 'Edit room' : 'Add a room' }}</h2>
-          <p class="muted">
-            {{ editingId() ? 'Update the details and save.' : 'Register a new bookable space.' }}
-          </p>
-        </div>
-      </div>
-
-      <form class="admin-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
-        <div class="form-grid">
-          <label class="form-field">
-            <span class="field__label">Name</span>
-            <input
-              class="control"
-              type="text"
-              formControlName="name"
-              [class.control--invalid]="isInvalid('name')"
-              placeholder="Salle 204"
-            />
-            @if (isInvalid('name')) {
-              <p class="field-error">A room name is required.</p>
-            }
-          </label>
-
-          <label class="form-field">
-            <span class="field__label">Building</span>
-            <select
-              class="control"
-              formControlName="buildingId"
-              [class.control--invalid]="isInvalid('buildingId')"
-            >
-              <option value="">Choose a building</option>
-              @for (building of buildings(); track building.id) {
-                <option [value]="building.id">{{ building.name }}</option>
-              }
-            </select>
-            @if (isInvalid('buildingId')) {
-              <p class="field-error">Pick the building this room belongs to.</p>
-            }
-          </label>
-
-          <label class="form-field">
-            <span class="field__label">Capacity</span>
-            <input
-              class="control"
-              type="number"
-              min="1"
-              max="1000"
-              formControlName="capacity"
-              [class.control--invalid]="isInvalid('capacity')"
-            />
-            @if (isInvalid('capacity')) {
-              <p class="field-error">Capacity must be between 1 and 1000.</p>
-            }
-          </label>
-
-          <label class="form-field">
-            <span class="field__label">Status</span>
-            <select class="control" formControlName="status">
-              @for (status of statuses; track status) {
-                <option [value]="status">{{ statusLabels[status] }}</option>
-              }
-            </select>
-          </label>
-
-          <label class="form-field form-field--full">
-            <span class="field__label">Facilities</span>
-            <input
-              class="control"
-              type="text"
-              formControlName="facilities"
-              placeholder="Wi-Fi, Projecteur, Tableau blanc"
-            />
-          </label>
-        </div>
-
-        <div class="form-actions">
-          @if (editingId()) {
-            <button type="button" class="button" (click)="startCreate()">Cancel edit</button>
-          }
-          <button type="submit" class="button button--primary">
-            {{ editingId() ? 'Save changes' : 'Add room' }}
-          </button>
-        </div>
-      </form>
-    </section>
   </div>
 
+  <app-form-dialog
+    [(open)]="formOpen"
+    [title]="formTitle()"
+    [subtitle]="formSubtitle()"
+    [formId]="formId"
+    [submitLabel]="editingId() ? 'Save changes' : 'Add room'"
+    [wide]="true"
+    (cancelled)="closeForm()"
+  >
+    <form class="admin-form" [id]="formId" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <div class="form-grid">
+        <label class="form-field">
+          <span class="field__label">Name</span>
+          <input
+            class="control"
+            type="text"
+            formControlName="name"
+            autofocus
+            [class.control--invalid]="isInvalid('name')"
+            placeholder="Salle 204"
+          />
+          @if (isInvalid('name')) {
+            <p class="field-error">A room name is required.</p>
+          }
+        </label>
+
+        <label class="form-field">
+          <span class="field__label">Building</span>
+          <select
+            class="control"
+            formControlName="buildingId"
+            [class.control--invalid]="isInvalid('buildingId')"
+          >
+            <option value="">Choose a building</option>
+            @for (building of buildings(); track building.id) {
+              <option [value]="building.id">{{ building.name }}</option>
+            }
+          </select>
+          @if (isInvalid('buildingId')) {
+            <p class="field-error">Pick the building this room belongs to.</p>
+          }
+        </label>
+
+        <label class="form-field">
+          <span class="field__label">Capacity</span>
+          <input
+            class="control"
+            type="number"
+            min="1"
+            max="1000"
+            formControlName="capacity"
+            [class.control--invalid]="isInvalid('capacity')"
+          />
+          @if (isInvalid('capacity')) {
+            <p class="field-error">Capacity must be between 1 and 1000.</p>
+          }
+        </label>
+
+        <label class="form-field">
+          <span class="field__label">Status</span>
+          <select class="control" formControlName="status">
+            @for (status of statuses; track status) {
+              <option [value]="status">{{ statusLabels[status] }}</option>
+            }
+          </select>
+        </label>
+
+        <label class="form-field form-field--full">
+          <span class="field__label">Facilities</span>
+          <input
+            class="control"
+            type="text"
+            formControlName="facilities"
+            placeholder="Wi-Fi, Projecteur, Tableau blanc"
+          />
+        </label>
+      </div>
+    </form>
+  </app-form-dialog>
+
   <app-confirm-dialog
-    [open]="dialogOpen()"
+    [(open)]="dialogOpen"
     title="Delete room"
     [message]="
       deleteTarget()
         ? 'Delete ' + deleteTarget()!.name + '? Rooms with active bookings cannot be removed.'
         : ''
     "
+    [confirmPhrase]="deleteTarget() ? 'delete ' + deleteTarget()!.name : ''"
     confirmLabel="Delete"
     cancelLabel="Keep"
     [danger]="true"

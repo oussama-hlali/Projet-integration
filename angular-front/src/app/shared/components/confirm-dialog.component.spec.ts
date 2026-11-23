@@ -60,4 +60,35 @@ describe('ConfirmDialogComponent (keyboard)', () => {
     expect(confirmed).toBe(1);
     expect(fixture.componentInstance.open()).toBeFalse();
   });
+
+  it('requires the exact typed phrase before confirming', () => {
+    fixture.componentRef.setInput('open', true);
+    fixture.componentRef.setInput('confirmPhrase', 'delete Salle 204');
+    fixture.componentRef.setInput('danger', true);
+    fixture.detectChanges();
+
+    let confirmed = 0;
+    fixture.componentInstance.confirmed.subscribe(() => confirmed++);
+
+    const native = fixture.nativeElement as HTMLElement;
+    const input = native.querySelector('.phrase__input') as HTMLInputElement;
+    const deleteButton = native.querySelector('button.danger') as HTMLButtonElement;
+
+    expect(input).toBeTruthy();
+    expect(deleteButton.disabled).toBeTrue();
+
+    input.value = 'delete Salle 20';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(deleteButton.disabled).toBeTrue();
+
+    input.value = 'delete Salle 204';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(deleteButton.disabled).toBeFalse();
+
+    deleteButton.click();
+    expect(confirmed).toBe(1);
+    expect(fixture.componentInstance.open()).toBeFalse();
+  });
 });

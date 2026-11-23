@@ -142,13 +142,14 @@
   </section>
 
   <app-confirm-dialog
-    [open]="dialogOpen()"
+    [(open)]="dialogOpen"
     title="Delete report"
     [message]="
       deleteTarget()
         ? 'Remove ' + deleteTarget()!.title + ' from the register? This cannot be undone.'
         : ''
     "
+    [confirmPhrase]="deleteTarget() ? 'delete ' + deleteTarget()!.title : ''"
     confirmLabel="Delete"
     cancelLabel="Keep"
     [danger]="true"

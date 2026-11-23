@@ -40,13 +40,16 @@
     </div>
   }
 
-  <div class="admin-layout">
+  <div class="admin-layout admin-layout--wide">
     <section class="admin-panel glass glass--thick" aria-labelledby="users-list-title">
       <div class="admin-panel__head">
         <div>
           <h2 id="users-list-title">Directory</h2>
           <p class="muted">Showing {{ filtered().length }} of {{ users().length }} accounts</p>
         </div>
+        <button type="button" class="button button--small button--primary" (click)="startCreate()">
+          New account
+        </button>
       </div>
 
       <div class="admin-toolbar glass">
@@ -154,102 +157,91 @@
       } @else {
         <app-empty-state
           title="No accounts match"
-          message="Adjust the filters or create a new account with the form."
+          message="Adjust the filters or use New account to add someone."
         />
       }
     </section>
-
-    <section class="admin-panel glass glass--thick" aria-labelledby="user-form-title">
-      <div class="admin-panel__head">
-        <div>
-          <h2 id="user-form-title">{{ editingId() ? 'Edit account' : 'Create account' }}</h2>
-          <p class="muted">
-            {{
-              editingId()
-                ? 'Update details, role or reset the password.'
-                : 'New users confirm 2FA on their first sign-in.'
-            }}
-          </p>
-        </div>
-      </div>
-
-      <form class="admin-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
-        <label class="form-field">
-          <span class="field__label">Full name</span>
-          <input
-            class="control"
-            type="text"
-            formControlName="fullName"
-            [class.control--invalid]="isInvalid('fullName')"
-            placeholder="Yasmine Ben Salah"
-          />
-          @if (isInvalid('fullName')) {
-            <p class="field-error">A full name is required.</p>
-          }
-        </label>
-
-        <label class="form-field">
-          <span class="field__label">Email</span>
-          <input
-            class="control"
-            type="email"
-            formControlName="email"
-            [class.control--invalid]="isInvalid('email')"
-            placeholder="name@campus.tn"
-          />
-          @if (isInvalid('email')) {
-            <p class="field-error">Enter a valid email address.</p>
-          }
-        </label>
-
-        <label class="form-field">
-          <span class="field__label">Role</span>
-          <select class="control" formControlName="role">
-            @for (role of roles; track role) {
-              <option [value]="role">{{ roleLabels[role] }}</option>
-            }
-          </select>
-        </label>
-
-        <label class="form-field">
-          <span class="field__label">
-            {{ editingId() ? 'New password (optional)' : 'Temporary password' }}
-          </span>
-          <input
-            class="control"
-            type="password"
-            formControlName="password"
-            [class.control--invalid]="passwordError() !== null"
-            [placeholder]="editingId() ? 'Leave blank to keep current' : 'At least 8 characters'"
-            (input)="passwordError.set(null)"
-          />
-          @if (passwordError()) {
-            <p class="field-error">{{ passwordError() }}</p>
-          } @else if (!editingId()) {
-            <p class="field-error">Must be at least 8 characters.</p>
-          }
-        </label>
-
-        <div class="form-actions">
-          @if (editingId()) {
-            <button type="button" class="button" (click)="startCreate()">Cancel edit</button>
-          }
-          <button type="submit" class="button button--primary">
-            {{ editingId() ? 'Save changes' : 'Create account' }}
-          </button>
-        </div>
-      </form>
-    </section>
   </div>
 
+  <app-form-dialog
+    [(open)]="formOpen"
+    [title]="formTitle()"
+    [subtitle]="formSubtitle()"
+    [formId]="formId"
+    [submitLabel]="editingId() ? 'Save changes' : 'Create account'"
+    [saving]="saving()"
+    [wide]="true"
+    (cancelled)="closeForm()"
+  >
+    <form class="admin-form" [id]="formId" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <label class="form-field">
+        <span class="field__label">Full name</span>
+        <input
+          class="control"
+          type="text"
+          formControlName="fullName"
+          autofocus
+          [class.control--invalid]="isInvalid('fullName')"
+          placeholder="Yasmine Ben Salah"
+        />
+        @if (isInvalid('fullName')) {
+          <p class="field-error">A full name is required.</p>
+        }
+      </label>
+
+      <label class="form-field">
+        <span class="field__label">Email</span>
+        <input
+          class="control"
+          type="email"
+          formControlName="email"
+          [class.control--invalid]="isInvalid('email')"
+          placeholder="name@campus.tn"
+        />
+        @if (isInvalid('email')) {
+          <p class="field-error">Enter a valid email address.</p>
+        }
+      </label>
+
+      <label class="form-field">
+        <span class="field__label">Role</span>
+        <select class="control" formControlName="role">
+          @for (role of roles; track role) {
+            <option [value]="role">{{ roleLabels[role] }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="form-field">
+        <span class="field__label">
+          {{ editingId() ? 'New password (optional)' : 'Temporary password' }}
+        </span>
+        <input
+          class="control"
+          type="password"
+          formControlName="password"
+          [class.control--invalid]="passwordError() !== null"
+          [placeholder]="editingId() ? 'Leave blank to keep current' : 'At least 8 characters'"
+          (input)="passwordError.set(null)"
+        />
+        @if (passwordError()) {
+          <p class="field-error">{{ passwordError() }}</p>
+        } @else if (!editingId()) {
+          <p class="field-error">Must be at least 8 characters.</p>
+        }
+      </label>
+    </form>
+  </app-form-dialog>
+
   <app-confirm-dialog
-    [open]="dialogOpen()"
+    [(open)]="dialogOpen"
     title="Delete account"
     [message]="
       deleteTarget()
         ? 'Delete ' + deleteTarget()!.fullName + '\'s account? This cannot be undone.'
         : ''
     "
+    [confirmPhrase]="deleteTarget() ? 'delete ' + deleteTarget()!.fullName : ''"
     confirmLabel="Delete"
     cancelLabel="Keep"
     [danger]="true"

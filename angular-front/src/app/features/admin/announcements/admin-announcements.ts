@@ -17,6 +17,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import {
   ConfirmDialogComponent,
   EmptyStateComponent,
+  FormDialogComponent,
   PageHeaderComponent,
   StatCardComponent,
 } from '../../../shared/components';
@@ -37,6 +38,7 @@ type CategoryFilter = 'all' | AnnouncementCategory;
     ReactiveFormsModule,
     ConfirmDialogComponent,
     EmptyStateComponent,
+    FormDialogComponent,
     PageHeaderComponent,
     StatCardComponent,
   ],
@@ -62,6 +64,18 @@ export class AdminAnnouncements {
 
   protected readonly deleteTarget = signal<Announcement | null>(null);
   protected readonly dialogOpen = signal(false);
+
+  protected readonly formId = 'admin-announcement-form';
+  protected readonly formOpen = signal(false);
+
+  protected readonly formTitle = computed(() =>
+    this.editingId() ? 'Edit announcement' : 'New announcement',
+  );
+  protected readonly formSubtitle = computed(() =>
+    this.editingId()
+      ? 'Update the wording and save.'
+      : 'Write a notice for the campus feed.',
+  );
 
   protected readonly form = this.formBuilder.nonNullable.group({
     title: ['', [Validators.required, Validators.maxLength(80)]],
@@ -130,6 +144,7 @@ export class AdminAnnouncements {
     this.resetForm();
     this.feedback.set(null);
     this.error.set(null);
+    this.formOpen.set(true);
   }
 
   protected startEdit(announcement: Announcement): void {
@@ -143,6 +158,12 @@ export class AdminAnnouncements {
       category: announcement.category,
       pinned: announcement.pinned,
     });
+    this.formOpen.set(true);
+  }
+
+  protected closeForm(): void {
+    this.formOpen.set(false);
+    this.resetForm();
   }
 
   protected submit(): void {
@@ -179,6 +200,7 @@ export class AdminAnnouncements {
       this.feedback.set(`${created.title} was published.`);
     }
 
+    this.formOpen.set(false);
     this.resetForm();
   }
 
@@ -221,6 +243,7 @@ export class AdminAnnouncements {
     }
 
     if (this.editingId() === target.id) {
+      this.formOpen.set(false);
       this.resetForm();
     }
     this.feedback.set(`${target.title} was deleted.`);
