@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { AssistantLauncher } from '../../features/assistant/assistant-launcher/assistant-launcher';
 import { ToastHostComponent } from '../../shared/components';
 import { Dock } from '../dock/dock';
 import { Topbar } from '../topbar/topbar';
@@ -13,7 +14,7 @@ import { Topbar } from '../topbar/topbar';
  */
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, Topbar, Dock, ToastHostComponent],
+  imports: [RouterOutlet, Topbar, Dock, AssistantLauncher, ToastHostComponent],
   templateUrl: './app-shell.html',
   styleUrl: './app-shell.scss',
 })

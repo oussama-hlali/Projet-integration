@@ -1,0 +1,347 @@
+/* Compact IA launcher: the floating button / flyout choreography borrows from
+   the Faivra reference, but every colour uses Smart Campus tokens. */
+
+:host {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: var(--z-drawer);
+}
+
+.ia {
+  display: contents;
+}
+
+.floating_button {
+  --nav-icon-size: 21px;
+
+  display: inline-flex;
+  min-height: 50px;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-4);
+  color: var(--color-accent-contrast);
+  background: var(--color-accent);
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-lg);
+  cursor: pointer;
+  animation: fade-in-down 380ms var(--ease-out) both;
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-base),
+    background-color var(--transition-fast);
+}
+
+.floating_button:hover {
+  background: var(--color-accent-hover);
+  box-shadow: 0 20px 40px -18px color-mix(in srgb, var(--color-accent) 70%, transparent);
+  transform: translateY(-2px);
+}
+
+.floating_button:active {
+  transform: translateY(0) scale(0.96);
+}
+
+.floating_button__label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
+}
+
+.flyout {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 16px);
+  display: flex;
+  width: min(380px, calc(100vw - 32px));
+  max-height: min(520px, calc(100dvh - 150px));
+  flex-direction: column;
+  border-radius: var(--radius-xl);
+  animation: fade-in-down 260ms var(--ease-out) both;
+}
+
+.flyout__triangle {
+  position: absolute;
+  right: 30px;
+  bottom: -7px;
+  width: 14px;
+  height: 14px;
+  background: var(--glass-bg-strong);
+  border-right: 1px solid var(--glass-border);
+  border-bottom: 1px solid var(--glass-border);
+  transform: rotate(45deg);
+}
+
+.flyout__head {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--line);
+}
+
+.flyout__avatar {
+  --nav-icon-size: 20px;
+
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: none;
+  place-items: center;
+  color: var(--color-accent-text);
+  background: var(--color-accent-soft);
+  border-radius: var(--radius-full);
+}
+
+.flyout__identity {
+  min-width: 0;
+  flex: 1;
+}
+
+.flyout__identity h2 {
+  margin: 0;
+  font-size: var(--font-size-base);
+}
+
+.flyout__status {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.flyout__tools {
+  display: flex;
+  flex: none;
+  gap: var(--space-1);
+}
+
+.flyout__tools .icon-btn {
+  width: 34px;
+  height: 34px;
+  font-size: var(--font-size-lg);
+}
+
+.flyout__tools .icon-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.flyout__body[data-show='true'] {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  min-height: 180px;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-3);
+  overflow-y: auto;
+  padding: var(--space-4);
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+.flyout__hint {
+  margin: auto 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  text-align: center;
+}
+
+.bubble {
+  max-width: 88%;
+  padding: var(--space-2) var(--space-3);
+  align-self: flex-start;
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md) var(--radius-md) var(--radius-md) var(--radius-xs);
+}
+
+.bubble--user {
+  align-self: flex-end;
+  background: var(--color-accent-soft);
+  border-color: transparent;
+  border-radius: var(--radius-md) var(--radius-md) var(--radius-xs) var(--radius-md);
+}
+
+.bubble__role {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.bubble p {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-base);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.bubble--thinking {
+  display: flex;
+  gap: 4px;
+  padding: var(--space-3);
+}
+
+.bubble--thinking span {
+  width: 6px;
+  height: 6px;
+  background: var(--color-text-muted);
+  border-radius: var(--radius-full);
+  animation: ia-pulse 1s ease-in-out infinite;
+}
+
+.bubble--thinking span:nth-child(2) {
+  animation-delay: 150ms;
+}
+
+.bubble--thinking span:nth-child(3) {
+  animation-delay: 300ms;
+}
+
+.flyout__quick {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: 0 var(--space-4) var(--space-3);
+}
+
+.flyout__quick button {
+  padding: 5px 10px;
+  color: var(--color-accent-text);
+  background: var(--color-accent-soft);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.flyout__quick button:hover:not(:disabled) {
+  background: var(--color-accent-fill);
+  color: var(--color-accent-text);
+}
+
+.flyout__quick button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.flyout__form {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  border-top: 1px solid var(--line);
+}
+
+.flyout__form input {
+  min-width: 0;
+  min-height: 40px;
+  flex: 1;
+  padding: var(--space-2) var(--space-3);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+}
+
+.flyout__form button {
+  --nav-icon-size: 18px;
+
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  place-items: center;
+  color: var(--color-accent-contrast);
+  background: var(--color-accent);
+  border: 0;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.flyout__form button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@keyframes fade-in-down {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in-down-desktop {
+  from {
+    opacity: 0;
+    transform: translateY(-14px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes ia-pulse {
+  0%,
+  80%,
+  100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+
+  40% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+@media (min-width: 761px) {
+  .flyout {
+    animation-name: fade-in-down-desktop;
+  }
+}
+
+@media (max-width: 760px) {
+  :host {
+    right: 16px;
+    bottom: calc(84px + env(safe-area-inset-bottom));
+  }
+
+  .floating_button {
+    min-height: 46px;
+  }
+
+  .flyout {
+    bottom: calc(100% + 12px);
+    max-height: min(440px, calc(100dvh - 160px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .floating_button,
+  .flyout {
+    animation: none;
+  }
+
+  .bubble--thinking span {
+    animation: none;
+  }
+}
