@@ -23,8 +23,12 @@ export const appConfig: ApplicationConfig = {
     // Order matters: the runtime API base URL must be known before the silent
     // cookie refresh runs, otherwise the bootstrap may call a stale host.
     provideAppInitializer(async () => {
-      await inject(RuntimeConfigService).load();
-      await inject(AuthService).init();
+      // Resolve both services synchronously: inject() is only valid inside the
+      // initializer's injection context, before the first await.
+      const config = inject(RuntimeConfigService);
+      const auth = inject(AuthService);
+      await config.load();
+      await auth.init();
     }),
   ],
 };
