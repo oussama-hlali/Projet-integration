@@ -151,6 +151,15 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'admin/review',
+        title: 'Admin · Reservation review',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./features/admin/reservation-review/reservation-review').then(
+            (m) => m.ReservationReview,
+          ),
+      },
+      {
         path: 'admin/lost-found',
         title: 'Admin · Lost & Found',
         canActivate: [adminGuard],

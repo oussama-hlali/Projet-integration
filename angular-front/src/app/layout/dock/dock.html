@@ -22,10 +22,17 @@
       [routerLinkActiveOptions]="{ exact: true }"
       #dockLink="routerLinkActive"
       [attr.aria-current]="dockLink.isActive ? 'page' : null"
-      [attr.aria-label]="item.label"
+      [attr.aria-label]="
+        item.route === reviewRoute
+          ? item.label + ' (' + pendingReviews() + ' pending)'
+          : item.label
+      "
       [attr.data-label]="item.label"
     >
       <app-nav-icon [name]="item.icon" />
+      @if (item.route === reviewRoute && pendingReviews() > 0) {
+        <span class="dock__badge" aria-hidden="true">{{ pendingReviews() }}</span>
+      }
     </a>
   }
 

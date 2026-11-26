@@ -129,4 +129,15 @@ describe('ReservationService', () => {
     expect(service.cancel(created.reservation.id)).toBeUndefined();
   });
 
+  it('keeps pending requests in the review queue and denies them without deletion', () => {
+    expect(service.pending().length).toBe(1);
+
+    const target = service.pending()[0];
+    const denied = service.deny(target.id);
+
+    expect(denied?.status).toBe('CANCELLED');
+    expect(service.pending().length).toBe(0);
+    expect(service.deny(target.id)).toBeUndefined();
+  });
+
 });

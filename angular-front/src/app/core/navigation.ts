@@ -19,6 +19,7 @@ export type NavIconName =
   | 'admin'
   | 'assistant'
   | 'analytics'
+  | 'review'
   | 'logout';
 
 export interface NavItem {
@@ -62,6 +63,12 @@ export const ADMIN_NAV: readonly NavItem[] = [
 export const ACCOUNT_NAV: readonly NavItem[] = [
   { label: 'Notifications', route: '/notifications', icon: 'bell' },
   { label: 'Profile', route: '/profile', icon: 'user' },
+  {
+    label: 'Review',
+    route: '/admin/review',
+    icon: 'review',
+    adminOnly: true,
+  },
   { label: 'Assistant', route: '/assistant', icon: 'assistant' },
   {
     label: 'AI Analytics',

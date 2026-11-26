@@ -66,6 +66,13 @@ export class ReservationService {
     return counts;
   });
 
+  /** Pending requests waiting for an administrator decision, soonest first. */
+  readonly pending = computed<readonly Reservation[]>(() =>
+    this.state()
+      .filter((reservation) => reservation.status === 'PENDING')
+      .sort((a, b) => a.startTime.getTime() - b.startTime.getTime()),
+  );
+
   /** Upcoming = still ahead of its end time; cancelled always wins. */
   phaseOf(reservation: Reservation, now: Date = new Date()): ReservationPhase {
     if (reservation.status === 'CANCELLED') {
@@ -175,6 +182,22 @@ export class ReservationService {
     return this.transition(id, 'CONFIRMED', (saved) => {
       this.notifications.add({
         message: `Votre réservation pour ${saved.room} est confirmée.`,
+        type: 'RESERVATION',
+        reservationId: saved.id,
+      });
+    });
+  }
+
+  /** Decline a pending request. The row stays as CANCELLED for history. */
+  deny(id: string): Reservation | undefined {
+    const target = this.state().find((reservation) => reservation.id === id);
+    if (!target || target.status !== 'PENDING') {
+      return undefined;
+    }
+
+    return this.transition(id, 'CANCELLED', (saved) => {
+      this.notifications.add({
+        message: `Votre demande de réservation pour ${saved.room} a été refusée.`,
         type: 'RESERVATION',
         reservationId: saved.id,
       });
