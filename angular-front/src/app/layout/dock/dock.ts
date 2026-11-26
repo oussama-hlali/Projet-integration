@@ -2,6 +2,7 @@ import { Component, computed, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { ACCOUNT_NAV, NavItem } from '../../core/navigation';
 import { AuthService } from '../../core/services/auth.service';
+import { ReservationService } from '../../core/services/reservation.service';
 import { BrandMarkComponent, NavIconComponent, ThemeToggleComponent } from '../../shared/components';
 
 /**
@@ -24,8 +25,11 @@ import { BrandMarkComponent, NavIconComponent, ThemeToggleComponent } from '../.
 export class Dock {
   private readonly router = inject(Router);
   private readonly auth = inject(AuthService);
+  private readonly reservations = inject(ReservationService);
 
   protected readonly homeRoute = this.auth.homeRoute;
+  protected readonly reviewRoute = '/admin/review';
+  protected readonly pendingReviews = computed(() => this.reservations.pending().length);
 
   protected readonly visibleAccount = computed<readonly NavItem[]>(() =>
     ACCOUNT_NAV.filter((item) => !item.adminOnly || this.auth.isAdmin()),

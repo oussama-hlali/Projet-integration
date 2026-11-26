@@ -63,6 +63,10 @@ import { NavIconName } from '../../core/navigation';
           <path d="M4 20V10m5 10V4m5 16v-7m5 7V8" />
           <path d="M3 20h18" />
         }
+        @case ('review') {
+          <path d="M9 4h6v2H9V4Zm-4 0H4v16h16V4h-1" />
+          <path d="m8 12 2 2 4-4M8 17h6" />
+        }
         @case ('logout') {
           <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 8l-4 4 4 4M6 12h10" />
         }

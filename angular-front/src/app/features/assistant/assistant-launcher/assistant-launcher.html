@@ -1,0 +1,89 @@
+<div class="ia">
+  @if (open()) {
+    <section
+      class="flyout glass glass--thick"
+      id="assistant-flyout"
+      role="dialog"
+      aria-label="Assistant Smart Campus"
+    >
+      <span class="flyout__triangle" aria-hidden="true"></span>
+
+      <header class="flyout__head">
+        <span class="flyout__avatar" aria-hidden="true"><app-nav-icon name="assistant" /></span>
+        <div class="flyout__identity">
+          <h2>Smart Campus IA</h2>
+          <p class="flyout__status" role="status">
+            {{ busy() ? 'En réflexion…' : 'Connecté au service IA' }}
+          </p>
+        </div>
+        <div class="flyout__tools">
+          <button
+            type="button"
+            class="icon-btn"
+            aria-label="Effacer la conversation"
+            [disabled]="busy() || !messages().length"
+            (click)="clear()"
+          >
+            &#8635;
+          </button>
+          <button type="button" class="icon-btn" aria-label="Fermer l'assistant" (click)="close()">
+            &times;
+          </button>
+        </div>
+      </header>
+
+      <div class="flyout__body" #body data-show="true" role="log" aria-live="polite">
+        @if (!messages().length) {
+          <p class="flyout__hint">
+            Posez une question sur les salles, les événements, le menu ou les objets perdus.
+          </p>
+        }
+
+        @for (message of messages(); track $index) {
+          <div class="bubble" [class.bubble--user]="message.role === 'user'">
+            <span class="bubble__role">{{ message.role === 'user' ? 'Vous' : 'IA' }}</span>
+            <p>{{ message.content }}</p>
+          </div>
+        }
+
+        @if (busy()) {
+          <div class="bubble bubble--thinking" role="status" aria-label="L'assistant prépare une réponse">
+            <span></span><span></span><span></span>
+          </div>
+        }
+      </div>
+
+      <div class="flyout__quick" aria-label="Questions rapides">
+        @for (prompt of quickPrompts; track prompt) {
+          <button type="button" [disabled]="busy()" (click)="ask(prompt)">{{ prompt }}</button>
+        }
+      </div>
+
+      <form class="flyout__form" (ngSubmit)="send()">
+        <input
+          type="text"
+          name="draft"
+          [(ngModel)]="draft"
+          placeholder="Écrivez votre question…"
+          aria-label="Votre message pour l'assistant"
+          [disabled]="busy()"
+        />
+        <button type="submit" aria-label="Envoyer" [disabled]="busy() || !draft.trim()">
+          <app-nav-icon name="assistant" />
+        </button>
+      </form>
+    </section>
+  }
+
+  <button
+    class="floating_button"
+    type="button"
+    [attr.aria-expanded]="open()"
+    [attr.aria-controls]="open() ? 'assistant-flyout' : null"
+    [attr.aria-label]="open() ? 'Fermer l’assistant' : 'Ouvrir l’assistant'"
+    (click)="toggle()"
+  >
+    <app-nav-icon name="assistant" />
+    <span class="floating_button__label">{{ open() ? 'Fermer' : 'IA' }}</span>
+  </button>
+</div>
