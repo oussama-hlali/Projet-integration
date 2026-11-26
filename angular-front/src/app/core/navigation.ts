@@ -56,7 +56,6 @@ export const ADMIN_NAV: readonly NavItem[] = [
   { label: 'Lost & Found', route: '/admin/lost-found', icon: 'search' },
   { label: 'Users', route: '/admin/users', icon: 'user' },
   { label: 'AI Analytics', route: '/admin/ai-analytics', icon: 'admin', adminOnly: true },
-  { label: 'Assistant', route: '/assistant', icon: 'assistant' },
 ];
 
 /** Account destinations shown in the floating dock. */

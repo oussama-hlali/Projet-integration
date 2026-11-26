@@ -1,0 +1,89 @@
+@if (open()) {
+  <section
+    id="review-flyout"
+    class="review-flyout glass glass--thick"
+    role="dialog"
+    aria-label="Reservation review"
+    data-show="true"
+  >
+    <span class="flyout__triangle" aria-hidden="true"></span>
+
+    <header class="flyout__head">
+      <span class="flyout__avatar" aria-hidden="true"><app-nav-icon name="review" /></span>
+      <div class="flyout__identity">
+        <h2>Reservation review</h2>
+        <p class="flyout__status" role="status">
+          {{ pending().length }} pending request{{ pending().length === 1 ? '' : 's' }}
+        </p>
+      </div>
+      <button
+        type="button"
+        class="icon-btn"
+        aria-label="Close review panel"
+        [attr.aria-controls]="'review-flyout'"
+        (click)="close()"
+      >
+        &times;
+      </button>
+    </header>
+
+    @if (feedback()) {
+      <div class="review-feedback" role="status">
+        <span>{{ feedback() }}</span>
+        <button type="button" aria-label="Dismiss message" (click)="dismissFeedback()">&times;</button>
+      </div>
+    }
+
+    @if (error()) {
+      <div class="review-feedback review-feedback--danger" role="alert">
+        <span>{{ error() }}</span>
+        <button type="button" aria-label="Dismiss message" (click)="dismissError()">&times;</button>
+      </div>
+    }
+
+    <div class="flyout__body" data-show="true" role="log" aria-live="polite">
+      @if (!pending().length) {
+        <p class="flyout__hint">
+          Nothing to review. New room requests appear here as soon as students submit them.
+        </p>
+      }
+
+      @for (reservation of pending(); track reservation.id) {
+        <article class="review-card">
+          <div class="review-card__head">
+            <h3>{{ reservation.room }}</h3>
+            <p>
+              {{ reservation.startTime | date: 'd MMM yyyy' }}
+              <span>{{ reservation.startTime | date: 'HH:mm' }} &ndash; {{ reservation.endTime | date: 'HH:mm' }}</span>
+            </p>
+          </div>
+          <p class="review-card__purpose">{{ reservation.purpose }}</p>
+          <p class="review-card__meta">Requested by {{ reservation.userId }}</p>
+          <div class="review-card__actions">
+            <button
+              type="button"
+              class="button button--small button--primary"
+              [attr.aria-label]="'Accept reservation for ' + reservation.room"
+              (click)="accept(reservation)"
+            >
+              Accept
+            </button>
+            <button
+              type="button"
+              class="button button--small button--danger"
+              [attr.aria-label]="'Decline reservation for ' + reservation.room"
+              (click)="deny(reservation)"
+            >
+              Decline
+            </button>
+          </div>
+        </article>
+      }
+    </div>
+
+    <footer class="flyout__foot">
+      <a routerLink="/admin/review" (click)="close()">Open full review &rarr;</a>
+      <p class="flyout__keys"><kbd>A</kbd> accept <kbd>D</kbd> decline</p>
+    </footer>
+  </section>
+}

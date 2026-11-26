@@ -15,25 +15,36 @@
   <span class="dock__divider" aria-hidden="true"></span>
 
   @for (item of visibleAccount(); track item.route) {
-    <a
-      class="dock__btn"
-      [routerLink]="item.route"
-      routerLinkActive="dock__btn--active"
-      [routerLinkActiveOptions]="{ exact: true }"
-      #dockLink="routerLinkActive"
-      [attr.aria-current]="dockLink.isActive ? 'page' : null"
-      [attr.aria-label]="
-        item.route === reviewRoute
-          ? item.label + ' (' + pendingReviews() + ' pending)'
-          : item.label
-      "
-      [attr.data-label]="item.label"
-    >
-      <app-nav-icon [name]="item.icon" />
-      @if (item.route === reviewRoute && pendingReviews() > 0) {
-        <span class="dock__badge" aria-hidden="true">{{ pendingReviews() }}</span>
-      }
-    </a>
+    @if (item.route === reviewRoute) {
+      <button
+        class="dock__btn"
+        type="button"
+        [attr.aria-label]="item.label + ' (' + pendingReviews() + ' pending)'"
+        [attr.aria-expanded]="reviewOpen()"
+        [attr.aria-controls]="reviewOpen() ? 'review-flyout' : null"
+        [attr.data-label]="item.label"
+        (click)="toggleReview()"
+      >
+        <app-nav-icon [name]="item.icon" />
+        @if (pendingReviews() > 0) {
+          <span class="dock__badge" aria-hidden="true">{{ pendingReviews() }}</span>
+        }
+      </button>
+    } @else {
+      <a
+        class="dock__btn"
+        [routerLink]="item.route"
+        routerLinkActive="dock__btn--active"
+        [routerLinkActiveOptions]="{ exact: true }"
+        #dockLink="routerLinkActive"
+        [attr.aria-current]="dockLink.isActive ? 'page' : null"
+        [attr.aria-label]="item.label"
+        [attr.data-label]="item.label"
+        (click)="closeReview()"
+      >
+        <app-nav-icon [name]="item.icon" />
+      </a>
+    }
   }
 
   <span class="dock__divider" aria-hidden="true"></span>
@@ -50,3 +61,7 @@
     <app-nav-icon name="logout" />
   </button>
 </nav>
+
+@if (isAdmin()) {
+  <app-reservation-review-panel [open]="reviewOpen()" (closed)="closeReview()" />
+}
