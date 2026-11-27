@@ -72,11 +72,22 @@ export class Register {
     }
 
     if (!result.ok) {
-      this.error.set(
-        result.reason === 'email-taken'
-          ? 'An account with this email already exists.'
-          : 'Password must be at least 8 characters.',
-      );
+      switch (result.reason) {
+        case 'email-taken':
+          this.error.set('An account with this email already exists.');
+          break;
+        case 'weak-password':
+          this.error.set('Password must be at least 8 characters.');
+          break;
+        case 'rate-limited':
+          this.error.set('Too many attempts. Please wait a moment and try again.');
+          break;
+        case 'service-unavailable':
+          this.error.set('The sign-up service is unavailable right now. Please try again shortly.');
+          break;
+        default:
+          this.error.set('Unable to create the account. Please try again.');
+      }
       return;
     }
 

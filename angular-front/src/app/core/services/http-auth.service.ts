@@ -68,22 +68,27 @@ export class HttpAuthService {
   } as const;
 
   login(email: string, password: string): Observable<MfaChallenge> {
+    // Auth forms render their own inline error; avoid a duplicate toast.
     return this.http.post<MfaChallenge>(
       `${this.base()}/auth/login`,
       { email, password },
-      this.write,
+      this.silentWrite,
     );
   }
 
   register(fullName: string, email: string, password: string): Observable<any> {
-    return this.http.post(`${this.base()}/auth/register`, { fullName, email, password }, this.write);
+    return this.http.post(
+      `${this.base()}/auth/register`,
+      { fullName, email, password },
+      this.silentWrite,
+    );
   }
 
   mfaSetup(challengeId: string): Observable<MfaSetupResponse> {
     return this.http.post<MfaSetupResponse>(
       `${this.base()}/auth/mfa/setup`,
       { challengeId },
-      this.write,
+      this.silentWrite,
     );
   }
 
@@ -91,7 +96,7 @@ export class HttpAuthService {
     return this.http.post<SessionResponse>(
       `${this.base()}/auth/mfa/verify`,
       { challengeId, code },
-      this.write,
+      this.silentWrite,
     );
   }
 

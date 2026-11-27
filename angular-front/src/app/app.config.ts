@@ -20,15 +20,13 @@ export const appConfig: ApplicationConfig = {
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
     provideHttpClient(withInterceptors([authInterceptor, httpErrorInterceptor])),
-    // Order matters: the runtime API base URL must be known before the silent
-    // cookie refresh runs, otherwise the bootstrap may call a stale host.
-    provideAppInitializer(async () => {
-      // Resolve both services synchronously: inject() is only valid inside the
-      // initializer's injection context, before the first await.
+    // Resolve both services synchronously: inject() is only valid inside the
+    // initializer's injection context. Neither promise is awaited here, so the
+    // splash paints immediately; guards and login wait on `auth.ready`.
+    provideAppInitializer(() => {
       const config = inject(RuntimeConfigService);
       const auth = inject(AuthService);
-      await config.load();
-      await auth.init();
+      auth.init(config.load());
     }),
   ],
 };

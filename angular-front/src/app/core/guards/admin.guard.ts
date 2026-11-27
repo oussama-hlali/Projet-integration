@@ -7,9 +7,11 @@ import { AuthService } from '../services/auth.service';
  * Combine with `authGuard` only if a route is reachable while signed out —
  * a student who is signed in still lands on the dashboard here.
  */
-export const adminGuard: CanActivateFn = () => {
+export const adminGuard: CanActivateFn = async () => {
   const auth = inject(AuthService);
   const router = inject(Router);
+
+  await auth.ready;
 
   if (auth.isAdmin()) {
     return true;
