@@ -2,8 +2,19 @@ package com.smartcampus.mobile.core.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val GreenPrimary = Color(0xFF2E7D5B)
-val GreenDark = Color(0xFF1E5C43)
-val GreenLight = Color(0xFFA5D6B8)
-val SurfaceSoft = Color(0xFFF5F8F6)
-val ErrorRed = Color(0xFFB3261E)
+/* Couleurs alignées sur les tokens du web Smart Campus (_tokens.scss / splash.scss). */
+
+val SplashCanvas = Color(0xFFF4F6FB)
+val Ink = Color(0xFF111C3A)
+val Accent = Color(0xFF0D7C78)
+val AccentBright = Color(0xFF2DD4BF)
+val AccentGlow = Color(0x242DD4BF)
+
+val WebSurface = Color(0xFFFFFFFF)
+val WebSurfaceMuted = Color(0xFFF4F7FB)
+
+val DarkCanvas = Color(0xFF0D0F13)
+val DarkSurface = Color(0xFF16191F)
+val DarkAccent = Color(0xFF6FE3D4)
+
+val ErrorRed = Color(0xFFA52A24)
