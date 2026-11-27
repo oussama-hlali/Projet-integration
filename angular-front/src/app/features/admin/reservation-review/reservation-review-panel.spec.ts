@@ -1,5 +1,6 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 
 import { Reservation } from '../../../core/models/reservation.model';
 import { ReservationService } from '../../../core/services/reservation.service';
@@ -29,6 +30,7 @@ describe('ReservationReviewPanel', () => {
     await TestBed.configureTestingModule({
       imports: [ReservationReviewPanel],
       providers: [
+        provideRouter([]),
         {
           provide: ReservationService,
           useValue: {
