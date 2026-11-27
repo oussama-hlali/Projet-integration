@@ -1,6 +1,8 @@
 package com.smartcampus.mobile.di
 
 import android.content.Context
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import com.smartcampus.mobile.core.datastore.UserPreferences
 import com.smartcampus.mobile.core.network.ApiClient
 import com.smartcampus.mobile.core.network.AuthInterceptor
@@ -8,6 +10,7 @@ import com.smartcampus.mobile.core.network.SessionCookieJar
 import com.smartcampus.mobile.core.network.TokenHolder
 import com.smartcampus.mobile.core.repository.SmartCampusRepository
 import com.smartcampus.mobile.feature.auth.AuthRepository
+import com.smartcampus.mobile.feature.auth.AuthViewModel
 
 /**
  * Conteneur simple, sans Hilt ni Koin.
@@ -39,4 +42,11 @@ class AppContainer(private val context: Context) {
         api = apiClient.smartApi,
         apiClient = apiClient
     )
+
+    fun authViewModelFactory() = object : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            return AuthViewModel(authRepository) as T
+        }
+    }
 }
