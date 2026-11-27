@@ -1,6 +1,8 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, Injector, computed, inject, signal } from '@angular/core';
-import { Observable, firstValueFrom, map, of } from 'rxjs';
+import { Observable, firstValueFrom, map, of, timeout } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { RuntimeConfigService } from '../config/runtime-config.service';
 import {
   HttpAuthService,
   MfaChallenge,
@@ -20,6 +22,12 @@ const TOTP_DIGITS = 6;
 const TOTP_PERIOD = 30;
 const TOTP_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 
+/** Non-secret marker: only used to avoid a refresh request on every first visit. */
+const SESSION_HINT_COOKIE = 'smart-campus.session';
+const REFRESH_TIMEOUT_MS = 4000;
+const WRITE_TIMEOUT_MS = 8000;
+const TRANSIENT_RETRY_DELAY_MS = 1200;
+
 export interface RegisterInput {
   fullName: string;
   email: string;
@@ -37,8 +45,14 @@ export type AuthResult =
         | 'otp-required'
         | 'setup-required'
         | 'invalid-otp'
-        | 'no-pending';
+        | 'no-pending'
+        | 'rate-limited'
+        | 'service-unavailable';
     };
+
+type AuthFailureResult = Extract<AuthResult, { ok: false }>;
+type AuthFailureReason = AuthFailureResult['reason'];
+type TransientReason = 'rate-limited' | 'service-unavailable';
 
 /**
  * Real (client-side) authentication with TOTP second factor.
@@ -62,6 +76,20 @@ export class AuthService {
     return (this.userServiceInstance ??= this.injector.get(UserService));
   }
   private readonly httpAuth = inject(HttpAuthService);
+  private readonly runtimeConfig = inject(RuntimeConfigService);
+
+  private restorePromise: Promise<void> | null = null;
+  /** Transient problem seen during the silent restore, if any (never a token). */
+  readonly restoreIssue = signal<TransientReason | null>(null);
+
+  /**
+   * Guards, the splash and the login page wait on this before making a routing
+   * decision. It is created synchronously by `init()` so a fast navigation can
+   * never race the cookie restore.
+   */
+  get ready(): Promise<void> {
+    return this.restorePromise ?? Promise.resolve();
+  }
 
   private readonly currentUserIdState = signal<string | null>(null);
   /** Cached user from HTTP login (for HTTP mode). */
@@ -107,11 +135,15 @@ export class AuthService {
   });
 
   /**
-   * Restore a session before the first navigation. The access token is rebuilt
-   * in memory from the HttpOnly refresh cookie; no token is read from or written
-   * to localStorage.
+   * Start the silent cookie restore without blocking Angular's first paint.
+   * The returned promise always settles (it never rejects), so route guards and
+   * the splash can safely await `ready`.
    */
-  async init(): Promise<void> {
+  init(configReady?: Promise<void>): Promise<void> {
+    if (this.restorePromise) {
+      return this.restorePromise;
+    }
+
     for (const key of [TOKEN_KEY, LEGACY_ROLE_KEY]) {
       if (typeof localStorage !== 'undefined') {
         localStorage.removeItem(key);
@@ -121,16 +153,36 @@ export class AuthService {
     this.pendingMfaChallenge = null;
     this.pendingOtpauthUri = null;
     this.pendingLiveUserState.set(null);
+    this.restoreIssue.set(null);
 
-    if (environment.useMocks) {
+    this.restorePromise = this.restoreSession(configReady);
+    return this.restorePromise;
+  }
+
+  private async restoreSession(configReady?: Promise<void>): Promise<void> {
+    if (configReady) {
+      await configReady;
+    }
+    if (environment.useMocks || !this.hasSessionHint()) {
       return;
     }
 
     try {
-      this.applySession(await firstValueFrom(this.httpAuth.refresh()));
-    } catch {
-      // No valid cookie (first visit, logout, rotation replay) — guards own the redirect.
+      const session = await this.requestWithRetry(
+        () => this.httpAuth.refresh(),
+        REFRESH_TIMEOUT_MS,
+      );
+      this.applySession(session);
+    } catch (error) {
+      // No valid cookie, rotation replay, or a waking-up gateway. Guards own the
+      // redirect; keep the hint on a transient failure so the next visit retries.
       this.clearSession();
+      const issue = this.transientReason(error);
+      if (issue) {
+        this.restoreIssue.set(issue);
+      } else {
+        this.clearSessionHint();
+      }
     }
   }
 
@@ -139,8 +191,8 @@ export class AuthService {
     if (!environment.useMocks) {
       try {
         return await this.startLiveMfa(email, password);
-      } catch {
-        return { ok: false, reason: 'invalid-credentials' };
+      } catch (error) {
+        return this.failureResult(error, 'invalid-credentials');
       }
     }
 
@@ -176,8 +228,9 @@ export class AuthService {
         // Registration does not issue a session: walk the new student through
         // the same mandatory TOTP enrolment as any other first login.
         return await this.startLiveMfa(input.email, input.password);
-      } catch {
-        return { ok: false, reason: 'email-taken' };
+      } catch (error) {
+        const transient = this.transientReason(error);
+        return { ok: false, reason: transient ?? 'email-taken' };
       }
     }
 
@@ -301,8 +354,8 @@ export class AuthService {
         this.applySession(res);
         this.clearPendingMfa();
         return { ok: true };
-      } catch {
-        return { ok: false, reason: 'invalid-otp' };
+      } catch (error) {
+        return this.failureResult(error, 'invalid-otp');
       }
     }
 
@@ -332,8 +385,8 @@ export class AuthService {
         this.applySession(res);
         this.clearPendingMfa();
         return { ok: true };
-      } catch {
-        return { ok: false, reason: 'invalid-otp' };
+      } catch (error) {
+        return this.failureResult(error, 'invalid-otp');
       }
     }
 
@@ -364,6 +417,7 @@ export class AuthService {
   async logout(): Promise<void> {
     this.clearSession();
     this.clearPendingMfa();
+    this.clearSessionHint();
     if (!environment.useMocks) {
       try {
         await firstValueFrom(this.httpAuth.logout());
@@ -408,7 +462,10 @@ export class AuthService {
    * are fetched here so the setup screen can render a real authenticator QR.
    */
   private async startLiveMfa(email: string, password: string): Promise<AuthResult> {
-    const challenge: MfaChallenge = await firstValueFrom(this.httpAuth.login(email, password));
+    const challenge: MfaChallenge = await this.requestWithRetry(
+      () => this.httpAuth.login(email, password),
+      WRITE_TIMEOUT_MS,
+    );
     if (!challenge.mfaRequired) {
       this.applySession(challenge as unknown as SessionResponse);
       return { ok: true };
@@ -435,8 +492,9 @@ export class AuthService {
       return { ok: false, reason: 'otp-required' };
     }
 
-    const setup: MfaSetupResponse = await firstValueFrom(
-      this.httpAuth.mfaSetup(challenge.challengeId),
+    const setup: MfaSetupResponse = await this.requestWithRetry(
+      () => this.httpAuth.mfaSetup(challenge.challengeId),
+      WRITE_TIMEOUT_MS,
     );
     this.pendingOtpauthUri = setup.otpauthUri;
     this.pendingLiveUserState.set({ ...baseUser, totpSecret: setup.secret, totpEnabled: false });
@@ -473,6 +531,8 @@ export class AuthService {
 
   private applySession(res: SessionResponse): void {
     const u: SessionUser = res.user;
+    this.restoreIssue.set(null);
+    this.setSessionHint();
     this.accessToken.set(res.accessToken);
     this.httpUser.set({
       id: u.id,
@@ -491,6 +551,80 @@ export class AuthService {
       totpEnabled: u.totpEnabled,
     });
     this.currentUserIdState.set(u.id);
+  }
+
+  /**
+   * A sleeping free-tier gateway can answer the first POST after an idle period
+   * with 429/503. Retry once so a single sign-in attempt is not lost, while a
+   * real 401 (bad credentials) still fails immediately.
+   */
+  private async requestWithRetry<T>(
+    request: () => Observable<T>,
+    timeoutMs: number,
+  ): Promise<T> {
+    let lastError: unknown;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        return await firstValueFrom(request().pipe(timeout(timeoutMs)));
+      } catch (error) {
+        lastError = error;
+        if (attempt === 1 || !this.transientReason(error)) {
+          throw error;
+        }
+        await this.pause(TRANSIENT_RETRY_DELAY_MS);
+      }
+    }
+    throw lastError;
+  }
+
+  private transientReason(error: unknown): TransientReason | null {
+    if (!(error instanceof HttpErrorResponse)) {
+      return null;
+    }
+    if (error.status === 429) {
+      return 'rate-limited';
+    }
+    if (error.status === 0 || error.status >= 500) {
+      return 'service-unavailable';
+    }
+    return null;
+  }
+
+  private failureResult(error: unknown, fallback: AuthFailureReason): AuthFailureResult {
+    return { ok: false, reason: this.transientReason(error) ?? fallback };
+  }
+
+  private pause(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  private hasSessionHint(): boolean {
+    if (typeof document === 'undefined') {
+      return false;
+    }
+    return document.cookie
+      .split(';')
+      .some((entry) => entry.trim().startsWith(`${SESSION_HINT_COOKIE}=`));
+  }
+
+  private setSessionHint(): void {
+    if (typeof document === 'undefined') {
+      return;
+    }
+    const secure = this.isSecurePage() ? '; Secure' : '';
+    document.cookie = `${SESSION_HINT_COOKIE}=1; Path=/; Max-Age=${TOKEN_TTL_SECONDS}; SameSite=Lax${secure}`;
+  }
+
+  private clearSessionHint(): void {
+    if (typeof document === 'undefined') {
+      return;
+    }
+    const secure = this.isSecurePage() ? '; Secure' : '';
+    document.cookie = `${SESSION_HINT_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax${secure}`;
+  }
+
+  private isSecurePage(): boolean {
+    return typeof location !== 'undefined' && location.protocol === 'https:';
   }
 
   private clearSession(): void {

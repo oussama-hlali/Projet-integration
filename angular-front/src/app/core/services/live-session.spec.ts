@@ -9,6 +9,15 @@ import { authInterceptor } from '../interceptors/auth.interceptor';
 import { AuthService } from './auth.service';
 
 const BASE = environment.apiBaseUrl;
+const SESSION_HINT = 'smart-campus.session';
+
+const setSessionHint = () => {
+  document.cookie = `${SESSION_HINT}=1; Path=/`;
+};
+
+const clearSessionHint = () => {
+  document.cookie = `${SESSION_HINT}=; Path=/; Max-Age=0`;
+};
 
 const session = (accessToken: string) => ({
   accessToken,
@@ -44,10 +53,12 @@ describe('live cookie session', () => {
   afterEach(() => {
     environment.useMocks = originalUseMocks;
     localStorage.clear();
+    clearSessionHint();
     httpMock.verify();
   });
 
   it('restores the session from the refresh cookie without a localStorage token', async () => {
+    setSessionHint();
     const init = auth.init();
     const request = httpMock.expectOne(`${BASE}/auth/refresh`);
 
@@ -62,6 +73,12 @@ describe('live cookie session', () => {
     expect(auth.currentUser()?.role).toBe('ADMINISTRATOR');
     expect(auth.isAdmin()).toBeTrue();
     expect(localStorage.getItem('smart-campus.auth.token')).toBeNull();
+  });
+
+  it('does not call refresh on a first visit without a session hint', async () => {
+    await auth.init();
+    httpMock.expectNone(`${BASE}/auth/refresh`);
+    expect(auth.isAuthenticated()).toBeFalse();
   });
 
   it('keeps every gateway request credentialed and retries once after a refresh', () => {

@@ -23,8 +23,50 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@900&family=JetBrains+Mono:wght@700&family=Urbanist:wght@400..700&display=swap" rel="stylesheet">
+  <style>
+    /* Instant splash: Angular replaces app-root as soon as it boots. */
+    html, body { margin: 0; min-height: 100%; background: #f4f6fb; }
+    #boot-splash {
+      position: fixed; inset: 0; z-index: 1000;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 1.4rem; background: #f4f6fb; color: #111c3a;
+      font-family: "JetBrains Mono", "Courier New", monospace; cursor: default;
+    }
+    #boot-splash::before {
+      content: ""; position: absolute; inset: 0; pointer-events: none;
+      background: radial-gradient(circle at 50% 38%, rgba(13,124,120,.14), transparent 42%);
+    }
+    .boot-gem {
+      position: relative; width: 88px; height: 132px;
+      clip-path: polygon(50% 0%, 100% 38%, 50% 51%, 0% 38%, 50% 100%);
+      background: linear-gradient(150deg, #2dd4bf 0%, #14b8a6 42%, #0d7c78 62%, #084c4a 100%);
+      filter: drop-shadow(0 0 22px rgba(13,124,120,.45));
+      animation: boot-bob 3.4s ease-in-out infinite;
+    }
+    .boot-title {
+      position: relative; font-family: "Unbounded", "Arial Black", sans-serif;
+      font-size: clamp(2rem, 6vw, 3.6rem); font-weight: 900; letter-spacing: -.05em;
+    }
+    .boot-year { position: relative; color: #0d7c78; font-weight: 700; letter-spacing: .35em; }
+    .boot-enter {
+      position: relative; margin-top: .6rem; padding: .55rem 1.6rem;
+      border: 1px solid rgba(13,124,120,.45); border-radius: 999px;
+      color: #0d7c78; font-size: .78rem; font-weight: 700; letter-spacing: .22em;
+      text-decoration: none; transition: background .2s, color .2s;
+    }
+    .boot-enter:hover { background: #0d7c78; color: #fff; }
+    @keyframes boot-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
+    @media (prefers-reduced-motion: reduce) { .boot-gem { animation: none; } }
+  </style>
 </head>
 <body>
-  <app-root></app-root>
+  <app-root>
+    <div id="boot-splash" role="status" aria-live="polite">
+      <div class="boot-gem" aria-hidden="true"></div>
+      <div class="boot-title">Smart Campus</div>
+      <div class="boot-year">◆ 2026</div>
+      <a class="boot-enter" href="/login">ENTER</a>
+    </div>
+  </app-root>
 </body>
 </html>

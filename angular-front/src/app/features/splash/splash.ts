@@ -180,9 +180,16 @@ export class Splash implements AfterViewInit, OnDestroy {
     }
     this.entered = true;
     this.leaving.set(true);
-    const destination = this.auth.isAuthenticated() ? this.auth.homeRoute() : '/login';
+
+    // The splash fades immediately, but the destination waits for the silent
+    // cookie restore so a valid session is never misread as a guest.
+    const destination = this.auth.ready.then(() =>
+      this.auth.isAuthenticated() ? this.auth.homeRoute() : '/login',
+    );
     this.timers.push(
-      window.setTimeout(() => void this.router.navigateByUrl(destination), FADE_MS),
+      window.setTimeout(() => {
+        void destination.then((url) => void this.router.navigateByUrl(url));
+      }, FADE_MS),
     );
   }
 

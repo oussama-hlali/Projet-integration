@@ -33,12 +33,21 @@ export class Login {
   });
 
   constructor() {
-    // Already signed in: skip the login screen and honour the role split.
-    if (this.auth.isAuthenticated()) {
-      void this.router.navigateByUrl(
-        this.auth.postAuthDestination(this.route.snapshot.queryParamMap.get('returnUrl')),
-      );
-    }
+    // Wait for the silent restore before deciding this is a guest visit.
+    void this.auth.ready.then(() => {
+      if (this.auth.isAuthenticated()) {
+        void this.router.navigateByUrl(
+          this.auth.postAuthDestination(this.route.snapshot.queryParamMap.get('returnUrl')),
+        );
+        return;
+      }
+
+      if (this.auth.restoreIssue() === 'rate-limited') {
+        this.error.set('The sign-in service is waking up. Please try again in a moment.');
+      } else if (this.auth.restoreIssue() === 'service-unavailable') {
+        this.error.set('The sign-in service is unavailable right now. Please try again shortly.');
+      }
+    });
   }
 
   isInvalid(controlName: 'email' | 'password'): boolean {
@@ -70,7 +79,16 @@ export class Login {
         );
         return;
       }
-      this.error.set('Invalid email or password.');
+      switch (result.reason) {
+        case 'rate-limited':
+          this.error.set('Too many sign-in attempts. Please wait a moment and try again.');
+          break;
+        case 'service-unavailable':
+          this.error.set('The sign-in service is unavailable right now. Please try again shortly.');
+          break;
+        default:
+          this.error.set('Invalid email or password.');
+      }
       return;
     }
 

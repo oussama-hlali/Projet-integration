@@ -63,7 +63,16 @@ export class Setup2fa implements OnDestroy {
     this.loading.set(false);
 
     if (!result.ok) {
-      this.error.set('Invalid or expired code. Try again.');
+      switch (result.reason) {
+        case 'rate-limited':
+          this.error.set('Too many attempts. Please wait a moment and try again.');
+          break;
+        case 'service-unavailable':
+          this.error.set('The sign-in service is unavailable right now. Please try again shortly.');
+          break;
+        default:
+          this.error.set('Invalid or expired code. Try again.');
+      }
       return;
     }
 

@@ -9,9 +9,11 @@ import { AuthService } from '../services/auth.service';
  * who opens one of those URLs is sent back to the management overview so the
  * two experiences never mix.
  */
-export const studentGuard: CanActivateFn = () => {
+export const studentGuard: CanActivateFn = async () => {
   const auth = inject(AuthService);
   const router = inject(Router);
+
+  await auth.ready;
 
   if (!auth.isAdmin()) {
     return true;
