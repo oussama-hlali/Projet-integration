@@ -63,7 +63,7 @@ export class AssistantLauncher {
 
   @HostListener('document:keydown', ['$event'])
   onKeydown(event: KeyboardEvent): void {
-    if (event.key === 'Escape' && this.open()) {
+    if (event.key === 'Escape' && this.open() && !event.defaultPrevented) {
       event.preventDefault();
       this.close();
     }

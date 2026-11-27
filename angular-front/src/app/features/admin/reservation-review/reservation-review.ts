@@ -60,7 +60,7 @@ export class ReservationReview {
   /** Faivra-style fast review: A accepts, D denies the oldest pending request. */
   @HostListener('document:keydown', ['$event'])
   protected onKeydown(event: KeyboardEvent): void {
-    if (event.metaKey || event.ctrlKey || event.altKey) {
+    if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) {
       return;
     }
 
