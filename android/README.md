@@ -61,7 +61,9 @@ Compose Screen → ViewModel → Repository → Retrofit / DataStore
 
 Le token d’accès reste en mémoire dans `TokenHolder`. Le cookie de refresh est gardé par `SessionCookieJar`. Aucun token n’est écrit dans DataStore.
 
-Le splash Android reprend la direction visuelle du splash web Smart Campus : canvas clair `#f4f6fb`, gem teal, titre `Smart Campus`, `◆ 2026` et bouton `ENTER`. La vérification de session reste automatique ; `ENTER` permet d’aller directement au login.
+Le splash Android reprend le splash web PR #88 : canvas clair `#f4f6fb`, grain, ghost `CAMPUS`, plumbob à facettes avec halos et bob, titre `Smart` en dégradé / `Campus` en contour, `◆ 2026`, bouton `enter` et particules. Le curseur custom du web n’est pas repris car il n’a pas de sens sur mobile.
+
+`SplashViewModel` garde l’état et fait la vérification de session. L’écran ne fait que rendre cet état. Comme sur le web, la session est restaurée en arrière-plan, `enter` part vers `home` ou `login` selon le résultat, et la main passe automatiquement après 8 secondes avec un fondu de 500 ms.
 
 ## Règles pour la suite
 

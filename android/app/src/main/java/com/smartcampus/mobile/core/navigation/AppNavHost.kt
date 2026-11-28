@@ -15,12 +15,16 @@ import com.smartcampus.mobile.feature.auth.MfaSetupScreen
 import com.smartcampus.mobile.feature.auth.MfaVerifyScreen
 import com.smartcampus.mobile.feature.home.HomeScreen
 import com.smartcampus.mobile.feature.splash.SplashScreen
+import com.smartcampus.mobile.feature.splash.SplashViewModel
 
 @Composable
 fun AppNavHost(container: AppContainer) {
     val navController = rememberNavController()
     val authViewModel: AuthViewModel = viewModel(
         factory = container.authViewModelFactory()
+    )
+    val splashViewModel: SplashViewModel = viewModel(
+        factory = container.splashViewModelFactory()
     )
     val authState by authViewModel.state.collectAsStateWithLifecycle()
 
@@ -36,8 +40,7 @@ fun AppNavHost(container: AppContainer) {
     NavHost(navController = navController, startDestination = "splash") {
         composable("splash") {
             SplashScreen(
-                repository = container.authRepository,
-                prefs = container.prefs,
+                viewModel = splashViewModel,
                 onReady = { authenticated ->
                     navController.navigate(if (authenticated) "home" else "login") {
                         popUpTo("splash") { inclusive = true }
