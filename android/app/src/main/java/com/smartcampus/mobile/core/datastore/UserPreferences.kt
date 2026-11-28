@@ -40,6 +40,8 @@ class UserPreferences(private val context: Context) {
 
     suspend fun userEmail(): String? = store.data.first()[USER_EMAIL]
 
+    suspend fun userName(): String? = store.data.first()[USER_NAME]
+
     suspend fun roomsFilter(): String = store.data.first()[LAST_ROOMS_FILTER] ?: ""
 
     suspend fun saveRoomsFilter(value: String) {
@@ -74,4 +76,17 @@ class UserPreferences(private val context: Context) {
     }
 
     suspend fun theme(): String = store.data.first()[THEME_MODE] ?: "SYSTEM"
+
+    suspend fun saveLanguage(value: String) {
+        store.edit { prefs -> prefs[LANGUAGE] = value }
+    }
+
+    suspend fun language(): String = store.data.first()[LANGUAGE] ?: "FR"
+
+    suspend fun saveNotificationsEnabled(value: Boolean) {
+        store.edit { prefs -> prefs[NOTIFICATIONS_ENABLED] = value }
+    }
+
+    suspend fun notificationsEnabled(): Boolean =
+        store.data.first()[NOTIFICATIONS_ENABLED] ?: true
 }

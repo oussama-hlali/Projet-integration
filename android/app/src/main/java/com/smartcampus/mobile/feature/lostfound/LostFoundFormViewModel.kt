@@ -7,6 +7,7 @@ import com.smartcampus.mobile.core.datastore.UserPreferences
 import com.smartcampus.mobile.core.repository.SmartCampusRepository
 import com.smartcampus.mobile.core.util.PhotoEncoder
 import com.smartcampus.mobile.core.util.PhotoFiles
+import com.smartcampus.mobile.core.util.LocalNotifier
 import com.smartcampus.mobile.core.util.photoError
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,6 +19,7 @@ class LostFoundFormViewModel(
     private val prefs: UserPreferences,
     private val photoEncoder: PhotoEncoder,
     private val photoFiles: PhotoFiles,
+    private val localNotifier: LocalNotifier,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(LostFoundFormUiState())
@@ -107,6 +109,9 @@ class LostFoundFormViewModel(
                 current.photoData?.let { body["photoData"] = it }
 
                 repository.createLostFound(body)
+                if (prefs.notificationsEnabled()) {
+                    localNotifier.notify("Annonce publiée", current.title.take(100))
+                }
                 _state.value = _state.value.copy(
                     loading = false,
                     message = "Annonce publiée",

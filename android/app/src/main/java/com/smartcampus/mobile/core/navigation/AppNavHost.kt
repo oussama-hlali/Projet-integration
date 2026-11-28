@@ -39,6 +39,8 @@ import com.smartcampus.mobile.feature.lostfound.LostFoundScreen
 import com.smartcampus.mobile.feature.lostfound.LostFoundViewModel
 import com.smartcampus.mobile.feature.notifications.NotificationsScreen
 import com.smartcampus.mobile.feature.notifications.NotificationsViewModel
+import com.smartcampus.mobile.feature.profile.ProfileScreen
+import com.smartcampus.mobile.feature.profile.ProfileViewModel
 import com.smartcampus.mobile.feature.reservations.ReservationDetailScreen
 import com.smartcampus.mobile.feature.reservations.ReservationDetailViewModel
 import com.smartcampus.mobile.feature.reservations.ReservationNewScreen
@@ -311,6 +313,16 @@ fun AppNavHost(container: AppContainer) {
             )
             LostFoundDetailScreen(
                 viewModel = detailViewModel,
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        composable("profile") {
+            val profileViewModel: ProfileViewModel = viewModel(
+                factory = container.profileViewModelFactory()
+            )
+            ProfileScreen(
+                viewModel = profileViewModel,
                 onBack = { navController.popBackStack() },
             )
         }

@@ -112,6 +112,15 @@ fun HomeScreen(viewModel: HomeViewModel) {
 
         Spacer(Modifier.height(12.dp))
 
+        OutlinedButton(
+            onClick = viewModel::openProfile,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Profil et préférences")
+        }
+
+        Spacer(Modifier.height(12.dp))
+
         Button(
             onClick = viewModel::logout,
             enabled = !state.loading,
