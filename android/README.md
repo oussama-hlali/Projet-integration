@@ -47,6 +47,21 @@ Navigation vers events / event_detail / event_form / announcements / announcemen
 
 Les actions admin sont visibles seulement quand le rôle sauvegardé est `ADMINISTRATOR`. Les suppressions demandent à l’utilisateur de taper `delete <titre>` avant de confirmer, conformément au plan. Le formulaire d’événement utilise une date ISO ; le backend reste la source de vérité (`date`, `endDate`, `category`, `location`, `capacity`). Le corps d’une annonce utilise bien `body` et non `content`.
 
+## Contenu de la partie 4
+
+```text
+Notifications : boîte de réception, compteur de non lues
+Marquer une notification comme lue / tout marquer comme lu / supprimer
+Cafétéria : menu du jour + plats
+Commande d’un plat avec clé d’idempotence générée dans le ViewModel
+Mes commandes : liste active, QR, annulation
+Navigation vers notifications / cafeteria / orders
+```
+
+Les commandes annulées gardent le statut `CANCELLED` dans le backend mais sont masquées de la liste active. Le ViewModel génère une clé `UUID` pour l’en-tête `Idempotency-Key` ; aucun secret n’est stocké dans l’application.
+
+Cette partie est répartie en quatre commits, un par contributeur : Oussama (repository), Rayen (notifications), Youssef (cafétéria), Ahmed (navigation et README).
+
 ## Ouvrir le projet
 
 1. Android Studio → **Open** → sélectionner le dossier `android/`.

@@ -14,10 +14,13 @@ import com.smartcampus.mobile.feature.announcements.AnnouncementFormViewModel
 import com.smartcampus.mobile.feature.announcements.AnnouncementsViewModel
 import com.smartcampus.mobile.feature.auth.AuthRepository
 import com.smartcampus.mobile.feature.auth.AuthViewModel
+import com.smartcampus.mobile.feature.cafeteria.CafeteriaViewModel
+import com.smartcampus.mobile.feature.cafeteria.OrdersViewModel
 import com.smartcampus.mobile.feature.events.EventDetailViewModel
 import com.smartcampus.mobile.feature.events.EventFormViewModel
 import com.smartcampus.mobile.feature.events.EventsViewModel
 import com.smartcampus.mobile.feature.home.HomeViewModel
+import com.smartcampus.mobile.feature.notifications.NotificationsViewModel
 import com.smartcampus.mobile.feature.reservations.ReservationDetailViewModel
 import com.smartcampus.mobile.feature.reservations.ReservationNewViewModel
 import com.smartcampus.mobile.feature.reservations.ReservationsViewModel
@@ -151,6 +154,27 @@ class AppContainer(private val context: Context) {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             return AnnouncementFormViewModel(smartCampusRepository, id) as T
+        }
+    }
+
+    fun notificationsViewModelFactory() = object : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            return NotificationsViewModel(smartCampusRepository, prefs) as T
+        }
+    }
+
+    fun cafeteriaViewModelFactory() = object : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            return CafeteriaViewModel(smartCampusRepository, prefs) as T
+        }
+    }
+
+    fun ordersViewModelFactory() = object : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            return OrdersViewModel(smartCampusRepository, prefs) as T
         }
     }
 }

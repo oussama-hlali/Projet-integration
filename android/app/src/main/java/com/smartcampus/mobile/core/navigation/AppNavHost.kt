@@ -17,6 +17,10 @@ import com.smartcampus.mobile.feature.announcements.AnnouncementsScreen
 import com.smartcampus.mobile.feature.announcements.AnnouncementsViewModel
 import com.smartcampus.mobile.feature.auth.AuthViewModel
 import com.smartcampus.mobile.feature.auth.LoginScreen
+import com.smartcampus.mobile.feature.cafeteria.CafeteriaScreen
+import com.smartcampus.mobile.feature.cafeteria.CafeteriaViewModel
+import com.smartcampus.mobile.feature.cafeteria.OrdersScreen
+import com.smartcampus.mobile.feature.cafeteria.OrdersViewModel
 import com.smartcampus.mobile.feature.auth.MfaSetupScreen
 import com.smartcampus.mobile.feature.auth.MfaVerifyScreen
 import com.smartcampus.mobile.feature.events.EventDetailScreen
@@ -27,6 +31,8 @@ import com.smartcampus.mobile.feature.events.EventsScreen
 import com.smartcampus.mobile.feature.events.EventsViewModel
 import com.smartcampus.mobile.feature.home.HomeScreen
 import com.smartcampus.mobile.feature.home.HomeViewModel
+import com.smartcampus.mobile.feature.notifications.NotificationsScreen
+import com.smartcampus.mobile.feature.notifications.NotificationsViewModel
 import com.smartcampus.mobile.feature.reservations.ReservationDetailScreen
 import com.smartcampus.mobile.feature.reservations.ReservationDetailViewModel
 import com.smartcampus.mobile.feature.reservations.ReservationNewScreen
@@ -58,7 +64,8 @@ fun AppNavHost(container: AppContainer) {
     fun navigate(destination: String) {
         if (destination == "reservations" ||
             destination == "events" ||
-            destination == "announcements"
+            destination == "announcements" ||
+            destination == "orders"
         ) {
             navController.navigate(destination) {
                 popUpTo(destination) { inclusive = true }
@@ -243,6 +250,30 @@ fun AppNavHost(container: AppContainer) {
                 onBack = { navController.popBackStack() },
                 onNavigate = { destination -> navigate(destination) },
             )
+        }
+
+        composable("notifications") {
+            val notificationsViewModel: NotificationsViewModel = viewModel(
+                factory = container.notificationsViewModelFactory()
+            )
+            NotificationsScreen(viewModel = notificationsViewModel)
+        }
+
+        composable("cafeteria") {
+            val cafeteriaViewModel: CafeteriaViewModel = viewModel(
+                factory = container.cafeteriaViewModelFactory()
+            )
+            CafeteriaScreen(
+                viewModel = cafeteriaViewModel,
+                onNavigate = { destination -> navigate(destination) },
+            )
+        }
+
+        composable("orders") {
+            val ordersViewModel: OrdersViewModel = viewModel(
+                factory = container.ordersViewModelFactory()
+            )
+            OrdersScreen(viewModel = ordersViewModel)
         }
     }
 }

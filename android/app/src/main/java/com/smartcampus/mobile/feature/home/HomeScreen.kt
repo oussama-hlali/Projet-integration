@@ -76,6 +76,33 @@ fun HomeScreen(viewModel: HomeViewModel) {
 
         Spacer(Modifier.height(12.dp))
 
+        OutlinedButton(
+            onClick = viewModel::openNotifications,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Notifications")
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        OutlinedButton(
+            onClick = viewModel::openCafeteria,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Cafétéria")
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        OutlinedButton(
+            onClick = viewModel::openOrders,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Mes commandes")
+        }
+
+        Spacer(Modifier.height(12.dp))
+
         Button(
             onClick = viewModel::logout,
             enabled = !state.loading,

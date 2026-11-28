@@ -62,6 +62,18 @@ class HomeViewModel(
         _state.value = _state.value.copy(navigateTo = "announcements")
     }
 
+    fun openNotifications() {
+        _state.value = _state.value.copy(navigateTo = "notifications")
+    }
+
+    fun openCafeteria() {
+        _state.value = _state.value.copy(navigateTo = "cafeteria")
+    }
+
+    fun openOrders() {
+        _state.value = _state.value.copy(navigateTo = "orders")
+    }
+
     fun logout() {
         viewModelScope.launch {
             _state.value = _state.value.copy(loading = true)
