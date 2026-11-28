@@ -74,6 +74,10 @@ class HomeViewModel(
         _state.value = _state.value.copy(navigateTo = "orders")
     }
 
+    fun openLostFound() {
+        _state.value = _state.value.copy(navigateTo = "lost_found")
+    }
+
     fun logout() {
         viewModelScope.launch {
             _state.value = _state.value.copy(loading = true)

@@ -9,6 +9,8 @@ import com.smartcampus.mobile.core.network.AuthInterceptor
 import com.smartcampus.mobile.core.network.SessionCookieJar
 import com.smartcampus.mobile.core.network.TokenHolder
 import com.smartcampus.mobile.core.repository.SmartCampusRepository
+import com.smartcampus.mobile.core.util.PhotoEncoder
+import com.smartcampus.mobile.core.util.PhotoFiles
 import com.smartcampus.mobile.feature.announcements.AnnouncementDetailViewModel
 import com.smartcampus.mobile.feature.announcements.AnnouncementFormViewModel
 import com.smartcampus.mobile.feature.announcements.AnnouncementsViewModel
@@ -20,6 +22,9 @@ import com.smartcampus.mobile.feature.events.EventDetailViewModel
 import com.smartcampus.mobile.feature.events.EventFormViewModel
 import com.smartcampus.mobile.feature.events.EventsViewModel
 import com.smartcampus.mobile.feature.home.HomeViewModel
+import com.smartcampus.mobile.feature.lostfound.LostFoundDetailViewModel
+import com.smartcampus.mobile.feature.lostfound.LostFoundFormViewModel
+import com.smartcampus.mobile.feature.lostfound.LostFoundViewModel
 import com.smartcampus.mobile.feature.notifications.NotificationsViewModel
 import com.smartcampus.mobile.feature.reservations.ReservationDetailViewModel
 import com.smartcampus.mobile.feature.reservations.ReservationNewViewModel
@@ -58,6 +63,10 @@ class AppContainer(private val context: Context) {
         api = apiClient.smartApi,
         apiClient = apiClient
     )
+
+    val photoEncoder = PhotoEncoder(appContext)
+
+    val photoFiles = PhotoFiles(appContext)
 
     fun authViewModelFactory() = object : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
@@ -175,6 +184,32 @@ class AppContainer(private val context: Context) {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             return OrdersViewModel(smartCampusRepository, prefs) as T
+        }
+    }
+
+    fun lostFoundViewModelFactory() = object : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            return LostFoundViewModel(smartCampusRepository) as T
+        }
+    }
+
+    fun lostFoundFormViewModelFactory() = object : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            return LostFoundFormViewModel(
+                smartCampusRepository,
+                prefs,
+                photoEncoder,
+                photoFiles,
+            ) as T
+        }
+    }
+
+    fun lostFoundDetailViewModelFactory(id: String) = object : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            return LostFoundDetailViewModel(smartCampusRepository, id) as T
         }
     }
 }

@@ -103,6 +103,15 @@ fun HomeScreen(viewModel: HomeViewModel) {
 
         Spacer(Modifier.height(12.dp))
 
+        OutlinedButton(
+            onClick = viewModel::openLostFound,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Objets perdus / trouvés")
+        }
+
+        Spacer(Modifier.height(12.dp))
+
         Button(
             onClick = viewModel::logout,
             enabled = !state.loading,
