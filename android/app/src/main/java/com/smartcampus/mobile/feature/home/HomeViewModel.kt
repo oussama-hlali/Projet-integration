@@ -54,6 +54,14 @@ class HomeViewModel(
         _state.value = _state.value.copy(navigateTo = "reservations")
     }
 
+    fun openEvents() {
+        _state.value = _state.value.copy(navigateTo = "events")
+    }
+
+    fun openAnnouncements() {
+        _state.value = _state.value.copy(navigateTo = "announcements")
+    }
+
     fun logout() {
         viewModelScope.launch {
             _state.value = _state.value.copy(loading = true)

@@ -33,6 +33,20 @@ Navigation vers rooms / room_detail / reservation_new / reservations / reservati
 
 Les réservations annulées gardent le statut `CANCELLED` dans le backend mais sont masquées des listes actives. Le filtre de recherche des salles est mémorisé dans DataStore sous `last_rooms_filter`.
 
+## Contenu de la partie 3
+
+```text
+Événements : liste filtrable par catégorie, détail
+Intérêt événement : consultation et bascule
+Inscriptions événement : inscription, désinscription, QR
+Création / modification / suppression événement (admin)
+Annonces : liste avec épinglées en premier, détail
+Création / modification / suppression annonce (admin)
+Navigation vers events / event_detail / event_form / announcements / announcement_detail / announcement_form
+```
+
+Les actions admin sont visibles seulement quand le rôle sauvegardé est `ADMINISTRATOR`. Les suppressions demandent à l’utilisateur de taper `delete <titre>` avant de confirmer, conformément au plan. Le formulaire d’événement utilise une date ISO ; le backend reste la source de vérité (`date`, `endDate`, `category`, `location`, `capacity`). Le corps d’une annonce utilise bien `body` et non `content`.
+
 ## Ouvrir le projet
 
 1. Android Studio → **Open** → sélectionner le dossier `android/`.

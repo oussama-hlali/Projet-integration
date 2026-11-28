@@ -143,6 +143,11 @@ data class RegistrationDto(
     @SerializedName("qrCode") val qrCode: String? = null
 )
 
+data class RegistrationStatusDto(
+    val registered: Boolean = false,
+    @SerializedName("qrCode") val qrCode: String? = null
+)
+
 data class CancelOrderDto(val cancelled: Boolean = false)
 
 data class UnreadCountDto(val count: Int = 0)

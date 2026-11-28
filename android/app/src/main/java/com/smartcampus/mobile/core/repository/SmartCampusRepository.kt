@@ -4,8 +4,11 @@ import com.smartcampus.mobile.core.model.dto.AnnouncementDto
 import com.smartcampus.mobile.core.model.dto.AvailabilityDto
 import com.smartcampus.mobile.core.model.dto.CafeteriaOrderDto
 import com.smartcampus.mobile.core.model.dto.EventDto
+import com.smartcampus.mobile.core.model.dto.InterestDto
 import com.smartcampus.mobile.core.model.dto.MenuItemDto
 import com.smartcampus.mobile.core.model.dto.NotificationDto
+import com.smartcampus.mobile.core.model.dto.RegistrationDto
+import com.smartcampus.mobile.core.model.dto.RegistrationStatusDto
 import com.smartcampus.mobile.core.model.dto.ReservationDto
 import com.smartcampus.mobile.core.model.dto.RoomDto
 import com.smartcampus.mobile.core.network.ApiClient
@@ -43,11 +46,53 @@ class SmartCampusRepository(
     suspend fun cancelReservation(id: String): ReservationDto =
         safeCall { api.cancelReservation(id) }
 
-    suspend fun events(): List<EventDto> =
-        safeCall { api.events() }
+    suspend fun events(category: String? = null): List<EventDto> =
+        safeCall { api.events(category = category) }
+
+    suspend fun event(id: String): EventDto =
+        safeCall { api.event(id) }
+
+    suspend fun createEvent(body: Map<String, Any>): EventDto =
+        safeCall { api.createEvent(body) }
+
+    suspend fun updateEvent(id: String, body: Map<String, Any>): EventDto =
+        safeCall { api.updateEvent(id, body) }
+
+    suspend fun deleteEvent(id: String) {
+        safeCall { api.deleteEvent(id) }
+    }
+
+    suspend fun interestStatus(id: String, userId: String): InterestDto =
+        safeCall { api.interestStatus(id, userId) }
+
+    suspend fun toggleInterest(id: String, userId: String): InterestDto =
+        safeCall { api.toggleInterest(id, userId) }
+
+    suspend fun myRegistration(id: String, userId: String): RegistrationStatusDto =
+        safeCall { api.myRegistration(id, userId) }
+
+    suspend fun registerToEvent(id: String, userId: String): RegistrationDto =
+        safeCall { api.registerToEvent(id, userId) }
+
+    suspend fun unregisterFromEvent(id: String, userId: String) {
+        safeCall { api.unregisterFromEvent(id, userId) }
+    }
 
     suspend fun announcements(): List<AnnouncementDto> =
         safeCall { api.announcements() }
+
+    suspend fun announcement(id: String): AnnouncementDto =
+        safeCall { api.announcement(id) }
+
+    suspend fun createAnnouncement(body: Map<String, Any>): AnnouncementDto =
+        safeCall { api.createAnnouncement(body) }
+
+    suspend fun updateAnnouncement(id: String, body: Map<String, Any>): AnnouncementDto =
+        safeCall { api.updateAnnouncement(id, body) }
+
+    suspend fun deleteAnnouncement(id: String) {
+        safeCall { api.deleteAnnouncement(id) }
+    }
 
     suspend fun menuItems(menuId: String): List<MenuItemDto> =
         safeCall { api.menuItems(menuId) }
