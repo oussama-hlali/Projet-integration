@@ -7,6 +7,7 @@ import com.smartcampus.mobile.core.model.dto.CafeteriaOrderDto
 import com.smartcampus.mobile.core.model.dto.CancelOrderDto
 import com.smartcampus.mobile.core.model.dto.EventDto
 import com.smartcampus.mobile.core.model.dto.InterestDto
+import com.smartcampus.mobile.core.model.dto.LostFoundItemDto
 import com.smartcampus.mobile.core.model.dto.MenuItemDto
 import com.smartcampus.mobile.core.model.dto.NotificationDto
 import com.smartcampus.mobile.core.model.dto.RegistrationDto
@@ -128,6 +129,18 @@ class SmartCampusRepository(
     suspend fun deleteNotification(id: String) {
         safeCall { api.deleteNotification(id) }
     }
+
+    suspend fun lostFound(status: String? = null, query: String? = null): List<LostFoundItemDto> =
+        safeCall { api.lostFound(status, query) }
+
+    suspend fun lostFoundItem(id: String): LostFoundItemDto =
+        safeCall { api.lostFoundItem(id) }
+
+    suspend fun createLostFound(body: Map<String, Any>): LostFoundItemDto =
+        safeCall { api.createLostFound(body) }
+
+    suspend fun claimLostFound(id: String): LostFoundItemDto =
+        safeCall { api.claimLostFound(id) }
 
     private suspend fun <T> safeCall(block: suspend () -> T): T {
         return try {

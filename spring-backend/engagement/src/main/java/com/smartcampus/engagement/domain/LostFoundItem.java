@@ -44,6 +44,8 @@ public class LostFoundItem {
     private List<String> reactionUserIds = new ArrayList<>();
     @Column(name = "created_at", nullable = false)
     private Instant createdAt = Instant.now();
+    @Column(name = "photo_data", columnDefinition = "text")
+    private String photoData;
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -67,4 +69,6 @@ public class LostFoundItem {
     public void setReactionUserIds(List<String> reactionUserIds) { this.reactionUserIds = reactionUserIds; }
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
+    public String getPhotoData() { return photoData; }
+    public void setPhotoData(String photoData) { this.photoData = photoData; }
 }

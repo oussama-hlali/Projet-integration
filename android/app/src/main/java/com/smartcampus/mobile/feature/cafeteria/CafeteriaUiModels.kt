@@ -62,6 +62,10 @@ fun CafeteriaOrderDto.toUi(): OrderUiItem = OrderUiItem(
     pickupTime = pickupTime.orEmpty(),
 )
 
+/** Pure : CANCELLED reste dans le backend mais sort de la liste active. */
+fun List<CafeteriaOrderDto>.activeOnly(): List<CafeteriaOrderDto> =
+    filterNot { it.status.equals("CANCELLED", ignoreCase = true) }
+
 data class CafeteriaUiState(
     val loading: Boolean = false,
     val menu: MenuUiItem? = null,

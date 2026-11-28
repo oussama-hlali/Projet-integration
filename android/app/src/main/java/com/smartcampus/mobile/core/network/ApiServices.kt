@@ -8,6 +8,7 @@ import com.smartcampus.mobile.core.model.dto.CancelOrderDto
 import com.smartcampus.mobile.core.model.dto.EventDto
 import com.smartcampus.mobile.core.model.dto.InterestDto
 import com.smartcampus.mobile.core.model.dto.LoginRequest
+import com.smartcampus.mobile.core.model.dto.LostFoundItemDto
 import com.smartcampus.mobile.core.model.dto.MfaChallenge
 import com.smartcampus.mobile.core.model.dto.MfaSetupResponse
 import com.smartcampus.mobile.core.model.dto.MfaVerifyRequest
@@ -206,5 +207,20 @@ object ApiServices {
 
         @DELETE("notifications/{id}")
         suspend fun deleteNotification(@Path("id") id: String)
+
+        @GET("lost-found")
+        suspend fun lostFound(
+            @Query("status") status: String? = null,
+            @Query("q") q: String? = null
+        ): List<LostFoundItemDto>
+
+        @GET("lost-found/{id}")
+        suspend fun lostFoundItem(@Path("id") id: String): LostFoundItemDto
+
+        @POST("lost-found")
+        suspend fun createLostFound(@Body body: Map<String, Any>): LostFoundItemDto
+
+        @POST("lost-found/{id}/claim")
+        suspend fun claimLostFound(@Path("id") id: String): LostFoundItemDto
     }
 }

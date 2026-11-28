@@ -22,6 +22,9 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1")
 public class LostFoundController {
+    /** ~1.5 Mo de JPEG en base64 : assez pour une photo, sans gonfler la base. */
+    private static final int MAX_PHOTO_CHARS = 2_000_000;
+
     private final LostFoundService service;
     public LostFoundController(LostFoundService service) { this.service = service; }
 
@@ -43,6 +46,7 @@ public class LostFoundController {
         if (!List.of("LOST", "FOUND").contains(status)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid status");
         }
+        String photoData = photo(body.get("photoData"));
         return service.create(
                 required(body.get("title"), "title", 160),
                 optional(body.get("description")),
@@ -51,7 +55,8 @@ public class LostFoundController {
                 optional(body.get("location")),
                 optional(body.get("category")),
                 optional(body.get("contactPhone")),
-                tags);
+                tags,
+                photoData);
     }
 
     @PatchMapping("/lost-found/{id}")
@@ -113,5 +118,15 @@ public class LostFoundController {
         if (raw == null) return null;
         String text = String.valueOf(raw).trim();
         return text.isEmpty() ? null : text;
+    }
+
+    /** Base64 JPEG sans préfixe "data:" ; on refuse les valeurs absurdes. */
+    private String photo(Object raw) {
+        String data = optional(raw);
+        if (data == null) return null;
+        if (data.length() > MAX_PHOTO_CHARS || !data.matches("[A-Za-z0-9+/=]+")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid photoData");
+        }
+        return data;
     }
 }

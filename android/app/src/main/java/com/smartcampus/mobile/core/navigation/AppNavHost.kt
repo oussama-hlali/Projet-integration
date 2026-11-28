@@ -31,8 +31,16 @@ import com.smartcampus.mobile.feature.events.EventsScreen
 import com.smartcampus.mobile.feature.events.EventsViewModel
 import com.smartcampus.mobile.feature.home.HomeScreen
 import com.smartcampus.mobile.feature.home.HomeViewModel
+import com.smartcampus.mobile.feature.lostfound.LostFoundDetailScreen
+import com.smartcampus.mobile.feature.lostfound.LostFoundDetailViewModel
+import com.smartcampus.mobile.feature.lostfound.LostFoundFormScreen
+import com.smartcampus.mobile.feature.lostfound.LostFoundFormViewModel
+import com.smartcampus.mobile.feature.lostfound.LostFoundScreen
+import com.smartcampus.mobile.feature.lostfound.LostFoundViewModel
 import com.smartcampus.mobile.feature.notifications.NotificationsScreen
 import com.smartcampus.mobile.feature.notifications.NotificationsViewModel
+import com.smartcampus.mobile.feature.profile.ProfileScreen
+import com.smartcampus.mobile.feature.profile.ProfileViewModel
 import com.smartcampus.mobile.feature.reservations.ReservationDetailScreen
 import com.smartcampus.mobile.feature.reservations.ReservationDetailViewModel
 import com.smartcampus.mobile.feature.reservations.ReservationNewScreen
@@ -65,7 +73,8 @@ fun AppNavHost(container: AppContainer) {
         if (destination == "reservations" ||
             destination == "events" ||
             destination == "announcements" ||
-            destination == "orders"
+            destination == "orders" ||
+            destination == "lost_found"
         ) {
             navController.navigate(destination) {
                 popUpTo(destination) { inclusive = true }
@@ -274,6 +283,48 @@ fun AppNavHost(container: AppContainer) {
                 factory = container.ordersViewModelFactory()
             )
             OrdersScreen(viewModel = ordersViewModel)
+        }
+
+        composable("lost_found") {
+            val lostFoundViewModel: LostFoundViewModel = viewModel(
+                factory = container.lostFoundViewModelFactory()
+            )
+            LostFoundScreen(
+                viewModel = lostFoundViewModel,
+                onNavigate = { destination -> navigate(destination) },
+            )
+        }
+
+        composable("lost_found_form") {
+            val formViewModel: LostFoundFormViewModel = viewModel(
+                factory = container.lostFoundFormViewModelFactory()
+            )
+            LostFoundFormScreen(
+                viewModel = formViewModel,
+                onBack = { navController.popBackStack() },
+                onNavigate = { destination -> navigate(destination) },
+            )
+        }
+
+        composable("lost_found_detail/{id}") { backStackEntry ->
+            val id = backStackEntry.arguments?.getString("id").orEmpty()
+            val detailViewModel: LostFoundDetailViewModel = viewModel(
+                factory = container.lostFoundDetailViewModelFactory(id)
+            )
+            LostFoundDetailScreen(
+                viewModel = detailViewModel,
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        composable("profile") {
+            val profileViewModel: ProfileViewModel = viewModel(
+                factory = container.profileViewModelFactory()
+            )
+            ProfileScreen(
+                viewModel = profileViewModel,
+                onBack = { navController.popBackStack() },
+            )
         }
     }
 }

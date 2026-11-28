@@ -40,7 +40,7 @@ public class LostFoundService {
 
     public LostFoundItem create(String title, String description, String status, String reporterId,
                                 String location, String category, String contactPhone,
-                                List<String> taggedUserIds) {
+                                List<String> taggedUserIds, String photoData) {
         LostFoundItem p = new LostFoundItem();
         p.setId("lf" + UUID.randomUUID().toString().substring(0, 8));
         p.setTitle(title);
@@ -50,6 +50,7 @@ public class LostFoundService {
         p.setLocation(location);
         p.setCategory(category);
         p.setContactPhone(contactPhone);
+        p.setPhotoData(photoData);
         if (taggedUserIds != null) p.setTaggedUserIds(new ArrayList<>(taggedUserIds));
         return posts.save(p);
     }

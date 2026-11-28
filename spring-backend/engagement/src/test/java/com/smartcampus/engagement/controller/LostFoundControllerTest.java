@@ -34,7 +34,7 @@ class LostFoundControllerTest {
     @Test
     void createPersistsTheFrontendReportFields() throws Exception {
         when(service.create("Keys", "Found near the library", "FOUND", "u1", "Library",
-                "Electronics", "+21612345678", List.of("u2"))).thenReturn(item());
+                "Electronics", "+21612345678", List.of("u2"), null)).thenReturn(item());
 
         mockMvc.perform(post("/api/v1/lost-found")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -48,7 +48,36 @@ class LostFoundControllerTest {
                 .andExpect(jsonPath("$.id").value("lf1"));
 
         verify(service).create("Keys", "Found near the library", "FOUND", "u1", "Library",
-                "Electronics", "+21612345678", List.of("u2"));
+                "Electronics", "+21612345678", List.of("u2"), null);
+    }
+
+    @Test
+    void createPersistsThePublishedPhoto() throws Exception {
+        when(service.create("Wallet", "Blue wallet", "LOST", "u1", "Library",
+                null, null, null, "YWJj")).thenReturn(item());
+
+        mockMvc.perform(post("/api/v1/lost-found")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"title":"Wallet","description":"Blue wallet","status":"LOST",
+                                 "reporterId":"u1","location":"Library","photoData":"YWJj"}
+                                """))
+                .andExpect(status().isOk());
+
+        verify(service).create("Wallet", "Blue wallet", "LOST", "u1", "Library",
+                null, null, null, "YWJj");
+    }
+
+    @Test
+    void oversizedPhotoIsRejectedBeforeReachingTheService() throws Exception {
+        String tooLarge = "A".repeat(2_000_001);
+
+        mockMvc.perform(post("/api/v1/lost-found")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Keys\",\"reporterId\":\"u1\",\"photoData\":\"" + tooLarge + "\"}"))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(service);
     }
 
     @Test

@@ -62,6 +62,26 @@ Les commandes annulées gardent le statut `CANCELLED` dans le backend mais sont 
 
 Cette partie est répartie en quatre commits, un par contributeur : Oussama (repository), Rayen (notifications), Youssef (cafétéria), Ahmed (navigation et README).
 
+## Contenu de la partie 5
+
+```text
+Objets perdus/trouvés : liste filtrable, publication, détail, réclamation
+Photo de l’objet : appareil photo (FileProvider) ou galerie
+Photo compressée en JPEG puis envoyée en base64 dans le post
+Profil : nom, e-mail, rôle, thème, langue, notifications locales
+Notification locale de confirmation après publication, sans FCM ni secret
+Tests JVM légers sur les fonctions pures
+Navigation vers lost_found / lost_found_form / lost_found_detail / profile
+```
+
+La photo est réduite à 1024 px maximum puis encodée en base64 dans le ViewModel. Le service `engagement` stocke `photo_data` (migration Flyway `V3`) et refuse une photo au-delà de 2 000 000 caractères. Aucun fichier n’est envoyé sur un serveur séparé : la photo voyage dans le post et survit au redémarrage de Render. Une annonce peut aussi être publiée sans photo.
+
+Le thème (Système / Clair / Sombre) est appliqué immédiatement par `ThemeController` et mémorisé dans DataStore. La langue est enregistrée (`FR` / `EN`) mais les textes de l’application restent en français pour l’instant. L’autorisation `POST_NOTIFICATIONS` est demandée depuis l’écran Profil avant d’activer les notifications locales ; si elle est refusée, aucune notification n’est envoyée.
+
+Les tests unitaires JVM couvrent uniquement les fonctions pures : réduction photo, validation du formulaire et masquage des commandes `CANCELLED`. Pas d’émulateur, pas de Hilt, pas de secret.
+
+Cette partie est répartie en quatre commits, un par contributeur : Oussama (contrat backend + DTO/API/repository), Rayen (lost-found et photo), Youssef (profil et notifications locales), Ahmed (tests et README).
+
 ## Ouvrir le projet
 
 1. Android Studio → **Open** → sélectionner le dossier `android/`.
@@ -75,6 +95,8 @@ En ligne de commande :
 cd android
 ./gradlew assembleDebug
 ```
+
+La compilation locale n’a pas pu être vérifiée ici : le téléchargement de Gradle 8.9 a échoué et le SDK installé n’a pas le `compileSdk 35`. À valider dans Android Studio ou en CI avant le merge.
 
 ## URLs
 
