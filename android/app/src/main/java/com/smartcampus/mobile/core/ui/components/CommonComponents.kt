@@ -31,6 +31,19 @@ fun LoadingBox(text: String = "Chargement…") {
 }
 
 @Composable
+fun EmptyBox(message: String) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodyMedium
+        )
+    }
+}
+
+@Composable
 fun ErrorBox(message: String, onRetry: () -> Unit) {
     Box(
         modifier = Modifier.fillMaxSize(),

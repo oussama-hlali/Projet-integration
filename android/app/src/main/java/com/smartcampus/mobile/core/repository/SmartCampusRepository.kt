@@ -1,6 +1,7 @@
 package com.smartcampus.mobile.core.repository
 
 import com.smartcampus.mobile.core.model.dto.AnnouncementDto
+import com.smartcampus.mobile.core.model.dto.AvailabilityDto
 import com.smartcampus.mobile.core.model.dto.CafeteriaOrderDto
 import com.smartcampus.mobile.core.model.dto.EventDto
 import com.smartcampus.mobile.core.model.dto.MenuItemDto
@@ -27,8 +28,14 @@ class SmartCampusRepository(
     suspend fun room(id: String): RoomDto =
         safeCall { api.room(id) }
 
+    suspend fun availability(roomId: String, from: String, to: String): AvailabilityDto =
+        safeCall { api.availability(roomId, from, to) }
+
     suspend fun reservations(userId: String): List<ReservationDto> =
         safeCall { api.reservations(userId = userId) }
+
+    suspend fun reservation(id: String): ReservationDto =
+        safeCall { api.reservation(id) }
 
     suspend fun createReservation(body: Map<String, Any>): ReservationDto =
         safeCall { api.createReservation(body) }

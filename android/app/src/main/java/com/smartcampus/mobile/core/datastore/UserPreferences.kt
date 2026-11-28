@@ -31,11 +31,20 @@ class UserPreferences(private val context: Context) {
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val LANGUAGE = stringPreferencesKey("language")
         val NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
+        val LAST_ROOMS_FILTER = stringPreferencesKey("last_rooms_filter")
     }
 
     suspend fun sessionHint(): Boolean = store.data.first()[SESSION_HINT] ?: false
 
     suspend fun userId(): String? = store.data.first()[USER_ID]
+
+    suspend fun userEmail(): String? = store.data.first()[USER_EMAIL]
+
+    suspend fun roomsFilter(): String = store.data.first()[LAST_ROOMS_FILTER] ?: ""
+
+    suspend fun saveRoomsFilter(value: String) {
+        store.edit { prefs -> prefs[LAST_ROOMS_FILTER] = value }
+    }
 
     suspend fun role(): String = store.data.first()[USER_ROLE] ?: "STUDENT"
 

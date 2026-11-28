@@ -17,7 +17,21 @@ Navigation Compose
 Splash → Login → MFA → Home
 ```
 
-Aucun écran métier avancé n’est encore implémenté dans cette partie.
+Aucun écran métier avancé n’est encore implémenté dans la partie 1.
+
+## Contenu de la partie 2
+
+```text
+HomeViewModel (accueil strictement MVVM)
+Liste des salles avec recherche
+Détail salle + disponibilité
+Liste des réservations actives
+Détail réservation + annulation
+Création de réservation avec créneaux simples
+Navigation vers rooms / room_detail / reservation_new / reservations / reservation_detail
+```
+
+Les réservations annulées gardent le statut `CANCELLED` dans le backend mais sont masquées des listes actives. Le filtre de recherche des salles est mémorisé dans DataStore sous `last_rooms_filter`.
 
 ## Ouvrir le projet
 
