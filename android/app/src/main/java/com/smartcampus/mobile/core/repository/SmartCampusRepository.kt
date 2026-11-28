@@ -2,7 +2,9 @@ package com.smartcampus.mobile.core.repository
 
 import com.smartcampus.mobile.core.model.dto.AnnouncementDto
 import com.smartcampus.mobile.core.model.dto.AvailabilityDto
+import com.smartcampus.mobile.core.model.dto.CafeteriaMenuDto
 import com.smartcampus.mobile.core.model.dto.CafeteriaOrderDto
+import com.smartcampus.mobile.core.model.dto.CancelOrderDto
 import com.smartcampus.mobile.core.model.dto.EventDto
 import com.smartcampus.mobile.core.model.dto.InterestDto
 import com.smartcampus.mobile.core.model.dto.MenuItemDto
@@ -94,17 +96,37 @@ class SmartCampusRepository(
         safeCall { api.deleteAnnouncement(id) }
     }
 
+    suspend fun todayMenu(): CafeteriaMenuDto =
+        safeCall { api.todayMenu() }
+
     suspend fun menuItems(menuId: String): List<MenuItemDto> =
         safeCall { api.menuItems(menuId) }
+
+    suspend fun orders(userId: String): List<CafeteriaOrderDto> =
+        safeCall { api.orders(userId) }
 
     suspend fun reserveOrder(key: String, body: Map<String, Any>): CafeteriaOrderDto =
         safeCall { api.reserveOrder(key, body) }
 
+    suspend fun cancelOrder(id: String, userId: String): CancelOrderDto =
+        safeCall { api.cancelOrder(id, userId) }
+
     suspend fun notifications(userId: String): List<NotificationDto> =
         safeCall { api.notifications(userId) }
 
+    suspend fun unreadCount(userId: String): Int =
+        safeCall { api.unreadCount(userId).count }
+
     suspend fun markNotificationRead(id: String) {
         safeCall { api.markNotificationRead(id, mapOf("read" to true)) }
+    }
+
+    suspend fun readAllNotifications(userId: String) {
+        safeCall { api.readAllNotifications(userId) }
+    }
+
+    suspend fun deleteNotification(id: String) {
+        safeCall { api.deleteNotification(id) }
     }
 
     private suspend fun <T> safeCall(block: suspend () -> T): T {
