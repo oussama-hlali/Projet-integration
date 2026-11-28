@@ -11,6 +11,7 @@ import com.smartcampus.mobile.core.network.TokenHolder
 import com.smartcampus.mobile.core.repository.SmartCampusRepository
 import com.smartcampus.mobile.feature.auth.AuthRepository
 import com.smartcampus.mobile.feature.auth.AuthViewModel
+import com.smartcampus.mobile.feature.splash.SplashViewModel
 
 /**
  * Conteneur simple, sans Hilt ni Koin.
@@ -47,6 +48,13 @@ class AppContainer(private val context: Context) {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             return AuthViewModel(authRepository) as T
+        }
+    }
+
+    fun splashViewModelFactory() = object : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            return SplashViewModel(authRepository, prefs) as T
         }
     }
 }
