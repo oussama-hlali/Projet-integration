@@ -9,8 +9,14 @@ import com.smartcampus.mobile.core.network.AuthInterceptor
 import com.smartcampus.mobile.core.network.SessionCookieJar
 import com.smartcampus.mobile.core.network.TokenHolder
 import com.smartcampus.mobile.core.repository.SmartCampusRepository
+import com.smartcampus.mobile.feature.announcements.AnnouncementDetailViewModel
+import com.smartcampus.mobile.feature.announcements.AnnouncementFormViewModel
+import com.smartcampus.mobile.feature.announcements.AnnouncementsViewModel
 import com.smartcampus.mobile.feature.auth.AuthRepository
 import com.smartcampus.mobile.feature.auth.AuthViewModel
+import com.smartcampus.mobile.feature.events.EventDetailViewModel
+import com.smartcampus.mobile.feature.events.EventFormViewModel
+import com.smartcampus.mobile.feature.events.EventsViewModel
 import com.smartcampus.mobile.feature.home.HomeViewModel
 import com.smartcampus.mobile.feature.reservations.ReservationDetailViewModel
 import com.smartcampus.mobile.feature.reservations.ReservationNewViewModel
@@ -103,6 +109,48 @@ class AppContainer(private val context: Context) {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             return ReservationNewViewModel(smartCampusRepository, prefs, roomId) as T
+        }
+    }
+
+    fun eventsViewModelFactory() = object : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            return EventsViewModel(smartCampusRepository, prefs) as T
+        }
+    }
+
+    fun eventDetailViewModelFactory(id: String) = object : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            return EventDetailViewModel(smartCampusRepository, prefs, id) as T
+        }
+    }
+
+    fun eventFormViewModelFactory(id: String) = object : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            return EventFormViewModel(smartCampusRepository, id) as T
+        }
+    }
+
+    fun announcementsViewModelFactory() = object : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            return AnnouncementsViewModel(smartCampusRepository, prefs) as T
+        }
+    }
+
+    fun announcementDetailViewModelFactory(id: String) = object : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            return AnnouncementDetailViewModel(smartCampusRepository, prefs, id) as T
+        }
+    }
+
+    fun announcementFormViewModelFactory(id: String) = object : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            return AnnouncementFormViewModel(smartCampusRepository, id) as T
         }
     }
 }

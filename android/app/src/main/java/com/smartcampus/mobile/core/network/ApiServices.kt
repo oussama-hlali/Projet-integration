@@ -13,6 +13,7 @@ import com.smartcampus.mobile.core.model.dto.MfaSetupResponse
 import com.smartcampus.mobile.core.model.dto.MfaVerifyRequest
 import com.smartcampus.mobile.core.model.dto.NotificationDto
 import com.smartcampus.mobile.core.model.dto.RegistrationDto
+import com.smartcampus.mobile.core.model.dto.RegistrationStatusDto
 import com.smartcampus.mobile.core.model.dto.ReservationDto
 import com.smartcampus.mobile.core.model.dto.RoomDto
 import com.smartcampus.mobile.core.model.dto.SessionResponse
@@ -119,11 +120,23 @@ object ApiServices {
         @DELETE("events/{id}")
         suspend fun deleteEvent(@Path("id") id: String)
 
+        @GET("events/{id}/interest")
+        suspend fun interestStatus(
+            @Path("id") id: String,
+            @Query("userId") userId: String
+        ): InterestDto
+
         @PUT("events/{id}/interest")
         suspend fun toggleInterest(
             @Path("id") id: String,
             @Query("userId") userId: String
         ): InterestDto
+
+        @GET("events/{id}/registrations/me")
+        suspend fun myRegistration(
+            @Path("id") id: String,
+            @Query("userId") userId: String
+        ): RegistrationStatusDto
 
         @POST("events/{id}/registrations")
         suspend fun registerToEvent(

@@ -9,10 +9,22 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.smartcampus.mobile.di.AppContainer
+import com.smartcampus.mobile.feature.announcements.AnnouncementDetailScreen
+import com.smartcampus.mobile.feature.announcements.AnnouncementDetailViewModel
+import com.smartcampus.mobile.feature.announcements.AnnouncementFormScreen
+import com.smartcampus.mobile.feature.announcements.AnnouncementFormViewModel
+import com.smartcampus.mobile.feature.announcements.AnnouncementsScreen
+import com.smartcampus.mobile.feature.announcements.AnnouncementsViewModel
 import com.smartcampus.mobile.feature.auth.AuthViewModel
 import com.smartcampus.mobile.feature.auth.LoginScreen
 import com.smartcampus.mobile.feature.auth.MfaSetupScreen
 import com.smartcampus.mobile.feature.auth.MfaVerifyScreen
+import com.smartcampus.mobile.feature.events.EventDetailScreen
+import com.smartcampus.mobile.feature.events.EventDetailViewModel
+import com.smartcampus.mobile.feature.events.EventFormScreen
+import com.smartcampus.mobile.feature.events.EventFormViewModel
+import com.smartcampus.mobile.feature.events.EventsScreen
+import com.smartcampus.mobile.feature.events.EventsViewModel
 import com.smartcampus.mobile.feature.home.HomeScreen
 import com.smartcampus.mobile.feature.home.HomeViewModel
 import com.smartcampus.mobile.feature.reservations.ReservationDetailScreen
@@ -44,9 +56,12 @@ fun AppNavHost(container: AppContainer) {
     val homeState by homeViewModel.state.collectAsStateWithLifecycle()
 
     fun navigate(destination: String) {
-        if (destination == "reservations") {
+        if (destination == "reservations" ||
+            destination == "events" ||
+            destination == "announcements"
+        ) {
             navController.navigate(destination) {
-                popUpTo("reservations") { inclusive = true }
+                popUpTo(destination) { inclusive = true }
             }
         } else {
             navController.navigate(destination)
@@ -157,6 +172,74 @@ fun AppNavHost(container: AppContainer) {
             )
             ReservationDetailScreen(
                 viewModel = detailViewModel,
+                onBack = { navController.popBackStack() },
+                onNavigate = { destination -> navigate(destination) },
+            )
+        }
+
+        composable("events") {
+            val eventsViewModel: EventsViewModel = viewModel(
+                factory = container.eventsViewModelFactory()
+            )
+            EventsScreen(
+                viewModel = eventsViewModel,
+                onNavigate = { destination -> navigate(destination) },
+            )
+        }
+
+        composable("event_detail/{id}") { backStackEntry ->
+            val id = backStackEntry.arguments?.getString("id").orEmpty()
+            val detailViewModel: EventDetailViewModel = viewModel(
+                factory = container.eventDetailViewModelFactory(id)
+            )
+            EventDetailScreen(
+                viewModel = detailViewModel,
+                onBack = { navController.popBackStack() },
+                onNavigate = { destination -> navigate(destination) },
+            )
+        }
+
+        composable("event_form/{id}") { backStackEntry ->
+            val id = backStackEntry.arguments?.getString("id").orEmpty()
+            val formViewModel: EventFormViewModel = viewModel(
+                factory = container.eventFormViewModelFactory(id)
+            )
+            EventFormScreen(
+                viewModel = formViewModel,
+                onBack = { navController.popBackStack() },
+                onNavigate = { destination -> navigate(destination) },
+            )
+        }
+
+        composable("announcements") {
+            val announcementsViewModel: AnnouncementsViewModel = viewModel(
+                factory = container.announcementsViewModelFactory()
+            )
+            AnnouncementsScreen(
+                viewModel = announcementsViewModel,
+                onNavigate = { destination -> navigate(destination) },
+            )
+        }
+
+        composable("announcement_detail/{id}") { backStackEntry ->
+            val id = backStackEntry.arguments?.getString("id").orEmpty()
+            val detailViewModel: AnnouncementDetailViewModel = viewModel(
+                factory = container.announcementDetailViewModelFactory(id)
+            )
+            AnnouncementDetailScreen(
+                viewModel = detailViewModel,
+                onBack = { navController.popBackStack() },
+                onNavigate = { destination -> navigate(destination) },
+            )
+        }
+
+        composable("announcement_form/{id}") { backStackEntry ->
+            val id = backStackEntry.arguments?.getString("id").orEmpty()
+            val formViewModel: AnnouncementFormViewModel = viewModel(
+                factory = container.announcementFormViewModelFactory(id)
+            )
+            AnnouncementFormScreen(
+                viewModel = formViewModel,
                 onBack = { navController.popBackStack() },
                 onNavigate = { destination -> navigate(destination) },
             )
