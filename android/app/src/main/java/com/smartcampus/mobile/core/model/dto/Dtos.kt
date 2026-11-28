@@ -151,3 +151,19 @@ data class RegistrationStatusDto(
 data class CancelOrderDto(val cancelled: Boolean = false)
 
 data class UnreadCountDto(val count: Int = 0)
+
+/** Le backend renvoie photoData en base64 JPEG brut, sans préfixe "data:image". */
+data class LostFoundItemDto(
+    val id: String = "",
+    val title: String = "",
+    val description: String? = null,
+    val status: String = "LOST",
+    val location: String? = null,
+    val category: String? = null,
+    @SerializedName("contactPhone") val contactPhone: String? = null,
+    @SerializedName("reporterId") val reporterId: String = "",
+    @SerializedName("taggedUserIds") val taggedUserIds: List<String> = emptyList(),
+    @SerializedName("reactionUserIds") val reactionUserIds: List<String> = emptyList(),
+    @SerializedName("createdAt") val createdAt: String = "",
+    @SerializedName("photoData") val photoData: String? = null
+)
