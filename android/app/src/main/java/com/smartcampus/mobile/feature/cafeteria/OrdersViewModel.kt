@@ -61,7 +61,7 @@ class OrdersViewModel(
             _state.value = _state.value.copy(loading = true, error = null)
             try {
                 val active = repository.orders(userId)
-                    .filterNot { it.status.equals("CANCELLED", ignoreCase = true) }
+                    .activeOnly()
                     .map { it.toUi() }
                 _state.value = _state.value.copy(loading = false, items = active)
             } catch (e: Exception) {
