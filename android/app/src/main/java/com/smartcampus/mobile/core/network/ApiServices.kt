@@ -180,6 +180,9 @@ object ApiServices {
             @Body body: Map<String, Any>
         ): CafeteriaOrderDto
 
+        @GET("orders")
+        suspend fun orders(@Query("userId") userId: String): List<CafeteriaOrderDto>
+
         @POST("orders/{id}/cancel")
         suspend fun cancelOrder(
             @Path("id") id: String,
